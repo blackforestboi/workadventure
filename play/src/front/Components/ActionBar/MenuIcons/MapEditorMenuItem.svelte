@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { IconMapEditor } from "@wa-icons";
+    import ActionBarButton from "../ActionBarButton.svelte";
     import { analyticsClient } from "../../../Administration/AnalyticsClient";
+    import { localUserStore } from "../../../Connection/LocalUserStore";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import { isCalendarVisibleStore } from "../../../Stores/CalendarStore";
@@ -8,7 +9,7 @@
     import { mapEditorMenuVisibleStore, openedMenuStore } from "../../../Stores/MenuStore";
     import { isTodoListVisibleStore } from "../../../Stores/TodoListStore";
     import { LL } from "../../../../i18n/i18n-svelte";
-    import ActionBarButton from "../ActionBarButton.svelte";
+    import { IconMapEditor } from "@wa-icons";
 
     interface Props {
         first?: boolean;
@@ -19,6 +20,12 @@
     let { first = undefined, last = undefined, classList = undefined }: Props = $props();
 
     function toggleMapEditorMode() {
+        if (!localUserStore.isLogged()) {
+            analyticsClient.login();
+            window.location.href = "/login";
+            return;
+        }
+
         if ($mapEditorModeStore && !$mapExplorationModeStore) {
             analyticsClient.toggleMapEditor(false);
             mapEditorModeStore.switchMode(false);

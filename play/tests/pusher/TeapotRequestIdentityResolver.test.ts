@@ -6,7 +6,7 @@ const runtimeMocks = vi.hoisted(() => ({ getTeapotDataServices: vi.fn() }));
 
 vi.mock("../../src/pusher/enums/EnvironmentVariable", () => ({
     MAP_EDITOR_ALLOWED_USERS: [],
-    MAP_EDITOR_ALLOW_ALL_USERS: false,
+    MAP_EDITOR_ALLOW_ALL_USERS: true,
 }));
 vi.mock("../../src/pusher/teapot/TeapotDataRuntime", () => runtimeMocks);
 
@@ -42,5 +42,18 @@ describe("resolveTeapotRequestIdentity", () => {
         await expect(resolveTeapotRequestIdentity(identity.id)).resolves.toBe(identity);
         expect(getIdentity).toHaveBeenCalledWith(identity.id);
         expect(resolveProviderIdentity).not.toHaveBeenCalled();
+    });
+
+    it("does not grant the default creator role to a guest identity", async () => {
+        const identity = { id: "25f0c786-e1d0-4c20-9d81-d2eeb7113bd0" };
+        const addRole = vi.fn();
+        runtimeMocks.getTeapotDataServices.mockReturnValue({
+            repository: { getIdentity: vi.fn(), addRole },
+            identity: { resolveProviderIdentity: vi.fn().mockResolvedValue(identity) },
+        });
+
+        await resolveTeapotRequestIdentity("anonymous-user", undefined, false);
+
+        expect(addRole).not.toHaveBeenCalled();
     });
 });

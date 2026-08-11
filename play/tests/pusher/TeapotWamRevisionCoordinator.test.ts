@@ -18,15 +18,39 @@ async function setup() {
         localSubject: "creator",
         initialRoles: ["creator"],
     });
+    const identityResolver = vi.fn(async () => identity);
     const coordinator = new TeapotWamRevisionCoordinator(
         { resolve: async () => "https://maps.test/world.tmj" },
         () => services,
-        async () => identity,
+        identityResolver,
     );
-    return { coordinator, identity, repository, services };
+    return { coordinator, identity, identityResolver, repository, services };
 }
 
 describe("TeapotWamRevisionCoordinator", () => {
+    it("does not grant or execute map editing for guests", async () => {
+        const { coordinator, identity, identityResolver } = await setup();
+        const join = {
+            roomId: "https://play.test/~/world.wam",
+            actorIdentifier: identity.id,
+            legacyCanEdit: true,
+            managementUiAccess: false,
+            isLogged: false,
+        };
+
+        await expect(coordinator.resolveJoinAccess(join)).resolves.toMatchObject({ canEdit: false });
+        expect(identityResolver).toHaveBeenCalledWith(identity.id, false);
+        await expect(
+            coordinator.begin({
+                commandId: "guest-command",
+                roomId: join.roomId,
+                actorIdentifier: identity.id,
+                legacyCanEdit: true,
+                isLogged: false,
+            }),
+        ).rejects.toThrow("Map editing requires login");
+    });
+
     it("holds the shared map lease until the durable WAM acknowledgement", async () => {
         const { coordinator, identity, repository, services } = await setup();
 

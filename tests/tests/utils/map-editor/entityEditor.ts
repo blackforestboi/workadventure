@@ -104,6 +104,7 @@ class EntityEditor {
     }
 
     async uploadTestAsset(page: Page) {
+        await this.openCreateNew(page);
         await page
             .getByTestId("uploadCustomAsset")
             .setInputFiles(fileURLToPath(new URL(`../../assets/${this.getTestAssetFile()}`, import.meta.url)));
@@ -112,6 +113,7 @@ class EntityEditor {
     }
 
     async uploadTestAssetWithOddSize(page: Page) {
+        await this.openCreateNew(page);
         await page
             .getByTestId("uploadCustomAsset")
             .setInputFiles(
@@ -119,6 +121,12 @@ class EntityEditor {
             );
         await page.getByTestId("floatingObject").click();
         await this.applyEntityModifications(page, true);
+    }
+
+    private async openCreateNew(page: Page) {
+        if (!(await page.getByTestId("uploadCustomAsset").isVisible())) {
+            await page.getByRole("button", { name: "Create new" }).click();
+        }
     }
 
     async openEditEntityForm(page: Page) {

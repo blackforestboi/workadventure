@@ -24,10 +24,16 @@ test.describe("Map editor @oidc @nomobile @nowebkit", () => {
     test("assert map editor not visible on public maps @oidc", async ({ browser }) => {
         await using page = await getPage(browser, "Admin1", publicTestMapUrl("tests/E2E/empty.json", "iframe_script"));
 
-        await Menu.openMapMenu(page);
-
         // Check if the map editor is disabled
-        await expect(page.getByText("Map editor")).toBeHidden();
+        await expect(page.getByTestId("map-editor-button")).toBeHidden();
+    });
+
+    test("guest is asked to log in when opening the map editor", async ({ browser }) => {
+        await using page = await getPage(browser, "Alice", Map.url("empty"));
+
+        await page.getByTestId("map-editor-button").click();
+
+        await expect(page.locator("#Input_Username")).toBeVisible({ timeout: 40_000 });
     });
 
     test("Assert map explorer visible for guest", async ({ browser, request }) => {
