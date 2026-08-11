@@ -471,7 +471,7 @@ export class IoSocketController {
                         throw new Error("User cannot access this world", { cause: e });
                     }
 
-                    const legacyCanEdit = userData.canEdit ?? false;
+                    const legacyCanEdit = isLogged && (userData.canEdit ?? false);
                     const legacyCanAdmin = memberTags.includes("admin");
                     try {
                         const roomAccess = await teapotWamRevisionCoordinator.resolveJoinAccess({
@@ -480,6 +480,7 @@ export class IoSocketController {
                             authToken: tokenData?.accessToken,
                             legacyCanEdit,
                             managementUiAccess: legacyCanAdmin,
+                            isLogged,
                         });
                         userData.canEdit = roomAccess.canEdit;
                         if (roomAccess.canAdmin && !memberTags.includes("admin")) memberTags = [...memberTags, "admin"];
@@ -1157,6 +1158,7 @@ export class IoSocketController {
                                         authToken: socketData.token,
                                         legacyCanEdit: socketData.legacyCanEdit,
                                         legacyCanAdmin: socketData.legacyCanAdmin,
+                                        isLogged: socketData.isLogged,
                                     });
                                     socketManager.forwardMessageToBack(socket, message.message);
                                 } catch (error: unknown) {

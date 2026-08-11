@@ -313,9 +313,18 @@ export class MapEditorModeManager {
     }
 
     public handleKeyDownEvent(event: KeyboardEvent): boolean {
-        this.currentlyActiveTool?.handleKeyDownEvent(event);
         const mapEditorModeStoreValue = get(mapEditorModeStore);
         if (!mapEditorModeStoreValue) return false;
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            if (!this.currentlyActiveTool?.cancelCurrentAction?.()) {
+                this.equipTool(EditorToolName.CloseMapEditor);
+            }
+            return true;
+        }
+
+        this.currentlyActiveTool?.handleKeyDownEvent(event);
 
         const historyAction = getMapEditorHistoryAction(event);
         if (historyAction !== undefined) {

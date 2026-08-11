@@ -15,6 +15,7 @@
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import { externalSvelteComponentService } from "../../Stores/Utils/externalSvelteComponentService";
     import ExternalComponents from "../ExternalModules/ExternalComponents.svelte";
+    import { openLoginOverlay } from "../../Stores/LoginOverlayStore";
 
     function closeCalendar() {
         isCalendarVisibleStore.set(false);
@@ -51,7 +52,7 @@
 
     function goToLoginPage() {
         analyticsClient.login();
-        window.location.href = "/login";
+        openLoginOverlay();
     }
 </script>
 

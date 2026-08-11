@@ -2,12 +2,13 @@
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import LL from "../../../i18n/i18n-svelte";
     import { popupStore } from "../../Stores/PopupStore";
+    import { openLoginOverlay } from "../../Stores/LoginOverlayStore";
     import Button from "../UI/Button.svelte";
     import PopUpContainer from "./PopUpContainer.svelte";
 
     function goToLogin() {
         analyticsClient.login();
-        window.location.href = "/login";
+        openLoginOverlay();
         popupStore.removePopup("popupConnect");
     }
 </script>

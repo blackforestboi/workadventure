@@ -34,6 +34,7 @@ export interface BeginWamMutationInput {
     authToken?: string;
     legacyCanEdit: boolean;
     legacyCanAdmin?: boolean;
+    isLogged?: boolean;
 }
 
 export interface ResolveWamJoinAccessInput {
@@ -42,6 +43,7 @@ export interface ResolveWamJoinAccessInput {
     authToken?: string;
     legacyCanEdit: boolean;
     managementUiAccess: boolean;
+    isLogged?: boolean;
 }
 
 export interface ResolvedWamJoinAccess {
@@ -108,7 +110,9 @@ export class TeapotWamRevisionCoordinator {
         private readonly services: () => TeapotDataServices = getTeapotDataServices,
         private readonly identityResolver: (
             identifier: string,
-        ) => Promise<TeapotIdentity> = resolveTeapotRequestIdentity,
+            grantDefaultCreatorRole?: boolean,
+        ) => Promise<TeapotIdentity> = (identifier, grantDefaultCreatorRole) =>
+            resolveTeapotRequestIdentity(identifier, undefined, grantDefaultCreatorRole),
     ) {}
 
     public async resolveJoinCanEdit(input: ResolveWamJoinAccessInput): Promise<boolean> {
@@ -123,9 +127,10 @@ export class TeapotWamRevisionCoordinator {
         if (input.actorIdentifier.trim().length === 0) {
             throw new TeapotAuthorizationError("Room access requires a stable user identity");
         }
+        const isLogged = input.isLogged !== false;
         const [mapId, identity] = await Promise.all([
             this.mapUrlResolver.resolve(input.roomId, input.authToken),
-            this.identityResolver(input.actorIdentifier),
+            this.identityResolver(input.actorIdentifier, isLogged),
         ]);
         const dataServices = this.services();
         const joinAccess = {
@@ -137,18 +142,20 @@ export class TeapotWamRevisionCoordinator {
         };
         await dataServices.roomAccess.assertCanView(joinAccess);
         const [canEdit, canAdmin] = await Promise.all([
-            this.isAllowed(() =>
-                dataServices.roomAccess.assertCanEdit({
-                    actorId: identity.id,
-                    mapId,
-                    context: {
-                        kind: "wam",
-                        successfulJoin: true,
-                        legacyCanEdit: input.legacyCanEdit,
-                        legacyCanAdmin: input.managementUiAccess,
-                    },
-                }),
-            ),
+            isLogged
+                ? this.isAllowed(() =>
+                      dataServices.roomAccess.assertCanEdit({
+                          actorId: identity.id,
+                          mapId,
+                          context: {
+                              kind: "wam",
+                              successfulJoin: true,
+                              legacyCanEdit: input.legacyCanEdit,
+                              legacyCanAdmin: input.managementUiAccess,
+                          },
+                      }),
+                  )
+                : Promise.resolve(false),
             this.isAllowed(() =>
                 dataServices.roomAccess.assertCanAdmin({
                     actorId: identity.id,
@@ -164,6 +171,7 @@ export class TeapotWamRevisionCoordinator {
 
     public async begin(input: BeginWamMutationInput): Promise<void> {
         if (input.commandId.trim().length === 0) throw new Error("Map commands require a command ID");
+        if (input.isLogged === false) throw new TeapotAuthorizationError("Map editing requires login");
         const duplicate = this.pending.get(input.commandId);
         if (duplicate !== undefined) {
             if (duplicate.roomId !== input.roomId || duplicate.actorIdentifier !== input.actorIdentifier) {
@@ -173,7 +181,7 @@ export class TeapotWamRevisionCoordinator {
         }
 
         const [identity, mapId] = await Promise.all([
-            this.identityResolver(input.actorIdentifier),
+            this.identityResolver(input.actorIdentifier, true),
             this.mapUrlResolver.resolve(input.roomId, input.authToken),
         ]);
         const previous = this.mapQueues.get(mapId) ?? Promise.resolve();

@@ -11,6 +11,7 @@
     } from "../../../Stores/ModalStore";
     import { mapEditorModeStore, mapExplorationModeStore } from "../../../Stores/MapEditorStore";
     import { gameManager } from "../../../Phaser/Game/GameManager";
+    import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import { isTodoListVisibleStore } from "../../../Stores/TodoListStore";
     import { isCalendarVisibleStore } from "../../../Stores/CalendarStore";
     import { chatVisibilityStore } from "../../../Stores/ChatStore";

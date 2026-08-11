@@ -153,11 +153,16 @@ export class FloorEditorTool extends MapEditorTool {
 
     public subscribeToGameMapFrontWrapperEvents(_gameMapFrontWrapper: GameMapFrontWrapper): void {}
 
-    public handleKeyDownEvent(event: KeyboardEvent): void {
-        if (event.key !== "Escape") return;
+    public handleKeyDownEvent(_event: KeyboardEvent): void {}
+
+    public cancelCurrentAction(): boolean {
+        if (this.selectedLayer === "" && this.shapeStart === undefined && !this.painting) {
+            return false;
+        }
         if (this.shapeStart !== undefined) this.cancelShapeDrag();
         else this.finishPaintStroke();
         this.clearBrush();
+        return true;
     }
 
     public async handleIncomingCommandMessage(editMapCommandMessage: EditMapCommandMessage): Promise<void> {

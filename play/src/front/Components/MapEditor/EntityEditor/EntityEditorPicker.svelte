@@ -312,12 +312,21 @@
 
 <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
     <div class="flex flex-col gap-2">
-        <div class="flex items-start justify-between gap-3">
-            {#if $selectCategoryStore === undefined}
-                <div>
-                    <p class="m-0 text-[22px]">{$LL.mapEditor.entityEditor.header.title()}</p>
-                    <p class="m-0 opacity-50">{$LL.mapEditor.entityEditor.header.description()}</p>
+        <div class="flex items-center justify-between gap-3">
+            {#if showUpload}
+                <div class="flex min-w-0 items-center gap-2">
+                    <button
+                        class="flex shrink-0 items-center rounded-full p-2 hover:bg-white/10"
+                        aria-label={$LL.mapEditor.entityEditor.buttons.back()}
+                        data-testid="backToAssets"
+                        onclick={() => (showUpload = false)}
+                    >
+                        <IconChevronLeft />
+                    </button>
+                    <p class="m-0 truncate text-[22px]">{$LL.mapEditor.entityEditor.header.title()}</p>
                 </div>
+            {:else if $selectCategoryStore === undefined}
+                <p class="m-0 text-[22px]">{$LL.mapEditor.entityEditor.header.title()}</p>
             {:else}
                 <div class="flex flex-row items-center gap-4">
                     <button
@@ -329,26 +338,30 @@
                     </button>
                 </div>
             {/if}
-            <Button
-                size="sm"
-                variant="light"
-                appearance="border"
-                onclick={() => {
-                    clearEntitySelection();
-                    showUpload = !showUpload;
-                }}
-            >
-                {#snippet icon()}<IconCloudUpload font-size={16} />{/snippet}
-                {showUpload ? "Browse assets" : "Upload asset"}
-            </Button>
+            {#if !showUpload}
+                <Button
+                    size="sm"
+                    variant="light"
+                    appearance="border"
+                    onclick={() => {
+                        clearEntitySelection();
+                        showUpload = true;
+                    }}
+                >
+                    {#snippet icon()}<IconCloudUpload font-size={16} />{/snippet}
+                    Create new
+                </Button>
+            {/if}
         </div>
-        <div class="flex *:w-full">
-            <Input
-                rounded
-                bind:value={searchTerm}
-                placeholder={$LL.mapEditor.entityEditor.itemPicker.searchPlaceholder()}
-            />
-        </div>
+        {#if !showUpload}
+            <div class="flex *:w-full">
+                <Input
+                    rounded
+                    bind:value={searchTerm}
+                    placeholder={$LL.mapEditor.entityEditor.itemPicker.searchPlaceholder()}
+                />
+            </div>
+        {/if}
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto">

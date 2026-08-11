@@ -3,6 +3,7 @@ import Map from "../utils/map";
 import AreaEditor from "../utils/map-editor/areaEditor";
 import { resetWamMaps } from "../utils/map-editor/uploader";
 import MapEditor from "../utils/mapeditor";
+import EntityEditor from "../utils/map-editor/entityEditor";
 import Menu from "../utils/menu";
 import { evaluateScript } from "../utils/scripting";
 import { map_storage_url } from "../utils/urls";
@@ -35,6 +36,25 @@ test.describe("Map editor @oidc @nomobile @nowebkit", () => {
         await AreaEditor.setAreaName(page, "MyStartZone");
         await AreaEditor.addProperty(page, "startAreaProperty");
         await Menu.closeMapEditor(page);
+    });
+
+    test("Escape cancels an active placement before closing the map editor", async ({ browser, request }) => {
+        await resetWamMaps(request);
+        await using page = await getPage(browser, "Admin1", Map.url("empty"));
+
+        await Menu.openMapEditor(page);
+        await page.keyboard.press("Escape");
+        await expect(page.getByTestId("closeMapEditorButton")).toBeHidden();
+
+        await Menu.openMapEditor(page);
+        await MapEditor.openEntityEditor(page);
+        await EntityEditor.selectEntity(page, 0, "coffee");
+
+        await page.keyboard.press("Escape");
+        await expect(page.getByTestId("closeMapEditorButton")).toBeVisible();
+
+        await page.keyboard.press("Escape");
+        await expect(page.getByTestId("closeMapEditorButton")).toBeHidden();
     });
 
     test("Successfully set and working exit area in the map editor", async ({ browser, request }) => {

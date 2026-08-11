@@ -7,6 +7,7 @@ import { localUserStore } from "../Connection/LocalUserStore";
 import { ABSOLUTE_PUSHER_URL } from "../Enum/ComputedConst";
 import {
     CONTACT_URL,
+    ENABLE_MAP_EDITOR,
     ENABLE_OPENID,
     ENABLE_REPORT_ISSUES_MENU,
     OPID_PROFILE_SCREEN_PROVIDER,
@@ -428,9 +429,17 @@ export const helpTextDisabledStore = derived(
 );
 
 export const mapEditorMenuVisibleStore = derived(
-    [mapEditorActivated, mapManagerActivated, mapEditorActivatedForThematics],
-    ([$mapEditorActivated, $mapManagerActivated, $mapEditorActivatedForThematics]) => {
-        return ($mapEditorActivated || $mapEditorActivatedForThematics) && $mapManagerActivated;
+    [mapEditorActivated, mapManagerActivated, mapEditorActivatedForThematics, userIsConnected],
+    ([$mapEditorActivated, $mapManagerActivated, $mapEditorActivatedForThematics, $userIsConnected]) => {
+        const loginCanUnlockMapEditor =
+            !$userIsConnected &&
+            ENABLE_OPENID &&
+            ENABLE_MAP_EDITOR &&
+            connectionManager.currentRoom?.wamUrl !== undefined;
+
+        return (
+            ($mapEditorActivated || $mapEditorActivatedForThematics || loginCanUnlockMapEditor) && $mapManagerActivated
+        );
     },
 );
 export const globalMessageVisibleStore = derived(

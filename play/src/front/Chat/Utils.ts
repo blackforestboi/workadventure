@@ -12,6 +12,7 @@ import { gameManager } from "../Phaser/Game/GameManager";
 import { userIsConnected } from "../Stores/MenuStore";
 import { chatVisibilityStore } from "../Stores/ChatStore";
 import { warningMessageStore } from "../Stores/ErrorStore";
+import { openLoginOverlay } from "../Stores/LoginOverlayStore";
 import { LL } from "../../i18n/i18n-svelte";
 import { hasMatrixChatCapabilities } from "./Connection/ChatConnection";
 import { navChat } from "./Stores/ChatStore";
@@ -64,7 +65,7 @@ export const sendRedirectPricing = () => {
 
 export const sendLogin = () => {
     analyticsClient.login();
-    window.location.href = "/login";
+    openLoginOverlay();
 };
 
 export const openTab = (url: string) => {

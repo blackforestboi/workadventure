@@ -6,13 +6,18 @@ import { dismissNoBrowserSoundInfoToast } from "./doNotDisturbInfoToast";
 
 // for oidcLogin to work on mobile you must open the burger menu before calling this function
 export async function oidcLogin(page: Page, userName = "User1", password = "pwd") {
+    const pageUrlBeforeLogin = page.url();
     await page.getByRole("button", { name: "Login" }).click();
-    await page.fill("#Input_Username", userName, {
+    await expect(page).toHaveURL(pageUrlBeforeLogin);
+    await expect(page.getByTestId("loginOverlay")).toBeVisible();
+
+    const loginFrame = page.frameLocator('[data-testid="loginFrame"]');
+    await loginFrame.locator("#Input_Username").fill(userName, {
         timeout: 40_000,
     });
-    await page.fill("#Input_Password", password);
+    await loginFrame.locator("#Input_Password").fill(password);
 
-    await page.click('button:has-text("Login")', {
+    await loginFrame.locator('button:has-text("Login")').click({
         // Give ample time for login to occur
         timeout: 50000,
     });

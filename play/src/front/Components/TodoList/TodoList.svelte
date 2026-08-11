@@ -10,6 +10,7 @@
     import { userIsConnected } from "../../Stores/MenuStore";
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import { externalSvelteComponentService } from "../../Stores/Utils/externalSvelteComponentService";
+    import { openLoginOverlay } from "../../Stores/LoginOverlayStore";
     import ExternalComponents from "../ExternalModules/ExternalComponents.svelte";
     import Button from "../UI/Button.svelte";
     import TodoTask from "./TodoTask.svelte";
@@ -34,7 +35,7 @@
 
     function goToLoginPage() {
         analyticsClient.login();
-        window.location.href = "/login";
+        openLoginOverlay();
     }
 
     onMount(() => {
