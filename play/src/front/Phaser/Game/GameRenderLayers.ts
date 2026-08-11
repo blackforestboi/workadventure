@@ -1,11 +1,15 @@
-import * as Phaser from "phaser";
+import type * as Phaser from "phaser";
 import { DEPTH_OVERLAY_INDEX, DEPTH_TILE_INDEX } from "./DepthIndexes";
 
 const DEPTH_WORLD_INDEX = DEPTH_TILE_INDEX + 1;
 const BACKGROUND_OBJECT_LOCAL_DEPTH = DEPTH_OVERLAY_INDEX;
 
 export type MapRenderBand = "background" | "foreground";
-export type DepthGameObject = Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Depth;
+export type DepthGameObject = {
+    depth: number;
+    displayList: unknown;
+    setDepth(value: number): unknown;
+};
 
 /**
  * Keeps map tiles, Y-sorted world objects, and intentional foreground tiles in
@@ -23,24 +27,20 @@ export class GameRenderLayers {
         this.foreground = scene.add.layer().setName("map-foreground").setDepth(DEPTH_OVERLAY_INDEX);
     }
 
-    public addMapLayer<T extends DepthGameObject>(
-        gameObject: T,
-        band: MapRenderBand,
-        localDepth: number,
-    ): T {
+    public addMapLayer<T extends DepthGameObject>(gameObject: T, band: MapRenderBand, localDepth: number): T {
         gameObject.setDepth(localDepth);
-        this.getMapBand(band).add(gameObject);
+        this.getMapBand(band).add(gameObject as unknown as Phaser.GameObjects.GameObject);
         return gameObject;
     }
 
     public addBackgroundObject<T extends DepthGameObject>(gameObject: T): T {
         gameObject.setDepth(BACKGROUND_OBJECT_LOCAL_DEPTH);
-        this.background.add(gameObject);
+        this.background.add(gameObject as unknown as Phaser.GameObjects.GameObject);
         return gameObject;
     }
 
     public addWorldObject<T extends DepthGameObject>(gameObject: T): T {
-        this.world.add(gameObject);
+        this.world.add(gameObject as unknown as Phaser.GameObjects.GameObject);
         return gameObject;
     }
 

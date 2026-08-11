@@ -98,8 +98,11 @@ describe("floor editor rendering", () => {
             'return getTileSupportGrid({ ...map, layers: applyRuntimeVisibility(map.layers, "") })',
         );
         expect(gameMapFrontWrapperSource).toContain("layer === this.voidCollisionLayer");
-        expect(gameMapFrontWrapperSource).toMatch(
-            /this\.voidCollisionLayer\.setDepth\(-2\)\.setCollisionByProperty\(\{ collides: true \}\)\.setVisible\(false\)/,
+        expect(gameMapFrontWrapperSource).toContain(
+            "this.voidCollisionLayer.setCollisionByProperty({ collides: true }).setVisible(false)",
+        );
+        expect(gameMapFrontWrapperSource).toContain(
+            'this.gameRenderLayers.addMapLayer(this.voidCollisionLayer, "background", localDepth.background++)',
         );
         expect(playerCollisionSource).toContain("for (const phaserLayer of this.gameMapFrontWrapper.phaserLayers)");
         expect(playerCollisionSource).not.toContain('__voidCollisionLayer") {\n                continue');

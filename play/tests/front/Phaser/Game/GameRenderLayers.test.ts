@@ -3,7 +3,7 @@ import type * as Phaser from "phaser";
 import { DEPTH_OVERLAY_INDEX, DEPTH_TILE_INDEX } from "../../../../src/front/Phaser/Game/DepthIndexes";
 import { GameRenderLayers } from "../../../../src/front/Phaser/Game/GameRenderLayers";
 
-type FakeGameObject = Phaser.GameObjects.GameObject & {
+type FakeGameObject = {
     depth: number;
     displayList: FakeLayer | null;
     setDepth: (depth: number) => FakeGameObject;
@@ -50,7 +50,7 @@ function createGameObject(depth = 0): FakeGameObject {
             return this;
         },
     };
-    return gameObject as FakeGameObject;
+    return gameObject;
 }
 
 function createRenderLayers(): GameRenderLayers {
