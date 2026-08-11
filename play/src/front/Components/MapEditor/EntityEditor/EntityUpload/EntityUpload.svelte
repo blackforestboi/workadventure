@@ -143,6 +143,7 @@
                     imagePath: failedDraft?.uploadEntityMessage.imagePath ?? `${generatedId}-${selectedAsset.name}`,
                     collisionGrid: customEditedEntity.collisionGrid,
                     depthOffset: customEditedEntity.depthOffset,
+                    defaultSizeInTiles: customEditedEntity.defaultSizeInTiles,
                     color: "",
                     animation: customEditedEntity.animation,
                 },

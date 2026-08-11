@@ -21,8 +21,15 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
     }
 
     execute(): Promise<void> {
-        const { id, name, tags, depthOffset, collisionGrid } = this.modifyCustomEntityMessage;
-        this.entitiesCollectionManager.modifyCustomEntity(id, name, tags, depthOffset, collisionGrid);
+        const { id, name, tags, depthOffset, collisionGrid, defaultSizeInTiles } = this.modifyCustomEntityMessage;
+        this.entitiesCollectionManager.modifyCustomEntity(
+            id,
+            name,
+            tags,
+            depthOffset,
+            collisionGrid,
+            defaultSizeInTiles,
+        );
         this.entitiesManager.updateEntitiesPrefabMetadata(id, collisionGrid, depthOffset);
         this.gameFrontWrapper.recomputeEntitiesCollisionGrid();
         return super.execute();
