@@ -44,6 +44,7 @@
     let savedAssetItemErrors: Record<string, string> = $state({});
     const savedAssetsController = new AbortController();
     let generatedAssetController: GeneratedMapAssetController | undefined;
+    let persistedGeneratedAsset: Blob | undefined;
     const savedAssetPreviewUrls = new SvelteMap<string, { blob: Blob; url: string }>();
 
     const BASIC_TYPE = "Custom";
@@ -186,9 +187,14 @@
         }
     }
 
-    async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
+    async function persistGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
         if (generatedAssetController === undefined) throw new Error("Generated asset storage is not ready yet.");
         await generatedAssetController.saveGenerated(asset, savedAssetsController.signal);
+        persistedGeneratedAsset = asset.blob;
+    }
+
+    async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
+        if (persistedGeneratedAsset !== asset.blob) await persistGeneratedAsset(asset);
         acceptAsset(asset.blob, `generated-${uuidv4()}.png`);
     }
 
@@ -403,6 +409,7 @@
                 promptPlaceholder="A mossy community notice board with small pinned cards, viewed from above…"
                 compact
                 outputSize={{ width: 512, height: 512 }}
+                onGenerated={persistGeneratedAsset}
                 onAccept={acceptGeneratedAsset}
             />
         </div>

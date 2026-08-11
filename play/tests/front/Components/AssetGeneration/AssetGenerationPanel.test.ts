@@ -33,4 +33,12 @@ describe("asset generation panel", () => {
             'class="min-h-full rounded-2xl border border-white/10 bg-black/10 p-3"',
         );
     });
+
+    it("archives a completed map-object generation before the user places it", () => {
+        expect(assetGenerationPanelSource).toContain("onGenerated?:");
+        expect(assetGenerationPanelSource).toContain(
+            "await onGenerated?.({ blob: normalized, ...candidateProvenance });",
+        );
+        expect(entityUploadSource).toContain("onGenerated={persistGeneratedAsset}");
+    });
 });

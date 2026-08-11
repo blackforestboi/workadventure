@@ -44,6 +44,7 @@
         authorizeGeneration?: () => Promise<string>;
         onGenerationFailure?: (reason: "provider-error" | "cancelled") => void | Promise<void>;
         onDiscardCandidate?: () => void | Promise<void>;
+        onGenerated?: (asset: AcceptedGeneratedAsset) => void | Promise<void>;
         onAccept: (asset: AcceptedGeneratedAsset) => void | Promise<void>;
     }
 
@@ -62,6 +63,7 @@
         authorizeGeneration,
         onGenerationFailure,
         onDiscardCandidate,
+        onGenerated,
         onAccept,
     }: Props = $props();
 
@@ -193,6 +195,13 @@
                 modelId: selection.modelId,
                 prompt,
             };
+            try {
+                await onGenerated?.({ blob: normalized, ...candidateProvenance });
+            } catch (reason) {
+                lifecycle = "failed";
+                error = reason instanceof Error ? reason.message : "The generated asset could not be saved locally.";
+                return;
+            }
             lifecycle = "succeeded";
             references.clear();
             referencePreviews = [];
