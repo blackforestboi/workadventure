@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "teapot-cli-companion/Dockerfile"
+watchPatterns = ["/teapot-cli-companion/**", "/package.json", "/package-lock.json", "/contrib/railway/**"]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 180
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+overlapSeconds = 20
+drainingSeconds = 30
