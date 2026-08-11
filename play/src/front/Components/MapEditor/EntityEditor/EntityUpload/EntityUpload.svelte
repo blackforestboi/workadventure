@@ -5,10 +5,15 @@
     import type { EntityPrefab } from "@workadventure/map-editor";
     import { Direction, ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
     import AssetGenerationPanel from "../../../AssetGeneration/AssetGenerationPanel.svelte";
+    import { teapotGeneratedAssetApi } from "../../../../Services/TeapotGeneratedAssetApi";
+    import { GeneratedAssetLocalStore } from "../../../../Services/GeneratedAssetLocalStore";
     import {
-        teapotGeneratedAssetApi,
-        type TeapotGeneratedAssetView,
-    } from "../../../../Services/TeapotGeneratedAssetApi";
+        GeneratedMapAssetController,
+        generatedAssetOwnerScope,
+        type AcceptedGeneratedMapAsset,
+        type GeneratedMapAssetCard,
+    } from "../../../../Services/GeneratedMapAssetController";
+    import { localUserStore } from "../../../../Connection/LocalUserStore";
     import LL from "../../../../../i18n/i18n-svelte";
     import {
         mapEditorEntityUploadDraftStore,
@@ -32,25 +37,32 @@
     let selectedAsset: { source: Blob; name: string; previewUrl: string } | undefined = $state(undefined);
     let uploadDraft: MapEditorEntityUploadDraft | undefined = $state(undefined);
     let consumedGeneratedAsset: Blob | File | undefined;
-    let savedAssets: TeapotGeneratedAssetView[] = $state([]);
+    let savedAssets: GeneratedMapAssetCard[] = $state([]);
     let savedAssetsLoading = $state(false);
     let savedAssetsError = $state<string>();
+    let savedAssetItemErrors: Record<string, string> = $state({});
     const savedAssetsController = new AbortController();
+    let generatedAssetController: GeneratedMapAssetController | undefined;
+    const savedAssetPreviewUrls = new Map<string, { blob: Blob; url: string }>();
 
     const BASIC_TYPE = "Custom";
 
     onMount(() => {
         savedAssetsLoading = true;
-        teapotGeneratedAssetApi
-            .list("map-entity", savedAssetsController.signal)
-            .then((items) => {
-                savedAssets = items;
-            })
-            .catch((reason: unknown) => {
-                if (reason instanceof DOMException && reason.name === "AbortError") return;
-                console.error("Failed to load saved generated map objects", reason);
-                savedAssetsError = reason instanceof Error ? reason.message : "Saved assets could not be loaded.";
-            })
+        const token = localUserStore.getAuthToken();
+        const ownerScope = generatedAssetOwnerScope(token, localUserStore.getLocalUser()?.uuid);
+        generatedAssetController = new GeneratedMapAssetController(
+            ownerScope,
+            ownerScope !== "anonymous",
+            new GeneratedAssetLocalStore(),
+            teapotGeneratedAssetApi,
+            ({ items, warning }) => {
+                replaceSavedAssets(items);
+                savedAssetsError = warning;
+            },
+        );
+        generatedAssetController
+            .hydrate(savedAssetsController.signal)
             .finally(() => {
                 savedAssetsLoading = false;
             });
@@ -154,18 +166,62 @@
         errorOnFile = undefined;
     }
 
-    async function reuseSavedAsset(asset: TeapotGeneratedAssetView): Promise<void> {
-        savedAssetsError = undefined;
-        savedAssetsLoading = true;
+    async function reuseSavedAsset(asset: GeneratedMapAssetCard): Promise<void> {
+        savedAssetItemErrors = { ...savedAssetItemErrors, [asset.key]: "" };
         try {
-            const blob = await teapotGeneratedAssetApi.download(asset, savedAssetsController.signal);
-            acceptAsset(blob, `${asset.id}-${asset.name.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 48)}.png`);
+            const blob = await generatedAssetController?.open(asset, savedAssetsController.signal);
+            if (blob !== undefined) acceptAsset(blob, savedAssetFileName(asset));
         } catch (reason: unknown) {
             if (reason instanceof DOMException && reason.name === "AbortError") return;
-            savedAssetsError = reason instanceof Error ? reason.message : "Saved asset could not be opened.";
-        } finally {
-            savedAssetsLoading = false;
+            savedAssetItemErrors = {
+                ...savedAssetItemErrors,
+                [asset.key]: reason instanceof Error ? reason.message : "Saved asset could not be opened.",
+            };
         }
+    }
+
+    async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
+        if (generatedAssetController === undefined) throw new Error("Generated asset storage is not ready yet.");
+        await generatedAssetController.saveGenerated(asset, savedAssetsController.signal);
+        acceptAsset(asset.blob, `generated-${uuidv4()}.png`);
+    }
+
+    async function retrySavedAsset(asset: GeneratedMapAssetCard): Promise<void> {
+        if (asset.local === undefined) return;
+        savedAssetItemErrors = { ...savedAssetItemErrors, [asset.key]: "" };
+        try {
+            await generatedAssetController?.retry(asset.local.clientId, savedAssetsController.signal);
+        } catch (reason: unknown) {
+            savedAssetItemErrors = {
+                ...savedAssetItemErrors,
+                [asset.key]: reason instanceof Error ? reason.message : "Upload retry failed.",
+            };
+        }
+    }
+
+    function replaceSavedAssets(items: GeneratedMapAssetCard[]): void {
+        const nextKeys = new Set(items.map((item) => item.key));
+        for (const [key, preview] of savedAssetPreviewUrls) {
+            if (!nextKeys.has(key)) {
+                URL.revokeObjectURL(preview.url);
+                savedAssetPreviewUrls.delete(key);
+            }
+        }
+        savedAssets = items;
+    }
+
+    function savedAssetPreview(asset: GeneratedMapAssetCard): string {
+        if (asset.blob === undefined) return asset.remote?.url ?? "";
+        const existing = savedAssetPreviewUrls.get(asset.key);
+        if (existing?.blob === asset.blob) return existing.url;
+        if (existing !== undefined) URL.revokeObjectURL(existing.url);
+        const url = URL.createObjectURL(asset.blob);
+        savedAssetPreviewUrls.set(asset.key, { blob: asset.blob, url });
+        return url;
+    }
+
+    function savedAssetFileName(asset: GeneratedMapAssetCard): string {
+        return `${asset.remote?.id ?? asset.local?.clientId ?? "saved"}-${asset.name.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 48)}.png`;
     }
 
     function mapDraftToEntityPrefab(draft: MapEditorEntityUploadDraft): EntityPrefab {
@@ -216,6 +272,8 @@
     onDestroy(() => {
         savedAssetsController.abort();
         mapEditorEntityUploadDraftStoreUnsubscriber();
+        for (const preview of savedAssetPreviewUrls.values()) URL.revokeObjectURL(preview.url);
+        savedAssetPreviewUrls.clear();
         if (uploadDraft === undefined && selectedAsset) {
             URL.revokeObjectURL(selectedAsset.previewUrl);
         }
@@ -251,20 +309,27 @@
                     Open one to configure its name, tags, depth, and collision before uploading it into this map.
                 </p>
                 <div class="mt-2 grid max-h-40 grid-cols-3 gap-2 overflow-y-auto">
-                    {#each savedAssets as asset (asset.id)}
-                        <button
-                            type="button"
-                            class="rounded border border-white/10 bg-black/20 p-2 text-left hover:border-cyan-300 disabled:opacity-50"
-                            disabled={savedAssetsLoading}
-                            onclick={() => reuseSavedAsset(asset)}
-                        >
-                            <img
-                                class="h-16 w-full object-contain [image-rendering:pixelated]"
-                                src={asset.url}
-                                alt=""
-                            />
-                            <span class="mt-1 block truncate text-xs">{asset.name}</span>
-                        </button>
+                    {#each savedAssets as asset (asset.key)}
+                        <div class="rounded border border-white/10 bg-black/20 p-2">
+                            <button type="button" class="w-full text-left hover:opacity-80" onclick={() => reuseSavedAsset(asset)}>
+                                <img
+                                    class="h-16 w-full object-contain [image-rendering:pixelated]"
+                                    src={savedAssetPreview(asset)}
+                                    alt=""
+                                />
+                                <span class="mt-1 block truncate text-xs">{asset.name}</span>
+                            </button>
+                            {#if asset.local?.syncStatus === "pending"}
+                                <span class="text-[10px] opacity-60">Saving online…</span>
+                            {:else if asset.local?.syncStatus === "failed"}
+                                <button type="button" class="text-[10px] text-cyan-300 underline" onclick={() => retrySavedAsset(asset)}>Retry upload</button>
+                                <span class="block text-[10px] text-red-400">{asset.local.syncError}</span>
+                            {/if}
+                            {#if savedAssetItemErrors[asset.key]}
+                                <span class="block text-[10px] text-red-400">{savedAssetItemErrors[asset.key]}</span>
+                                <button type="button" class="text-[10px] text-cyan-300 underline" onclick={() => reuseSavedAsset(asset)}>Retry open</button>
+                            {/if}
+                        </div>
                     {/each}
                 </div>
             </section>
@@ -322,7 +387,7 @@
                 promptPlaceholder="A mossy community notice board with small pinned cards, viewed from above…"
                 promptGuidance="Create an object here, then use the existing collision, depth, tags, and interaction controls before placing it."
                 outputSize={{ width: 512, height: 512 }}
-                onAccept={({ blob }) => acceptAsset(blob, `generated-${uuidv4()}.png`)}
+                onAccept={acceptGeneratedAsset}
             />
         </div>
     </div>
