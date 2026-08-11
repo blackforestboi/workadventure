@@ -76,30 +76,48 @@ export interface TeapotMapWriterLease {
     createdAt: string;
 }
 
-export const TEAPOT_ROOM_EDITOR_MODES = ["everyone", "specific", "nobody"] as const;
+export const TEAPOT_ROOM_ACCESS_MODES = ["everyone", "specific", "nobody"] as const;
+export const TEAPOT_ROOM_ACCESS_ROLES = ["view", "edit", "admin"] as const;
 
-export type TeapotRoomEditorMode = (typeof TEAPOT_ROOM_EDITOR_MODES)[number];
+export type TeapotRoomAccessMode = (typeof TEAPOT_ROOM_ACCESS_MODES)[number];
+export type TeapotRoomAccessRole = (typeof TEAPOT_ROOM_ACCESS_ROLES)[number];
 
-export interface TeapotRoomEditorPolicyRecord {
+export interface TeapotRoomAccessPolicyRecord {
     mapId: string;
-    mode: TeapotRoomEditorMode;
+    role: TeapotRoomAccessRole;
+    mode: TeapotRoomAccessMode;
     version: number;
     updatedBy: string | null;
     createdAt: string;
     updatedAt: string;
 }
 
-export interface TeapotRoomEditorGrantRecord {
+export interface TeapotRoomAccessGrantRecord {
     mapId: string;
+    role: TeapotRoomAccessRole;
     userId: string;
     grantedBy: string | null;
     createdAt: string;
 }
 
-export interface TeapotRoomEditorAccessRecord {
-    policy: TeapotRoomEditorPolicyRecord;
-    grants: TeapotRoomEditorGrantRecord[];
+export interface TeapotRoomAccessRecord {
+    policy: TeapotRoomAccessPolicyRecord;
+    grants: TeapotRoomAccessGrantRecord[];
 }
+
+export interface TeapotRoomVisitorRecord {
+    mapId: string;
+    userId: string;
+    firstVisitedAt: string;
+    lastVisitedAt: string;
+    visitCount: number;
+}
+
+/** Backward-compatible editor aliases for the first room-access API revision. */
+export type TeapotRoomEditorMode = TeapotRoomAccessMode;
+export type TeapotRoomEditorPolicyRecord = TeapotRoomAccessPolicyRecord;
+export type TeapotRoomEditorGrantRecord = TeapotRoomAccessGrantRecord;
+export type TeapotRoomEditorAccessRecord = TeapotRoomAccessRecord;
 
 export interface TeapotMcpSessionRecord {
     id: string;
@@ -226,7 +244,7 @@ export interface TeapotCapabilityGrant {
 }
 
 export interface TeapotDataExport {
-    schemaVersion: 2 | 3;
+    schemaVersion: 2 | 3 | 4;
     exportedAt: string;
     users: TeapotIdentity[];
     providerLinks: TeapotProviderLink[];
@@ -240,6 +258,9 @@ export interface TeapotDataExport {
     writerLeases: TeapotMapWriterLease[];
     roomEditorPolicies?: TeapotRoomEditorPolicyRecord[];
     roomEditorGrants?: TeapotRoomEditorGrantRecord[];
+    roomAccessPolicies?: TeapotRoomAccessPolicyRecord[];
+    roomAccessGrants?: TeapotRoomAccessGrantRecord[];
+    roomVisitors?: TeapotRoomVisitorRecord[];
     mcpSessions: TeapotMcpSessionRecord[];
     mcpProposals: TeapotMcpProposalRecord[];
     mcpApprovals: TeapotMcpApprovalRecord[];

@@ -13,6 +13,9 @@ const mcpMocks = vi.hoisted(() => ({
     authenticateToken: vi.fn(),
     capabilities: vi.fn(() => ({})),
 }));
+const roomRuntimeMocks = vi.hoisted(() => ({ getTeapotDataServices: vi.fn() }));
+const roomIdentityMocks = vi.hoisted(() => ({ resolveTeapotRequestIdentity: vi.fn() }));
+const roomAdminMocks = vi.hoisted(() => ({ fetchMemberDataByUuid: vi.fn() }));
 
 vi.mock("../../src/pusher/middlewares/Authenticated", () => authMocks);
 vi.mock("../../src/pusher/middlewares/TeapotAuthoringMiddleware", () => authoringMocks);
@@ -22,11 +25,11 @@ vi.mock("../../src/pusher/enums/EnvironmentVariable", () => ({
     TEAPOT_WOKA_STORAGE_DIRECTORY: "/tmp/teapot-authoring-route-test",
 }));
 vi.mock("../../src/pusher/services/AdminService", () => ({
-    adminService: { fetchMemberDataByUuid: vi.fn() },
+    adminService: roomAdminMocks,
 }));
 vi.mock("../../src/pusher/teapot/TeapotDataRuntime", () => ({
     getTeapotDataRuntimeStatus: () => ({ initialized: true, durable: false }),
-    getTeapotDataServices: vi.fn(),
+    getTeapotDataServices: roomRuntimeMocks.getTeapotDataServices,
 }));
 vi.mock("../../src/pusher/teapot/TeapotMapPublicationService", () => ({
     TeapotMapPublicationError: class extends Error {},
@@ -37,7 +40,7 @@ vi.mock("../../src/pusher/teapot/TeapotMcpAuthoringService", () => ({
     teapotMcpAuthoringService: mcpMocks,
 }));
 vi.mock("../../src/pusher/teapot/TeapotRequestIdentityResolver", () => ({
-    resolveTeapotRequestIdentity: vi.fn(),
+    resolveTeapotRequestIdentity: roomIdentityMocks.resolveTeapotRequestIdentity,
 }));
 
 import { authenticated } from "../../src/pusher/middlewares/Authenticated";
@@ -57,6 +60,8 @@ import type { TeapotAgentBridgeClient } from "../../src/pusher/teapot/TeapotAgen
 import type { TeapotGeneratedAssetService } from "../../src/pusher/teapot/TeapotGeneratedAssetService";
 import type { TeapotTilesetService } from "../../src/pusher/teapot/TeapotTilesetService";
 import type { TeapotWokaService } from "../../src/pusher/teapot/TeapotWokaService";
+import { createTeapotDataServices } from "../../src/pusher/teapot/createTeapotDataServices";
+import { InMemoryTeapotDataRepository } from "../../src/pusher/teapot/InMemoryTeapotDataRepository";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -161,13 +166,95 @@ describe("Teapot authoring route coverage", () => {
         ];
         for (const [method, path] of authoringRoutes) expectAuthoringRoute(app, method, path);
 
-        expectAuthenticatedRoute(app, "GET", "/teapot/rooms/editor-access");
-        expectAuthenticatedRoute(app, "PUT", "/teapot/rooms/editor-access");
+        expectAuthenticatedRoute(app, "GET", "/teapot/rooms/access");
+        expectAuthenticatedRoute(app, "PUT", "/teapot/rooms/access");
 
         expectPublicRoute(app, "/teapot/woka-assets/:assetId.png");
         expectPublicRoute(app, "/teapot/tileset-assets/:assetId.png");
         expectPublicRoute(app, "/teapot/generated-assets/:assetId.png");
         expectPublicRoute(app, "/teapot/health/ready");
+    });
+
+    it("lets delegated room admins read visitor history and assign a never-visited username", async () => {
+        let nextId = 0;
+        const repository = new InMemoryTeapotDataRepository({ createId: () => `room-record-${++nextId}` });
+        const services = createTeapotDataServices(repository);
+        const admin = await repository.resolveIdentity({
+            provider: "workadventure",
+            providerSubject: "admin-user",
+            displayName: "Admin User",
+        });
+        const visitor = await repository.resolveIdentity({
+            provider: "workadventure",
+            providerSubject: "past-visitor",
+            displayName: "Past Visitor",
+        });
+        await repository.replaceRoomAccessPolicy({
+            mapId: "https://maps.test/room.tmj",
+            role: "admin",
+            mode: "specific",
+            expectedVersion: null,
+            memberIds: [admin.id],
+            actorId: admin.id,
+        });
+        await repository.recordRoomVisit("https://maps.test/room.tmj", visitor.id);
+        roomRuntimeMocks.getTeapotDataServices.mockReturnValue(services);
+        roomIdentityMocks.resolveTeapotRequestIdentity.mockImplementation((identifier: string, displayName?: string) =>
+            repository.resolveIdentity({ provider: "workadventure", providerSubject: identifier, displayName }),
+        );
+        roomAdminMocks.fetchMemberDataByUuid.mockResolvedValue({ status: "ok", tags: [] });
+
+        const app = new RouteRecordingApp();
+        new TeapotRoomEditorAccessController(app as unknown as Application, {
+            resolve: () => Promise.resolve("https://maps.test/room.tmj"),
+        });
+        const response = Object.assign(new RecordingResponse(), {
+            userIdentifier: "admin-user",
+            username: "Admin User",
+            accessToken: "token",
+            tags: [],
+        });
+        const getHandler = app.routes.get("GET /teapot/rooms/access")?.[1] as RequestHandler;
+        await getHandler(
+            {
+                query: { roomId: "https://play.test/~/room" },
+                header: () => "token",
+                ip: "127.0.0.1",
+            } as unknown as Request,
+            response as unknown as Response,
+            vi.fn(),
+        );
+        expect(response.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                policies: expect.arrayContaining([expect.objectContaining({ role: "admin", mode: "specific" })]),
+                visitors: [expect.objectContaining({ identifier: "past-visitor", visitCount: 1 })],
+            }),
+        );
+
+        response.json.mockClear();
+        const putHandler = app.routes.get("PUT /teapot/rooms/access")?.[1] as RequestHandler;
+        await putHandler(
+            {
+                body: {
+                    roomId: "https://play.test/~/room",
+                    role: "edit",
+                    mode: "specific",
+                    expectedVersion: 0,
+                    members: [{ identifier: "future-editor", displayName: "Future Editor" }],
+                },
+                header: () => "token",
+                ip: "127.0.0.1",
+            } as unknown as Request,
+            response as unknown as Response,
+            vi.fn(),
+        );
+        expect(response.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                role: "edit",
+                members: [expect.objectContaining({ identifier: "future-editor", displayName: "Future Editor" })],
+            }),
+        );
+        await expect(repository.listRoomVisitors("https://maps.test/room.tmj")).resolves.toHaveLength(1);
     });
 
     it("rechecks the current owner behind direct MCP bearer routes", async () => {

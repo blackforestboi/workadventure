@@ -186,4 +186,116 @@ describe("TeapotRoomAccessService", () => {
             }),
         ).rejects.toBeInstanceOf(TeapotAuthorizationError);
     });
+
+    it("enforces view policies and keeps legacy viewing only while view is unconfigured", async () => {
+        const { repository, services, creator, member } = await setup();
+        const join = {
+            actorId: member.id,
+            mapId: MAP_ID,
+            successfulJoin: true,
+            legacyCanEdit: false,
+            legacyCanAdmin: false,
+        };
+
+        await expect(services.roomAccess.assertCanView(join)).resolves.toBeUndefined();
+        await repository.replaceRoomAccessPolicy({
+            mapId: MAP_ID,
+            role: "view",
+            mode: "nobody",
+            expectedVersion: null,
+            memberIds: [],
+            actorId: creator.id,
+        });
+        await expect(services.roomAccess.assertCanView(join)).rejects.toBeInstanceOf(TeapotAuthorizationError);
+        await repository.replaceRoomAccessPolicy({
+            mapId: MAP_ID,
+            role: "view",
+            mode: "specific",
+            expectedVersion: 1,
+            memberIds: [member.id],
+            actorId: creator.id,
+        });
+        await expect(services.roomAccess.assertCanView(join)).resolves.toBeUndefined();
+    });
+
+    it("treats admin as edit and view, and edit as view", async () => {
+        const { repository, services, creator, member } = await setup();
+        await repository.replaceRoomAccessPolicy({
+            mapId: MAP_ID,
+            role: "view",
+            mode: "nobody",
+            expectedVersion: null,
+            memberIds: [],
+            actorId: creator.id,
+        });
+        await repository.replaceRoomAccessPolicy({
+            mapId: MAP_ID,
+            role: "edit",
+            mode: "specific",
+            expectedVersion: null,
+            memberIds: [member.id],
+            actorId: creator.id,
+        });
+        const join = {
+            actorId: member.id,
+            mapId: MAP_ID,
+            successfulJoin: true,
+            legacyCanEdit: false,
+            legacyCanAdmin: false,
+        };
+        await expect(services.roomAccess.assertCanView(join)).resolves.toBeUndefined();
+
+        await repository.replaceRoomAccessPolicy({
+            mapId: MAP_ID,
+            role: "edit",
+            mode: "nobody",
+            expectedVersion: 1,
+            memberIds: [],
+            actorId: creator.id,
+        });
+        await repository.replaceRoomAccessPolicy({
+            mapId: MAP_ID,
+            role: "admin",
+            mode: "specific",
+            expectedVersion: null,
+            memberIds: [member.id],
+            actorId: creator.id,
+        });
+        await expect(
+            services.roomAccess.assertCanEdit({
+                actorId: member.id,
+                mapId: MAP_ID,
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false },
+            }),
+        ).resolves.toBeUndefined();
+        await expect(services.roomAccess.assertCanView(join)).resolves.toBeUndefined();
+        await expect(
+            services.roomAccess.assertCanAdmin({
+                actorId: member.id,
+                mapId: MAP_ID,
+                successfulJoin: true,
+                legacyCanAdmin: false,
+            }),
+        ).resolves.toBeUndefined();
+    });
+
+    it("allows immutable platform room admins to recover every room policy", async () => {
+        const { repository, services, creator } = await setup();
+        await repository.replaceRoomAccessPolicy({
+            mapId: MAP_ID,
+            role: "admin",
+            mode: "nobody",
+            expectedVersion: null,
+            memberIds: [],
+            actorId: creator.id,
+        });
+        await expect(
+            services.roomAccess.assertCanAdmin({
+                actorId: creator.id,
+                mapId: MAP_ID,
+                successfulJoin: true,
+                legacyCanAdmin: true,
+            }),
+        ).resolves.toBeUndefined();
+    });
 });

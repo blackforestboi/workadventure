@@ -471,13 +471,37 @@ export class IoSocketController {
                     }
 
                     const legacyCanEdit = userData.canEdit ?? false;
-                    userData.canEdit = await teapotWamRevisionCoordinator.resolveJoinCanEdit({
-                        roomId,
-                        actorIdentifier: userData.userUuid,
-                        authToken: tokenData?.accessToken,
-                        legacyCanEdit,
-                        managementUiAccess: memberTags.includes("admin"),
-                    });
+                    const legacyCanAdmin = memberTags.includes("admin");
+                    try {
+                        const roomAccess = await teapotWamRevisionCoordinator.resolveJoinAccess({
+                            roomId,
+                            actorIdentifier: userData.userUuid,
+                            authToken: tokenData?.accessToken,
+                            legacyCanEdit,
+                            managementUiAccess: legacyCanAdmin,
+                        });
+                        userData.canEdit = roomAccess.canEdit;
+                        if (roomAccess.canAdmin && !memberTags.includes("admin")) memberTags = [...memberTags, "admin"];
+                        if (roomAccess.canEdit && !memberTags.includes("editor"))
+                            memberTags = [...memberTags, "editor"];
+                    } catch (error: unknown) {
+                        console.info("room view access denied", { roomId, userUuid: userData.userUuid });
+                        reject({
+                            rejected: true,
+                            reason: "error",
+                            error: {
+                                status: "error",
+                                type: "error",
+                                title: "This room is private",
+                                subtitle: "You do not have permission to view this room",
+                                image: "",
+                                code: "ROOM_VIEW_NOT_ALLOWED",
+                                details:
+                                    error instanceof Error ? error.message : "Ask a room administrator for access.",
+                            },
+                        } satisfies UpgradeFailedData);
+                        return;
+                    }
 
                     if (isAborted()) {
                         console.info("Ouch! Client disconnected before we could upgrade it!");
@@ -506,6 +530,7 @@ export class IoSocketController {
                         applications: userData.applications,
                         canEdit: userData.canEdit ?? false,
                         legacyCanEdit,
+                        legacyCanAdmin,
                         spaceUserId: "",
                         backConnection: undefined,
                         listenedZones: new Set<string>(),
@@ -1129,6 +1154,7 @@ export class IoSocketController {
                                         actorIdentifier: socketData.userUuid,
                                         authToken: socketData.token,
                                         legacyCanEdit: socketData.legacyCanEdit,
+                                        legacyCanAdmin: socketData.legacyCanAdmin,
                                     });
                                     socketManager.forwardMessageToBack(socket, message.message);
                                 } catch (error: unknown) {

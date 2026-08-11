@@ -41,6 +41,7 @@ describe("room editor policy repository", () => {
         expect(created.grants).toEqual([
             {
                 mapId: "https://maps.test/room.tmj",
+                role: "edit",
                 userId: editor.id,
                 grantedBy: actor.id,
                 createdAt: "2026-08-11T00:00:00.000Z",
@@ -131,7 +132,7 @@ describe("room editor policy repository", () => {
         });
     });
 
-    it("exports policies in schema 3 and restores schema 2 exports without them", async () => {
+    it("exports policies in schema 4 and restores schema 2 exports without them", async () => {
         const { repository } = createFixture();
         const actor = await createIdentity(repository, "admin");
         const editor = await createIdentity(repository, "editor");
@@ -145,9 +146,9 @@ describe("room editor policy repository", () => {
         });
 
         const exported = await repository.exportData();
-        expect(exported.schemaVersion).toBe(3);
-        expect(exported.roomEditorPolicies).toHaveLength(1);
-        expect(exported.roomEditorGrants).toHaveLength(1);
+        expect(exported.schemaVersion).toBe(4);
+        expect(exported.roomAccessPolicies).toHaveLength(1);
+        expect(exported.roomAccessGrants).toHaveLength(1);
 
         const restored = new InMemoryTeapotDataRepository();
         await restored.restoreData(exported);
@@ -155,10 +156,58 @@ describe("room editor policy repository", () => {
         await expect(restored.listRoomEditorGrants(mapId)).resolves.toHaveLength(1);
 
         const legacyFields = structuredClone(exported);
-        delete legacyFields.roomEditorPolicies;
-        delete legacyFields.roomEditorGrants;
+        delete legacyFields.roomAccessPolicies;
+        delete legacyFields.roomAccessGrants;
+        delete legacyFields.roomVisitors;
         const legacyRestored = new InMemoryTeapotDataRepository();
         await legacyRestored.restoreData({ ...legacyFields, schemaVersion: 2 });
         await expect(legacyRestored.getRoomEditorPolicy(mapId)).resolves.toBeNull();
+    });
+
+    it("stores independent role policies and the complete visitor history", async () => {
+        const { repository } = createFixture();
+        const actor = await createIdentity(repository, "admin");
+        const visitor = await createIdentity(repository, "visitor");
+        const mapId = "https://maps.test/room.tmj";
+
+        await repository.replaceRoomAccessPolicy({
+            mapId,
+            role: "view",
+            mode: "specific",
+            expectedVersion: null,
+            memberIds: [visitor.id],
+            actorId: actor.id,
+        });
+        await repository.replaceRoomAccessPolicy({
+            mapId,
+            role: "admin",
+            mode: "nobody",
+            expectedVersion: null,
+            memberIds: [],
+            actorId: actor.id,
+        });
+        await repository.recordRoomVisit(mapId, visitor.id);
+        await repository.recordRoomVisit(mapId, visitor.id);
+
+        await expect(repository.getRoomAccessPolicy(mapId, "view")).resolves.toMatchObject({
+            role: "view",
+            mode: "specific",
+        });
+        await expect(repository.getRoomAccessPolicy(mapId, "edit")).resolves.toBeNull();
+        await expect(repository.getRoomAccessPolicy(mapId, "admin")).resolves.toMatchObject({
+            role: "admin",
+            mode: "nobody",
+        });
+        await expect(repository.listRoomAccessGrants(mapId, "view")).resolves.toHaveLength(1);
+        await expect(repository.listRoomVisitors(mapId)).resolves.toEqual([
+            expect.objectContaining({ mapId, userId: visitor.id, visitCount: 2 }),
+        ]);
+
+        const exported = await repository.exportData();
+        const restored = new InMemoryTeapotDataRepository();
+        await restored.restoreData(exported);
+        await expect(restored.listRoomVisitors(mapId)).resolves.toEqual([
+            expect.objectContaining({ mapId, userId: visitor.id, visitCount: 2 }),
+        ]);
     });
 });

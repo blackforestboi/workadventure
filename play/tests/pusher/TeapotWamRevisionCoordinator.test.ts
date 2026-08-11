@@ -120,7 +120,7 @@ describe("TeapotWamRevisionCoordinator", () => {
         ).resolves.toBe(false);
     });
 
-    it("exposes settings to current admins without granting map mutations", async () => {
+    it("treats the immutable room admin as an effective admin, editor, and viewer", async () => {
         const { coordinator, identity, repository } = await setup();
         await repository.replaceRoomEditorPolicy({
             mapId: "https://maps.test/world.tmj",
@@ -144,7 +144,47 @@ describe("TeapotWamRevisionCoordinator", () => {
                 roomId: "https://play.test/~/world.wam",
                 actorIdentifier: identity.id,
                 legacyCanEdit: false,
+                legacyCanAdmin: true,
             }),
-        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+        ).resolves.toBeUndefined();
+        await coordinator.acknowledgeFailure("admin-content-edit");
+    });
+
+    it("denies unauthorized viewers before admission and records every successful visit", async () => {
+        const { coordinator, identity, repository } = await setup();
+        await repository.replaceRoomAccessPolicy({
+            mapId: "https://maps.test/world.tmj",
+            role: "view",
+            mode: "nobody",
+            expectedVersion: null,
+            memberIds: [],
+            actorId: identity.id,
+        });
+        const join = {
+            roomId: "https://play.test/~/world.wam",
+            actorIdentifier: identity.id,
+            legacyCanEdit: false,
+            managementUiAccess: false,
+        };
+        await expect(coordinator.resolveJoinAccess(join)).rejects.toBeInstanceOf(TeapotAuthorizationError);
+        await expect(repository.listRoomVisitors("https://maps.test/world.tmj")).resolves.toEqual([]);
+
+        await repository.replaceRoomAccessPolicy({
+            mapId: "https://maps.test/world.tmj",
+            role: "view",
+            mode: "specific",
+            expectedVersion: 1,
+            memberIds: [identity.id],
+            actorId: identity.id,
+        });
+        await expect(coordinator.resolveJoinAccess(join)).resolves.toMatchObject({
+            canView: true,
+            canEdit: false,
+            canAdmin: false,
+        });
+        await coordinator.resolveJoinAccess(join);
+        await expect(repository.listRoomVisitors("https://maps.test/world.tmj")).resolves.toEqual([
+            expect.objectContaining({ userId: identity.id, visitCount: 2 }),
+        ]);
     });
 });

@@ -34,6 +34,7 @@ import type {
     CreateTeapotMcpProposalInput,
     CreateTeapotOAuthStateInput,
     ResolveTeapotIdentityInput,
+    ReplaceTeapotRoomAccessPolicyInput,
     ReplaceTeapotRoomEditorPolicyInput,
     TransitionTeapotMcpProposalInput,
     TeapotDataRepository,
@@ -61,6 +62,11 @@ import type {
     TeapotRoomEditorAccessRecord,
     TeapotRoomEditorGrantRecord,
     TeapotRoomEditorPolicyRecord,
+    TeapotRoomAccessGrantRecord,
+    TeapotRoomAccessPolicyRecord,
+    TeapotRoomAccessRecord,
+    TeapotRoomAccessRole,
+    TeapotRoomVisitorRecord,
     TeapotRoleAssignment,
 } from "./TeapotRecords";
 
@@ -81,8 +87,9 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
     private readonly activeWokaSelections = new Map<string, TeapotActiveWokaSelectionRecord>();
     private readonly mapRevisions = new Map<string, TeapotMapRevisionRecord>();
     private readonly writerLeases = new Map<string, TeapotMapWriterLease>();
-    private readonly roomEditorPolicies = new Map<string, TeapotRoomEditorPolicyRecord>();
-    private readonly roomEditorGrants = new Map<string, TeapotRoomEditorGrantRecord>();
+    private readonly roomAccessPolicies = new Map<string, TeapotRoomAccessPolicyRecord>();
+    private readonly roomAccessGrants = new Map<string, TeapotRoomAccessGrantRecord>();
+    private readonly roomVisitors = new Map<string, TeapotRoomVisitorRecord>();
     private readonly mcpSessions = new Map<string, TeapotMcpSessionRecord>();
     private readonly mcpSessionIdsByTokenHash = new Map<string, string>();
     private readonly mcpProposals = new Map<string, TeapotMcpProposalRecord>();
@@ -533,35 +540,58 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
     }
 
     async getRoomEditorPolicy(mapId: string): Promise<TeapotRoomEditorPolicyRecord | null> {
-        const policy = this.roomEditorPolicies.get(mapId);
-        return policy === undefined ? null : structuredClone(policy);
+        return this.getRoomAccessPolicy(mapId, "edit");
     }
 
     async listRoomEditorGrants(mapId: string): Promise<TeapotRoomEditorGrantRecord[]> {
+        return this.listRoomAccessGrants(mapId, "edit");
+    }
+
+    async replaceRoomEditorPolicy(input: ReplaceTeapotRoomEditorPolicyInput): Promise<TeapotRoomEditorAccessRecord> {
+        return this.replaceRoomAccessPolicy({
+            mapId: input.mapId,
+            role: "edit",
+            mode: input.mode,
+            expectedVersion: input.expectedVersion,
+            memberIds: input.editorIds,
+            actorId: input.actorId,
+        });
+    }
+
+    async getRoomAccessPolicy(mapId: string, role: TeapotRoomAccessRole): Promise<TeapotRoomAccessPolicyRecord | null> {
+        const policy = this.roomAccessPolicies.get(`${mapId}\u0000${role}`);
+        return policy === undefined ? null : structuredClone(policy);
+    }
+
+    async listRoomAccessGrants(mapId: string, role: TeapotRoomAccessRole): Promise<TeapotRoomAccessGrantRecord[]> {
         return structuredClone(
             this.sorted(
-                [...this.roomEditorGrants.values()].filter((grant) => grant.mapId === mapId),
+                [...this.roomAccessGrants.values()].filter((grant) => grant.mapId === mapId && grant.role === role),
                 (grant) => grant.userId,
             ),
         );
     }
 
-    async replaceRoomEditorPolicy(input: ReplaceTeapotRoomEditorPolicyInput): Promise<TeapotRoomEditorAccessRecord> {
+    async replaceRoomAccessPolicy(input: ReplaceTeapotRoomAccessPolicyInput): Promise<TeapotRoomAccessRecord> {
         this.requireIdentity(input.actorId);
-        const editorIds = [...new Set(input.editorIds)].sort();
-        for (const editorId of editorIds) this.requireIdentity(editorId);
+        const memberIds = [...new Set(input.memberIds)].sort();
+        for (const memberId of memberIds) this.requireIdentity(memberId);
 
-        const existing = this.roomEditorPolicies.get(input.mapId);
+        const policyKey = `${input.mapId}\u0000${input.role}`;
+        const existing = this.roomAccessPolicies.get(policyKey);
         if (
             (existing === undefined && input.expectedVersion !== null) ||
             (existing !== undefined && existing.version !== input.expectedVersion)
         ) {
-            throw new TeapotDataConflictError(`Room editor policy ${input.mapId} changed before it could be saved`);
+            throw new TeapotDataConflictError(
+                `Room ${input.role} policy ${input.mapId} changed before it could be saved`,
+            );
         }
 
         const timestamp = this.nowIso();
-        const policy: TeapotRoomEditorPolicyRecord = {
+        const policy: TeapotRoomAccessPolicyRecord = {
             mapId: input.mapId,
+            role: input.role,
             mode: input.mode,
             version: (existing?.version ?? 0) + 1,
             updatedBy: input.actorId,
@@ -569,20 +599,49 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             updatedAt: timestamp,
         };
 
-        for (const key of this.roomEditorGrants.keys()) {
-            if (key.startsWith(`${input.mapId}\u0000`)) this.roomEditorGrants.delete(key);
+        for (const key of this.roomAccessGrants.keys()) {
+            if (key.startsWith(`${input.mapId}\u0000${input.role}\u0000`)) this.roomAccessGrants.delete(key);
         }
-        const grants = editorIds.map<TeapotRoomEditorGrantRecord>((userId) => ({
+        const grants = memberIds.map<TeapotRoomAccessGrantRecord>((userId) => ({
             mapId: input.mapId,
+            role: input.role,
             userId,
             grantedBy: input.actorId,
             createdAt: timestamp,
         }));
-        this.roomEditorPolicies.set(input.mapId, policy);
+        this.roomAccessPolicies.set(policyKey, policy);
         for (const grant of grants) {
-            this.roomEditorGrants.set(`${grant.mapId}\u0000${grant.userId}`, grant);
+            this.roomAccessGrants.set(`${grant.mapId}\u0000${grant.role}\u0000${grant.userId}`, grant);
         }
         return structuredClone({ policy, grants });
+    }
+
+    async recordRoomVisit(mapId: string, userId: string): Promise<TeapotRoomVisitorRecord> {
+        this.requireIdentity(userId);
+        const key = `${mapId}\u0000${userId}`;
+        const existing = this.roomVisitors.get(key);
+        const timestamp = this.nowIso();
+        const visitor: TeapotRoomVisitorRecord = {
+            mapId,
+            userId,
+            firstVisitedAt: existing?.firstVisitedAt ?? timestamp,
+            lastVisitedAt: timestamp,
+            visitCount: (existing?.visitCount ?? 0) + 1,
+        };
+        this.roomVisitors.set(key, visitor);
+        return structuredClone(visitor);
+    }
+
+    async listRoomVisitors(mapId: string): Promise<TeapotRoomVisitorRecord[]> {
+        return structuredClone(
+            [...this.roomVisitors.values()]
+                .filter((visitor) => visitor.mapId === mapId)
+                .sort(
+                    (left, right) =>
+                        right.lastVisitedAt.localeCompare(left.lastVisitedAt) ||
+                        left.userId.localeCompare(right.userId),
+                ),
+        );
     }
 
     async createMcpSession(input: CreateTeapotMcpSessionInput): Promise<TeapotMcpSessionRecord> {
@@ -978,7 +1037,7 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
 
     async exportData(): Promise<TeapotDataExport> {
         return structuredClone({
-            schemaVersion: 3,
+            schemaVersion: 4,
             exportedAt: this.nowIso(),
             users: this.sorted(this.users.values(), (record) => record.id),
             providerLinks: this.sorted(this.providerLinks.values(), (record) =>
@@ -998,11 +1057,15 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             activeWokaSelections: this.sorted(this.activeWokaSelections.values(), (record) => record.ownerId),
             mapRevisions: this.sorted(this.mapRevisions.values(), (record) => record.mapId),
             writerLeases: this.sorted(this.writerLeases.values(), (record) => record.mapId),
-            roomEditorPolicies: this.sorted(this.roomEditorPolicies.values(), (record) => record.mapId),
-            roomEditorGrants: this.sorted(
-                this.roomEditorGrants.values(),
-                (record) => `${record.mapId}:${record.userId}`,
+            roomAccessPolicies: this.sorted(
+                this.roomAccessPolicies.values(),
+                (record) => `${record.mapId}:${record.role}`,
             ),
+            roomAccessGrants: this.sorted(
+                this.roomAccessGrants.values(),
+                (record) => `${record.mapId}:${record.role}:${record.userId}`,
+            ),
+            roomVisitors: this.sorted(this.roomVisitors.values(), (record) => `${record.mapId}:${record.userId}`),
             mcpSessions: this.sorted(this.mcpSessions.values(), (record) => record.id),
             mcpProposals: this.sorted(this.mcpProposals.values(), (record) => record.id),
             mcpApprovals: this.sorted(this.mcpApprovals.values(), (record) => record.id),
@@ -1015,7 +1078,7 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
     }
 
     async restoreData(data: TeapotDataExport): Promise<void> {
-        if (data.schemaVersion !== 2 && data.schemaVersion !== 3) {
+        if (data.schemaVersion !== 2 && data.schemaVersion !== 3 && data.schemaVersion !== 4) {
             throw new TeapotRestoreConflictError(`Unsupported Teapot export schema ${String(data.schemaVersion)}`);
         }
         if (!this.isEmpty()) {
@@ -1053,25 +1116,39 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
         }
         for (const revision of data.mapRevisions) this.mapRevisions.set(revision.mapId, structuredClone(revision));
         for (const lease of data.writerLeases) this.writerLeases.set(lease.mapId, structuredClone(lease));
-        for (const policy of data.roomEditorPolicies ?? []) {
+        const roomAccessPolicies =
+            data.roomAccessPolicies ??
+            data.roomEditorPolicies?.map((policy) => ({ ...policy, role: "edit" as const })) ??
+            [];
+        const roomAccessGrants =
+            data.roomAccessGrants ?? data.roomEditorGrants?.map((grant) => ({ ...grant, role: "edit" as const })) ?? [];
+        for (const policy of roomAccessPolicies) {
             if (policy.updatedBy !== null && !this.users.has(policy.updatedBy)) {
                 throw new TeapotRestoreConflictError(
-                    `Room editor policy ${policy.mapId} references an invalid updater`,
+                    `Room ${policy.role} policy ${policy.mapId} references an invalid updater`,
                 );
             }
-            this.roomEditorPolicies.set(policy.mapId, structuredClone(policy));
+            this.roomAccessPolicies.set(`${policy.mapId}\u0000${policy.role}`, structuredClone(policy));
         }
-        for (const grant of data.roomEditorGrants ?? []) {
+        for (const grant of roomAccessGrants) {
             if (
-                !this.roomEditorPolicies.has(grant.mapId) ||
+                !this.roomAccessPolicies.has(`${grant.mapId}\u0000${grant.role}`) ||
                 !this.users.has(grant.userId) ||
                 (grant.grantedBy !== null && !this.users.has(grant.grantedBy))
             ) {
                 throw new TeapotRestoreConflictError(
-                    `Room editor grant ${grant.mapId}:${grant.userId} references invalid data`,
+                    `Room ${grant.role} grant ${grant.mapId}:${grant.userId} references invalid data`,
                 );
             }
-            this.roomEditorGrants.set(`${grant.mapId}\u0000${grant.userId}`, structuredClone(grant));
+            this.roomAccessGrants.set(`${grant.mapId}\u0000${grant.role}\u0000${grant.userId}`, structuredClone(grant));
+        }
+        for (const visitor of data.roomVisitors ?? []) {
+            if (!this.users.has(visitor.userId)) {
+                throw new TeapotRestoreConflictError(
+                    `Room visitor ${visitor.mapId}:${visitor.userId} references an invalid user`,
+                );
+            }
+            this.roomVisitors.set(`${visitor.mapId}\u0000${visitor.userId}`, structuredClone(visitor));
         }
         for (const session of data.mcpSessions) {
             this.mcpSessions.set(session.id, structuredClone(session));
@@ -1130,8 +1207,9 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             this.activeWokaSelections.size === 0 &&
             this.mapRevisions.size === 0 &&
             this.writerLeases.size === 0 &&
-            this.roomEditorPolicies.size === 0 &&
-            this.roomEditorGrants.size === 0 &&
+            this.roomAccessPolicies.size === 0 &&
+            this.roomAccessGrants.size === 0 &&
+            this.roomVisitors.size === 0 &&
             this.mcpSessions.size === 0 &&
             this.mcpProposals.size === 0 &&
             this.mcpApprovals.size === 0 &&

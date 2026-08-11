@@ -32,6 +32,12 @@ import type {
     TeapotRoomEditorGrantRecord,
     TeapotRoomEditorMode,
     TeapotRoomEditorPolicyRecord,
+    TeapotRoomAccessGrantRecord,
+    TeapotRoomAccessMode,
+    TeapotRoomAccessPolicyRecord,
+    TeapotRoomAccessRecord,
+    TeapotRoomAccessRole,
+    TeapotRoomVisitorRecord,
 } from "./TeapotRecords";
 
 export interface ResolveTeapotIdentityInput {
@@ -85,6 +91,15 @@ export interface ReplaceTeapotRoomEditorPolicyInput {
     mode: TeapotRoomEditorMode;
     expectedVersion: number | null;
     editorIds: string[];
+    actorId: string;
+}
+
+export interface ReplaceTeapotRoomAccessPolicyInput {
+    mapId: string;
+    role: TeapotRoomAccessRole;
+    mode: TeapotRoomAccessMode;
+    expectedVersion: number | null;
+    memberIds: string[];
     actorId: string;
 }
 
@@ -218,6 +233,11 @@ export interface TeapotDataRepository {
     getRoomEditorPolicy(mapId: string): Promise<TeapotRoomEditorPolicyRecord | null>;
     listRoomEditorGrants(mapId: string): Promise<TeapotRoomEditorGrantRecord[]>;
     replaceRoomEditorPolicy(input: ReplaceTeapotRoomEditorPolicyInput): Promise<TeapotRoomEditorAccessRecord>;
+    getRoomAccessPolicy(mapId: string, role: TeapotRoomAccessRole): Promise<TeapotRoomAccessPolicyRecord | null>;
+    listRoomAccessGrants(mapId: string, role: TeapotRoomAccessRole): Promise<TeapotRoomAccessGrantRecord[]>;
+    replaceRoomAccessPolicy(input: ReplaceTeapotRoomAccessPolicyInput): Promise<TeapotRoomAccessRecord>;
+    recordRoomVisit(mapId: string, userId: string): Promise<TeapotRoomVisitorRecord>;
+    listRoomVisitors(mapId: string): Promise<TeapotRoomVisitorRecord[]>;
 
     createMcpSession(input: CreateTeapotMcpSessionInput): Promise<TeapotMcpSessionRecord>;
     getMcpSession(sessionId: string): Promise<TeapotMcpSessionRecord | null>;

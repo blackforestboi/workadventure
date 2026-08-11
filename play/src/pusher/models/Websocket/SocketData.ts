@@ -46,6 +46,8 @@ export type ConnectingSocketData = {
     canEdit: boolean;
     /** Original admin-service edit decision, kept separate from join-only settings visibility. */
     legacyCanEdit: boolean;
+    /** Original room-admin tag, used as the immutable owner/admin override. */
+    legacyCanAdmin: boolean;
     spaceUserId: string;
     backConnection?: BackConnection;
     listenedZones: Set<string>;

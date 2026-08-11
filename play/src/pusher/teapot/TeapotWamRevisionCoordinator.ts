@@ -4,6 +4,7 @@ import type { TeapotIdentity } from "../../common/Teapot/TeapotIdentity";
 import { adminService } from "../services/AdminService";
 import type { TeapotDataServices } from "./createTeapotDataServices";
 import { getTeapotDataServices } from "./TeapotDataRuntime";
+import { TeapotAuthorizationError } from "./TeapotDataErrors";
 import { resolveTeapotRequestIdentity } from "./TeapotRequestIdentityResolver";
 import type { TeapotMapWriterLease } from "./TeapotRecords";
 
@@ -32,6 +33,7 @@ export interface BeginWamMutationInput {
     actorIdentifier: string;
     authToken?: string;
     legacyCanEdit: boolean;
+    legacyCanAdmin?: boolean;
 }
 
 export interface ResolveWamJoinAccessInput {
@@ -40,6 +42,14 @@ export interface ResolveWamJoinAccessInput {
     authToken?: string;
     legacyCanEdit: boolean;
     managementUiAccess: boolean;
+}
+
+export interface ResolvedWamJoinAccess {
+    mapId: string;
+    actorId: string;
+    canView: boolean;
+    canEdit: boolean;
+    canAdmin: boolean;
 }
 
 export interface TeapotMapUrlResolver {
@@ -103,27 +113,53 @@ export class TeapotWamRevisionCoordinator {
 
     public async resolveJoinCanEdit(input: ResolveWamJoinAccessInput): Promise<boolean> {
         try {
-            const mapId = await this.mapUrlResolver.resolve(input.roomId, input.authToken);
-            const dataServices = this.services();
-            if ((await dataServices.repository.getRoomEditorPolicy(mapId)) === null) {
-                return input.legacyCanEdit || input.managementUiAccess;
-            }
-            if (input.managementUiAccess) return true;
-            if (input.actorIdentifier.trim().length === 0) return false;
-            const identity = await this.identityResolver(input.actorIdentifier);
-            await dataServices.roomAccess.assertCanEdit({
-                actorId: identity.id,
-                mapId,
-                context: {
-                    kind: "wam",
-                    successfulJoin: true,
-                    legacyCanEdit: input.legacyCanEdit,
-                },
-            });
-            return true;
+            return (await this.resolveJoinAccess(input)).canEdit;
         } catch {
             return false;
         }
+    }
+
+    public async resolveJoinAccess(input: ResolveWamJoinAccessInput): Promise<ResolvedWamJoinAccess> {
+        if (input.actorIdentifier.trim().length === 0) {
+            throw new TeapotAuthorizationError("Room access requires a stable user identity");
+        }
+        const [mapId, identity] = await Promise.all([
+            this.mapUrlResolver.resolve(input.roomId, input.authToken),
+            this.identityResolver(input.actorIdentifier),
+        ]);
+        const dataServices = this.services();
+        const joinAccess = {
+            actorId: identity.id,
+            mapId,
+            successfulJoin: true,
+            legacyCanEdit: input.legacyCanEdit,
+            legacyCanAdmin: input.managementUiAccess,
+        };
+        await dataServices.roomAccess.assertCanView(joinAccess);
+        const [canEdit, canAdmin] = await Promise.all([
+            this.isAllowed(() =>
+                dataServices.roomAccess.assertCanEdit({
+                    actorId: identity.id,
+                    mapId,
+                    context: {
+                        kind: "wam",
+                        successfulJoin: true,
+                        legacyCanEdit: input.legacyCanEdit,
+                        legacyCanAdmin: input.managementUiAccess,
+                    },
+                }),
+            ),
+            this.isAllowed(() =>
+                dataServices.roomAccess.assertCanAdmin({
+                    actorId: identity.id,
+                    mapId,
+                    successfulJoin: true,
+                    legacyCanAdmin: input.managementUiAccess,
+                }),
+            ),
+        ]);
+        await dataServices.repository.recordRoomVisit(mapId, identity.id);
+        return { mapId, actorId: identity.id, canView: true, canEdit, canAdmin };
     }
 
     public async begin(input: BeginWamMutationInput): Promise<void> {
@@ -163,6 +199,7 @@ export class TeapotWamRevisionCoordinator {
                     kind: "wam",
                     successfulJoin: true,
                     legacyCanEdit: input.legacyCanEdit,
+                    legacyCanAdmin: input.legacyCanAdmin,
                 },
             });
         } catch (error: unknown) {
@@ -185,6 +222,16 @@ export class TeapotWamRevisionCoordinator {
             queueTail,
             releaseQueue,
         });
+    }
+
+    private async isAllowed(check: () => Promise<void>): Promise<boolean> {
+        try {
+            await check();
+            return true;
+        } catch (error: unknown) {
+            if (error instanceof TeapotAuthorizationError) return false;
+            throw error;
+        }
     }
 
     public acknowledgeSuccess(commandId: string): Promise<void> {
