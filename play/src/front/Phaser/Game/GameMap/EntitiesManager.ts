@@ -129,10 +129,9 @@ export class EntitiesManager extends EventEmitter {
             .then(() => {
                 const entity = this.entities.get(entityId);
                 if (entity) {
-                    entity
-                        .setTexture(prefab.imagePath)
-                        .setDepth(entity.y + entity.displayHeight + (entity.getPrefab().depthOffset ?? 0))
-                        .setVisible(true);
+                    entity.setTexture(prefab.imagePath).setVisible(true);
+                    entity.applyStoredDimensions();
+                    entity.setDepth(entity.y + entity.displayHeight + (entity.getPrefab().depthOffset ?? 0));
                 }
             })
             .catch((e) => console.error(e));
@@ -196,14 +195,16 @@ export class EntitiesManager extends EventEmitter {
         return removedEntitiesStatus.every(Boolean);
     }
 
-    public updateEntitiesDepth(modifiedEntityPrefabId: string, depthOffset: number) {
+    public updateEntitiesPrefabMetadata(
+        modifiedEntityPrefabId: string,
+        collisionGrid: number[][] | undefined,
+        depthOffset: number | undefined,
+    ): void {
         const entities = this.getEntities();
         for (const entity of entities.values()) {
             const entityPrefab = entity.getPrefab();
             if (entityPrefab.id === modifiedEntityPrefabId) {
-                if (entityPrefab.depthOffset !== depthOffset) {
-                    entity.setDepth(entity.y + entity.displayHeight + depthOffset);
-                }
+                entity.updatePrefabMetadata(collisionGrid, depthOffset);
             }
         }
     }
@@ -426,7 +427,7 @@ export class EntitiesManager extends EventEmitter {
             position: positionToPlaceCopyAt,
             prefabRef: entity.getEntityData().prefabRef,
             properties: entity.getEntityData().properties,
-            entityDimensions: { width: entity.width, height: entity.height },
+            entityDimensions: { width: entity.displayWidth, height: entity.displayHeight },
         };
         this.emit(EntitiesManagerEvent.CopyEntity, eventData);
     }

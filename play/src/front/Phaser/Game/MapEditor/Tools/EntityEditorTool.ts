@@ -10,7 +10,7 @@ import {
     mapEditorDeleteCustomEntityEventStore,
     mapEditorEntityFileDroppedStore,
     mapEditorEntityModeStore,
-    mapEditorEntityUploadEventStore,
+    mapEditorEntityUploadDraftStore,
     mapEditorModifyCustomEntityEventStore,
     mapEditorSelectedEntityStore,
     mapEditorSelectedToolStore,
@@ -27,6 +27,7 @@ import type { MapEditorModeManager } from "../MapEditorModeManager";
 import { EditorToolName } from "../MapEditorModeManager";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { mapEditorActivated } from "../../../../Stores/MenuStore";
+import { hasPointerDragged } from "../PanGesture";
 import { EntityRelatedEditorTool } from "./EntityRelatedEditorTool";
 
 import Key = Phaser.Input.Keyboard.Key;
@@ -47,6 +48,9 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     protected shiftKey?: Key;
     protected pointerMoveEventHandler!: (pointer: Pointer, gameObjects: GameObject[]) => void;
     protected pointerDownEventHandler!: (pointer: Pointer, gameObjects: GameObject[]) => void;
+    protected pointerUpEventHandler!: (pointer: Pointer) => void;
+    private panCandidate = false;
+    private panning = false;
 
     protected mapEditorEntityUploadStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEditorModifyCustomEntityEventStoreUnsubscriber: Unsubscriber | undefined;
@@ -115,6 +119,8 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                 const entityData: WAMEntityData = {
                     x: createEntityMessage.x,
                     y: createEntityMessage.y,
+                    width: createEntityMessage.width,
+                    height: createEntityMessage.height,
                     prefabRef: {
                         id: entityPrefab.id,
                         collectionName: entityPrefab.collectionName,
@@ -174,6 +180,8 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                         uploadEntityMessage,
                         this.entitiesManager,
                         this.scene.getEntitiesCollectionsManager(),
+                        commandId,
+                        true,
                     ),
                 );
                 break;
@@ -230,6 +238,10 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
             this.handlePointerDownEvent(pointer, gameObjects);
         this.scene.input.on(Phaser.Input.Events.POINTER_DOWN, this.pointerDownEventHandler);
 
+        this.pointerUpEventHandler = (pointer: Pointer) => this.stopPanning(pointer);
+        this.scene.input.on(Phaser.Input.Events.POINTER_UP, this.pointerUpEventHandler);
+        this.scene.input.on(Phaser.Input.Events.GAME_OUT, this.pointerUpEventHandler);
+
         this.shiftKey?.on(Phaser.Input.Keyboard.Events.DOWN, () => {
             this.changePreviewTint();
         });
@@ -240,25 +252,25 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     }
 
     protected subscribeToEntityUpload() {
-        this.mapEditorEntityUploadStoreUnsubscriber = mapEditorEntityUploadEventStore.subscribe(
-            (uploadEntityMessage) => {
-                if (uploadEntityMessage) {
-                    (async () => {
-                        await this.mapEditorModeManager.executeCommand(
-                            new UploadEntityFrontCommand(
-                                uploadEntityMessage,
-                                this.entitiesManager,
-                                this.scene.getEntitiesCollectionsManager(),
-                            ),
-                        );
-                        mapEditorEntityUploadEventStore.set(undefined);
-                    })().catch((e) => {
-                        console.error(e);
-                        Sentry.captureException(e);
-                    });
-                }
-            },
-        );
+        this.mapEditorEntityUploadStoreUnsubscriber = mapEditorEntityUploadDraftStore.subscribe((uploadDraft) => {
+            if (uploadDraft?.status === "accepted") {
+                mapEditorEntityUploadDraftStore.markSubmitting(uploadDraft.commandId);
+                const uploadCommand = new UploadEntityFrontCommand(
+                    uploadDraft.uploadEntityMessage,
+                    this.entitiesManager,
+                    this.scene.getEntitiesCollectionsManager(),
+                    uploadDraft.commandId,
+                );
+
+                (async () => {
+                    await this.mapEditorModeManager.executeCommand(uploadCommand);
+                })().catch((e) => {
+                    mapEditorEntityUploadDraftStore.fail(uploadDraft.commandId, "The upload could not be submitted.");
+                    console.error(e);
+                    Sentry.captureException(e);
+                });
+            }
+        });
     }
 
     protected subscribeToModifyCustomEntityEventStore() {
@@ -308,6 +320,16 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     }
 
     protected handlePointerMoveEvent(pointer: Pointer, gameObjects: GameObject[]): void {
+        if (this.panning || (this.panCandidate && pointer.leftButtonDown())) {
+            if (!this.panning) {
+                if (!hasPointerDragged(pointer)) return;
+                this.startPanning(pointer);
+            }
+            this.scene
+                .getCameraManager()
+                .scrollCameraByScreenDelta(pointer.prevPosition.x - pointer.x, pointer.prevPosition.y - pointer.y);
+            return;
+        }
         // TODO: add shadow when moving into the area
         // .setDropShadow(4, 4, 0x000000);
         if (!this.entityPrefabPreview || !this.entityPrefab) {
@@ -336,6 +358,13 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
 
     protected handlePointerDownEvent(pointer: Pointer, gameObjects: GameObject[]): void {
         const clickedAreaPreview = this.isAreaPreviewClicked(pointer, gameObjects);
+
+        if (this.canStartPanning(pointer, gameObjects, clickedAreaPreview)) {
+            pointer.motionFactor = 0.35;
+            this.panCandidate = true;
+        } else {
+            this.panCandidate = false;
+        }
 
         if (get(mapEditorEntityModeStore) === "EDIT" && gameObjects.length === 0 && !clickedAreaPreview) {
             mapEditorEntityModeStore.set("ADD");
@@ -381,6 +410,8 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         const entityData: WAMEntityData = {
             x: Math.floor(x - this.entityPrefabPreview.displayWidth * 0.5),
             y: Math.floor(y - this.entityPrefabPreview.displayHeight * 0.5),
+            width: this.entityPrefabPreview.displayWidth,
+            height: this.entityPrefabPreview.displayHeight,
             prefabRef: this.entityPrefab,
             properties: properties ?? [],
             name: properties?.find((p) => p.type === "openFile")?.name ?? undefined,
@@ -394,16 +425,14 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                     entityData,
                     undefined,
                     this.entitiesManager,
-                    { width: this.entityPrefabPreview.width, height: this.entityPrefabPreview.height },
+                    { width: this.entityPrefabPreview.displayWidth, height: this.entityPrefabPreview.displayHeight },
                 ),
             )
             .then(() => {
                 const openEntity = this.entitiesManager.getEntities().get(entityId);
-                if (get(mapEditorEntityFileDroppedStore)) {
-                    mapEditorEntityFileDroppedStore.set(false);
-                    mapEditorEntityModeStore.set("EDIT");
-                    mapEditorSelectedEntityStore.set(openEntity);
-                }
+                if (get(mapEditorEntityFileDroppedStore)) mapEditorEntityFileDroppedStore.set(false);
+                mapEditorEntityModeStore.set("EDIT");
+                mapEditorSelectedEntityStore.set(openEntity);
             })
             .catch((e) => console.error(e));
     }
@@ -413,6 +442,39 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         this.shiftKey?.off(Phaser.Input.Keyboard.Events.DOWN);
         this.shiftKey?.off(Phaser.Input.Keyboard.Events.UP);
         this.scene.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownEventHandler);
+        this.scene.input.off(Phaser.Input.Events.POINTER_UP, this.pointerUpEventHandler);
+        this.scene.input.off(Phaser.Input.Events.GAME_OUT, this.pointerUpEventHandler);
+        this.stopPanning();
+    }
+
+    private startPanning(pointer: Pointer): void {
+        pointer.motionFactor = 0.35;
+        this.panning = true;
+        this.scene.input.setDefaultCursor("grabbing");
+        const cameraManager = this.scene.getCameraManager();
+        cameraManager.setExplorationMode();
+        cameraManager.stopSpeed();
+    }
+
+    private canStartPanning(pointer: Pointer, gameObjects: GameObject[], clickedAreaPreview?: boolean): boolean {
+        return (
+            pointer.leftButtonDown() &&
+            gameObjects.length === 0 &&
+            !(clickedAreaPreview ?? this.isAreaPreviewClicked(pointer, gameObjects)) &&
+            this.entityPrefabPreview === undefined &&
+            this.entityPrefab === undefined &&
+            get(mapEditorSelectedEntityStore) === undefined
+        );
+    }
+
+    private stopPanning(pointer?: Pointer): void {
+        this.panCandidate = false;
+        if (!this.panning) return;
+        this.panning = false;
+        this.scene.input.setDefaultCursor("auto");
+        if (pointer?.velocity) {
+            this.scene.getCameraManager().setSpeedFromScreenVelocity(pointer.velocity);
+        }
     }
 
     protected unbindEntitiesManagerEventHandlers(): void {
@@ -519,6 +581,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     }
 
     private updateEntity(entityData: EntityData) {
+        const oldBounds = this.entitiesManager.getEntities().get(entityData.id)?.consumeEditorBoundsBeforeResize();
         // Create commande to update entity data
         this.mapEditorModeManager
             .executeCommand(
@@ -529,7 +592,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                         ...entityData,
                     },
                     undefined,
-                    undefined,
+                    oldBounds,
                     this.entitiesManager,
                     this.scene,
                 ),
@@ -544,6 +607,8 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         const entityData: WAMEntityData = {
             x: data.position.x,
             y: data.position.y,
+            width: data.entityDimensions.width,
+            height: data.entityDimensions.height,
             prefabRef: data.prefabRef,
             properties: data.properties ?? [],
         };

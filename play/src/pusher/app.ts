@@ -18,8 +18,19 @@ import { SwaggerController } from "./controllers/SwaggerController";
 import {
     ALLOWED_CORS_ORIGIN,
     ENABLE_OPENAPI_ENDPOINT,
+    FRONT_URL,
+    PUSHER_URL,
     PROMETHEUS_PORT,
     GRPC_MAX_MESSAGE_SIZE,
+    SECRET_KEY,
+    TEAPOT_AGENT_BRIDGE_SECRET,
+    TEAPOT_AGENT_BRIDGE_URL,
+    TEAPOT_WOKA_PUBLIC_BASE_URL,
+    TEAPOT_WOKA_STORAGE_DIRECTORY,
+    TEAPOT_X_BOOTSTRAP_USER_IDS,
+    TEAPOT_X_CLIENT_ID,
+    TEAPOT_X_CLIENT_SECRET,
+    TEAPOT_X_REDIRECT_URI,
 } from "./enums/EnvironmentVariable";
 import { PingController } from "./controllers/PingController";
 import { CompanionListController } from "./controllers/CompanionListController";
@@ -32,7 +43,27 @@ import { UserController } from "./controllers/UserController";
 import { MatrixRoomAreaController } from "./controllers/MatrixRoomAreaController";
 import { LocalScriptController } from "./controllers/LocalScriptController";
 import { LivekitWebhookController } from "./controllers/LivekitWebhookController";
+import { TeapotAdmissionController } from "./controllers/TeapotAdmissionController";
+import { configureTeapotAuthoringAccess } from "./middlewares/TeapotAuthoringMiddleware";
 import { videoQualityAnalyticsQueue } from "./services/VideoQualityAnalyticsQueue";
+import { getTeapotDataServices, initializeTeapotDataRuntime } from "./teapot/TeapotDataRuntime";
+import { TeapotAdmissionService } from "./teapot/TeapotAdmissionService";
+import { TeapotSecretBox } from "./teapot/TeapotTokenSecurity";
+import { TeapotXOAuthService } from "./teapot/TeapotXOAuthService";
+import { XOAuthClient } from "./teapot/XOAuthClient";
+import { TeapotMapController } from "./controllers/TeapotMapController";
+import { TeapotRoomEditorAccessController } from "./controllers/TeapotRoomEditorAccessController";
+import { TeapotWokaController } from "./controllers/TeapotWokaController";
+import { TeapotHealthController } from "./controllers/TeapotHealthController";
+import { TeapotMcpController } from "./controllers/TeapotMcpController";
+import { FileSystemTeapotWokaObjectStore } from "./teapot/TeapotWokaObjectStore";
+import { TeapotWokaService } from "./teapot/TeapotWokaService";
+import { TeapotTilesetService } from "./teapot/TeapotTilesetService";
+import { TeapotTilesetController } from "./controllers/TeapotTilesetController";
+import { TeapotGeneratedAssetService } from "./teapot/TeapotGeneratedAssetService";
+import { TeapotGeneratedAssetController } from "./controllers/TeapotGeneratedAssetController";
+import { TeapotAiProviderController } from "./controllers/TeapotAiProviderController";
+import { TeapotAgentBridgeClient } from "./teapot/TeapotAgentBridgeClient";
 
 const VIDEO_QUALITY_ANALYTICS_CAPABILITY = "api/analytics/video-quality-batch";
 
@@ -44,11 +75,15 @@ class App {
     constructor() {
         this.websocketApp = uWebsockets.App();
         this.app = express();
+        configureTeapotAuthoringAccess({
+            getDataServices: getTeapotDataServices,
+            isXAdmissionConfigured: () => Boolean(TEAPOT_X_CLIENT_ID && TEAPOT_X_REDIRECT_URI && FRONT_URL),
+        });
 
         // LiveKit webhooks must keep the raw body for signature verification in the back; register before express.json().
         new LivekitWebhookController(this.app);
 
-        this.app.use(express.json());
+        this.app.use(express.json({ limit: "8mb" }));
         this.app.use(express.urlencoded());
         // It seems the cookieParser type is not yet compatible with express 5
         //eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -111,6 +146,9 @@ class App {
         }
         new FrontController(this.app);
         new UserController(this.app);
+        new TeapotMapController(this.app);
+        new TeapotRoomEditorAccessController(this.app);
+        new TeapotMcpController(this.app);
         new MatrixRoomAreaController(this.app);
 
         const staticOptions = {
@@ -175,6 +213,72 @@ class App {
     }
 
     public async init() {
+        await initializeTeapotDataRuntime();
+        new TeapotHealthController(this.app);
+
+        const teapotDataServices = getTeapotDataServices();
+        const teapotWokaObjectStore = new FileSystemTeapotWokaObjectStore(TEAPOT_WOKA_STORAGE_DIRECTORY);
+        await teapotWokaObjectStore.initialize();
+        const teapotWokaService = new TeapotWokaService(
+            teapotDataServices.repository,
+            teapotDataServices.identity,
+            teapotDataServices.authorization,
+            teapotWokaObjectStore,
+            { publicPusherUrl: TEAPOT_WOKA_PUBLIC_BASE_URL },
+        );
+        WokaService.configureGeneratedWokas(teapotWokaService);
+        new TeapotWokaController(this.app, teapotWokaService);
+        new TeapotTilesetController(
+            this.app,
+            new TeapotTilesetService(
+                teapotDataServices.repository,
+                teapotDataServices.identity,
+                teapotDataServices.authorization,
+                teapotWokaObjectStore,
+                TEAPOT_WOKA_PUBLIC_BASE_URL,
+            ),
+        );
+        new TeapotGeneratedAssetController(
+            this.app,
+            new TeapotGeneratedAssetService(
+                teapotDataServices.repository,
+                teapotDataServices.identity,
+                teapotDataServices.authorization,
+                teapotWokaObjectStore,
+                TEAPOT_WOKA_PUBLIC_BASE_URL,
+            ),
+        );
+        new TeapotAiProviderController(
+            this.app,
+            new TeapotAgentBridgeClient(TEAPOT_AGENT_BRIDGE_URL, TEAPOT_AGENT_BRIDGE_SECRET),
+        );
+
+        const xOAuthClient = new XOAuthClient({
+            clientId: TEAPOT_X_CLIENT_ID ?? "",
+            clientSecret: TEAPOT_X_CLIENT_SECRET,
+        });
+        const teapotFrontUrl = resolveTeapotFrontUrl(FRONT_URL, PUSHER_URL);
+        const teapotOAuthService = new TeapotXOAuthService(
+            teapotDataServices,
+            jwtTokenManager,
+            xOAuthClient,
+            new TeapotSecretBox(SECRET_KEY),
+            {
+                clientId: TEAPOT_X_CLIENT_ID ?? "",
+                redirectUri: TEAPOT_X_REDIRECT_URI,
+                frontUrl: teapotFrontUrl,
+                bootstrapXUserIds: TEAPOT_X_BOOTSTRAP_USER_IDS,
+            },
+        );
+        const teapotAdmissionService = new TeapotAdmissionService(teapotDataServices, { frontUrl: teapotFrontUrl });
+        new TeapotAdmissionController(
+            this.app,
+            jwtTokenManager,
+            teapotDataServices,
+            teapotOAuthService,
+            teapotAdmissionService,
+        );
+
         const companionListController = new CompanionListController(this.app, jwtTokenManager);
         const wokaListController = new WokaListController(this.app, jwtTokenManager);
 
@@ -244,3 +348,15 @@ class App {
 }
 
 export default new App();
+
+function resolveTeapotFrontUrl(frontUrl: string, pusherUrl: string): string {
+    try {
+        return new URL(frontUrl).toString();
+    } catch {
+        try {
+            return new URL(frontUrl, pusherUrl).toString();
+        } catch {
+            return frontUrl;
+        }
+    }
+}

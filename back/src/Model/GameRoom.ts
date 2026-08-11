@@ -1,8 +1,13 @@
 import path from "path";
 import * as Sentry from "@sentry/node";
 import { Metadata } from "@grpc/grpc-js";
-import type { WAMFileFormat, AreaData, AreaDataProperty } from "@workadventure/map-editor";
-import { GameMapProperties } from "@workadventure/map-editor";
+import type { WAMFileFormat, AreaData, AreaDataProperty, TeapotTerrainMutation } from "@workadventure/map-editor";
+import {
+    applyTeapotTerrainMutation,
+    containsOccupiedVisualTileDeletion,
+    GameMapProperties,
+    worldToTileCoordinates,
+} from "@workadventure/map-editor";
 import { LocalUrlError } from "@workadventure/map-editor/src/LocalUrlError";
 import { mapFetcher } from "@workadventure/map-editor/src/MapFetcher";
 import type {
@@ -13,6 +18,7 @@ import type {
     MapDetailsData,
     MapJitsiData,
     MapThirdPartyData,
+    ModifyTerrainMessage,
     ServerToClientMessage,
     SetPlayerDetailsMessage,
     SubToPusherRoomMessage,
@@ -1408,6 +1414,12 @@ export class GameRoom implements BrothersFinder {
 
         await this.wamManager.applyCommand(editMapCommandMessage);
 
+        if (editMapMessage.$case === "modifyTerrainMessage" && this.mapPromise !== undefined) {
+            const mutation = GameRoom.toTerrainMutation(editMapMessage.modifyTerrainMessage);
+            this.mapPromise = this.mapPromise.then((map) => applyTeapotTerrainMutation(map, mutation));
+            await this.mapPromise;
+        }
+
         if (GameRoom.commandInvalidatesJitsiModeratorTagFinder(editMapMessage.$case)) {
             this.jitsiModeratorTagFinderPromise = undefined;
         }
@@ -1433,7 +1445,11 @@ export class GameRoom implements BrothersFinder {
     forwardEditMapCommandMessage(user: User, message: EditMapCommandMessage) {
         // We chain the map storage operations to avoid race conditions. Each operation will wait for the previous one to complete.
         // We also set a timeout of 20 seconds to avoid blocking the room forever in case of map storage issues.
-        this.mapStorageLock = this.mapStorageLock.then(() => {
+        this.mapStorageLock = this.mapStorageLock.then(async () => {
+            if (await this.containsOccupiedTerrainDeletion(message)) {
+                this.writeEditMapCommandError(user, message.id, "A tile occupied by an avatar cannot be deleted");
+                return;
+            }
             const timeoutSignal = AbortSignal.timeout(20000);
             return raceAbort(
                 new Promise<void>((resolve, reject) => {
@@ -1517,6 +1533,56 @@ export class GameRoom implements BrothersFinder {
                 }
             });
         });
+    }
+
+    private async containsOccupiedTerrainDeletion(message: EditMapCommandMessage): Promise<boolean> {
+        const editMapMessage = message.editMapMessage?.message;
+        if (
+            editMapMessage?.$case !== "modifyTerrainMessage" ||
+            editMapMessage.modifyTerrainMessage.regions.length === 0
+        ) {
+            return false;
+        }
+        const map = await this.getMap();
+        const occupiedCells = Array.from(this.users.values(), (roomUser) => {
+            const position = roomUser.getPosition();
+            return worldToTileCoordinates(map, position.x, position.y);
+        });
+        return containsOccupiedVisualTileDeletion(editMapMessage.modifyTerrainMessage.regions, occupiedCells);
+    }
+
+    private writeEditMapCommandError(user: User, commandId: string, reason: string): void {
+        user.write({
+            $case: "batchMessage",
+            batchMessage: {
+                event: "",
+                payload: [
+                    {
+                        message: {
+                            $case: "editMapCommandMessage",
+                            editMapCommandMessage: {
+                                id: commandId,
+                                editMapMessage: {
+                                    message: {
+                                        $case: "errorCommandMessage",
+                                        errorCommandMessage: { reason },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+        });
+    }
+
+    private static toTerrainMutation(message: ModifyTerrainMessage): TeapotTerrainMutation {
+        return {
+            mapId: message.mapUrl,
+            regions: message.regions,
+            tilesetJson: message.tilesetJson === "" ? undefined : message.tilesetJson,
+            removeTileset: message.removeTileset,
+        };
     }
 
     public dispatchEvent(name: string, data: unknown, senderId: number | "RoomApi", targetUserIds: number[]): void {

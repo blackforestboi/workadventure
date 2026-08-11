@@ -41,6 +41,7 @@
     import WokaScene from "./Woka/WokaScene.svelte";
     import Onboarding from "./Onboarding/Onboarding.svelte";
     import PwaInstallScreen from "./PwaInstall/PwaInstallScreen.svelte";
+    import AiGenerationSettingsOverlay from "./AssetGeneration/AiGenerationSettingsOverlay.svelte";
 
     interface Props {
         game: Game;
@@ -123,5 +124,6 @@
     {/if}
 {/if}
 
+<AiGenerationSettingsOverlay />
 <FloatingUiPopupList />
 <!-- </div> -->

@@ -8,12 +8,16 @@ import type { FrontCommand } from "../FrontCommand";
 import { DeleteCustomEntityFrontCommand } from "./DeleteCustomEntityFrontCommand";
 
 export class UploadEntityFrontCommand extends UploadEntityCommand implements FrontCommand {
+    private published = false;
+
     constructor(
         uploadEntityMessage: UploadEntityMessage,
         private entitiesManager: EntitiesManager,
         private entitiesCollectionManager: EntitiesCollectionsManager,
+        commandId?: string,
+        private readonly storageWriteAlreadyCompleted = false,
     ) {
-        super(uploadEntityMessage);
+        super(uploadEntityMessage, undefined, commandId);
     }
 
     emitEvent(roomConnection: RoomConnection): void {
@@ -21,21 +25,33 @@ export class UploadEntityFrontCommand extends UploadEntityCommand implements Fro
     }
 
     execute(): Promise<void> {
-        const customEntityCollectionUrl = gameManager.getCurrentGameScene().getCustomEntityCollectionUrl();
+        if (this.storageWriteAlreadyCompleted) {
+            this.publishUploadedEntity();
+        }
+
+        return super.execute();
+    }
+
+    onAcknowledged(): void {
+        this.publishUploadedEntity();
+    }
+
+    private publishUploadedEntity(): void {
+        if (this.published) {
+            return;
+        }
+
         try {
             const uploadedEntity = EntityRawPrefab.parse({
                 ...this.uploadEntityMessage,
                 direction: mapCustomEntityDirectionToDirection(this.uploadEntityMessage.direction),
             });
-            gameManager
-                .getCurrentGameScene()
-                .getEntitiesCollectionsManager()
-                .addUploadedEntity(uploadedEntity, customEntityCollectionUrl);
+            const customEntityCollectionUrl = gameManager.getCurrentGameScene().getCustomEntityCollectionUrl();
+            this.entitiesCollectionManager.addUploadedEntity(uploadedEntity, customEntityCollectionUrl);
+            this.published = true;
         } catch (e) {
             console.error(e);
         }
-
-        return super.execute();
     }
 
     getUndoCommand(): DeleteCustomEntityFrontCommand {

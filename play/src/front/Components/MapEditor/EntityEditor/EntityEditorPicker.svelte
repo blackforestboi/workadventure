@@ -1,7 +1,9 @@
 <script lang="ts">
     import type { EntityPrefab } from "@workadventure/map-editor";
+    import { CustomEntityDirection } from "@workadventure/messages";
     import { onDestroy } from "svelte";
     import { get } from "svelte/store";
+    import { v4 as uuidv4 } from "uuid";
     import { LL } from "../../../../i18n/i18n-svelte";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import type { EntityVariant } from "../../../Phaser/Game/MapEditor/Entities/EntityVariant";
@@ -9,6 +11,7 @@
     import {
         mapEditorDeleteCustomEntityEventStore,
         mapEditorEntityModeStore,
+        mapEditorEntityUploadDraftStore,
         mapEditorModifyCustomEntityEventStore,
         mapEditorSelectedEntityPrefabStore,
         mapEditorSelectedEntityStore,
@@ -19,12 +22,11 @@
     import Button from "../../UI/Button.svelte";
     import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
     import EntitiesGrid from "./EntitiesGrid.svelte";
-    import EntityImage from "./EntityItem/EntityImage.svelte";
     import EntityVariantColorPicker from "./EntityItem/EntityVariantColorPicker.svelte";
     import EntityVariantPositionPicker from "./EntityItem/EntityVariantPositionPicker.svelte";
     import EntityUpload from "./EntityUpload/EntityUpload.svelte";
     import TagListItem from "./TagListItem.svelte";
-    import { IconChevronLeft, IconPencil } from "@wa-icons";
+    import { IconChevronLeft, IconCloudUpload } from "@wa-icons";
 
     const entitiesCollectionsManager = gameManager.getCurrentGameScene().getEntitiesCollectionsManager();
     const entitiesPrefabsVariants = entitiesCollectionsManager.getEntitiesPrefabsVariantStore();
@@ -35,6 +37,10 @@
     let selectedColor = $state("");
 
     let searchTerm = $state("");
+    let showUpload = $state(false);
+    let saveAsCustomPending = $state(false);
+    let saveAsCustomError = $state<string>();
+    let saveAsCustomCommandId: string | undefined;
 
     const mapEditorSelectedEntityPrefabStoreUnsubscriber = mapEditorSelectedEntityPrefabStore.subscribe(
         (prefab?: EntityPrefab) => {
@@ -53,15 +59,75 @@
             }
         });
 
+    const entityUploadDraftStoreUnsubscriber = mapEditorEntityUploadDraftStore.subscribe((draft) => {
+        if (!saveAsCustomCommandId || draft?.commandId !== saveAsCustomCommandId) {
+            return;
+        }
+        if (draft.status === "failed") {
+            saveAsCustomPending = false;
+            saveAsCustomError = draft.error;
+        } else if (draft.status === "acknowledged") {
+            mapEditorEntityUploadDraftStore.clear(saveAsCustomCommandId);
+            saveAsCustomCommandId = undefined;
+            saveAsCustomPending = false;
+            saveAsCustomError = undefined;
+            clearEntitySelection();
+            selectCategoryStore.set({ kind: "special", tag: "custom" });
+        }
+    });
+
     function removeEntity(id: string) {
         mapEditorDeleteCustomEntityEventStore.set({ id });
         clearEntitySelection();
-        setIsEditingCustomEntity(false);
     }
 
     function saveCustomEntityModifications(customEntity: EntityPrefab) {
         mapEditorModifyCustomEntityEventStore.set($state.snapshot(customEntity));
-        setIsEditingCustomEntity(false);
+    }
+
+    async function saveEntity(customEntity: EntityPrefab) {
+        if (customEntity.type === "Custom") {
+            saveCustomEntityModifications(customEntity);
+            return;
+        }
+
+        saveAsCustomPending = true;
+        saveAsCustomError = undefined;
+        try {
+            const response = await fetch(customEntity.imagePath);
+            if (!response.ok) {
+                throw new Error(`The asset image could not be loaded (${response.status}).`);
+            }
+            const source = await response.blob();
+            const generatedId = uuidv4();
+            const commandId = uuidv4();
+            const extension =
+                new URL(customEntity.imagePath, window.location.href).pathname.match(/\.[A-Za-z0-9]+$/)?.[0] ?? ".png";
+            const safeName = customEntity.name.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-|-$/g, "") || "asset";
+            const sourceName = `${safeName}${extension}`;
+            saveAsCustomCommandId = commandId;
+            mapEditorEntityUploadDraftStore.accept({
+                commandId,
+                source,
+                sourceName,
+                previewUrl: customEntity.imagePath,
+                uploadEntityMessage: {
+                    id: generatedId,
+                    file: new Uint8Array(await source.arrayBuffer()),
+                    direction: CustomEntityDirection.Down,
+                    name: customEntity.name,
+                    tags: $state.snapshot(customEntity.tags),
+                    imagePath: `${generatedId}-${sourceName}`,
+                    collisionGrid: $state.snapshot(customEntity.collisionGrid),
+                    depthOffset: customEntity.depthOffset,
+                    color: customEntity.color,
+                },
+            });
+        } catch (error) {
+            saveAsCustomCommandId = undefined;
+            saveAsCustomPending = false;
+            saveAsCustomError = error instanceof Error ? error.message : "The asset could not be saved.";
+        }
     }
 
     function onPickItem(entityPrefab: EntityPrefab) {
@@ -69,6 +135,8 @@
     }
 
     function onPickEntityVariant(entityVariant: EntityVariant) {
+        showUpload = false;
+        saveAsCustomError = undefined;
         pickedEntity = entityVariant.defaultPrefab;
         pickedEntityVariant = entityVariant;
         onColorChange(pickedEntity.color);
@@ -90,7 +158,6 @@
         clearEntitySelection();
         selectCategoryStore.set(undefined);
         searchTerm = "";
-        setIsEditingCustomEntity(false);
     }
 
     function clearEntitySelection() {
@@ -98,11 +165,6 @@
         pickedEntity = undefined;
         mapEditorSelectedEntityStore.set(undefined);
         mapEditorSelectedEntityPrefabStore.set(undefined);
-    }
-
-    let isEditingCustomEntity = $state(false);
-    function setIsEditingCustomEntity(isEditing: boolean) {
-        isEditingCustomEntity = isEditing;
     }
 
     function getForEntitiesPrefabsVariantsWithCategories(
@@ -244,15 +306,18 @@
     onDestroy(() => {
         mapEditorSelectedEntityPrefabStoreUnsubscriber();
         entitiesPrefabsVariantStoreUnsubscriber();
+        entityUploadDraftStoreUnsubscriber();
     });
 </script>
 
-<div class="flex flex-col flex-1 overflow-auto gap-2">
+<div class="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
     <div class="flex flex-col gap-2">
-        <div>
+        <div class="flex items-start justify-between gap-3">
             {#if $selectCategoryStore === undefined}
-                <p class="text-[22px] m-0">{$LL.mapEditor.entityEditor.header.title()}</p>
-                <p class="m-0 opacity-50">{$LL.mapEditor.entityEditor.header.description()}</p>
+                <div>
+                    <p class="m-0 text-[22px]">{$LL.mapEditor.entityEditor.header.title()}</p>
+                    <p class="m-0 opacity-50">{$LL.mapEditor.entityEditor.header.description()}</p>
+                </div>
             {:else}
                 <div class="flex flex-row items-center gap-4">
                     <button
@@ -264,6 +329,18 @@
                     </button>
                 </div>
             {/if}
+            <Button
+                size="sm"
+                variant="light"
+                appearance="border"
+                onclick={() => {
+                    clearEntitySelection();
+                    showUpload = !showUpload;
+                }}
+            >
+                {#snippet icon()}<IconCloudUpload font-size={16} />{/snippet}
+                {showUpload ? "Browse assets" : "Upload asset"}
+            </Button>
         </div>
         <div class="flex *:w-full">
             <Input
@@ -271,16 +348,15 @@
                 bind:value={searchTerm}
                 placeholder={$LL.mapEditor.entityEditor.itemPicker.searchPlaceholder()}
             />
-            <!--            <input-->
-            <!--                class="flex-1 h-8 !border-solid !rounded-2xl !border-gray-400 !placeholder-gray-400"-->
-            <!--                type="search"-->
-            <!--                bind:value={searchTerm}-->
-            <!--                placeholder={$LL.mapEditor.entityEditor.itemPicker.searchPlaceholder()}-->
-            <!--            />-->
         </div>
     </div>
-    <div class="flex-1 overflow-auto">
-        {#if $selectCategoryStore === undefined && searchTerm === ""}
+
+    <div class="min-h-0 flex-1 overflow-auto">
+        {#if showUpload}
+            <div class="min-h-full rounded-2xl border border-white/10 bg-black/10 p-3">
+                <EntityUpload />
+            </div>
+        {:else if $selectCategoryStore === undefined && searchTerm === ""}
             <ul class="list-none !p-0 min-w-full">
                 {#each entitiesPrefabsVariantsWithCategories as { category, entitiesPrefabsVariants } (`${category.kind}-${category.tag}`)}
                     <TagListItem
@@ -294,30 +370,39 @@
                 {/each}
             </ul>
         {:else}
-            {#if pickedEntityVariant && pickedEntity}
-                <div
-                    class="fixed left-2 flex flex-row gap-2 items-center justify-center border-b-blue-50 p-4 mb-2 min-h-[200px] bg-white/20 backdrop-blur-xl rounded-2xl w-[calc(100%-16px)]"
-                >
-                    {#if isEditingCustomEntity}
-                        <CustomEntityEditionForm
-                            customEntity={pickedEntity}
-                            closeForm={() => {
-                                setIsEditingCustomEntity(false);
-                            }}
-                            removeEntity={({ entityId }) => {
-                                removeEntity(entityId);
-                            }}
-                            applyEntityModifications={(customModifiedEntity) =>
-                                saveCustomEntityModifications(customModifiedEntity)}
+            <div class="flex min-h-full flex-col gap-3">
+                <section class="shrink-0 rounded-xl border border-white/10 bg-black/10 p-3">
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <span class="font-bold text-lg">
+                            {$selectCategoryStore ? getCategoryLabel($selectCategoryStore) : "Assets"}
+                        </span>
+                        <span class="text-xs opacity-60">{filteredEntityPrefabVariants.length} options</span>
+                    </div>
+                    <div class="max-h-[220px] overflow-auto">
+                        <EntitiesGrid
+                            entityPrefabVariants={filteredEntityPrefabVariants}
+                            onSelectEntity={onPickEntityVariant}
+                            currentSelectedEntityId={pickedEntity?.id}
                         />
-                    {:else}
-                        <EntityImage
-                            classNames="h-16 w-[64px] object-contain rounded"
-                            imageSource={pickedEntity.imagePath}
-                            imageAlt={pickedEntity.name}
-                        />
-                        <div>
-                            <p class="m-0"><b>{pickedEntityVariant.defaultPrefab.name}</b></p>
+                    </div>
+                </section>
+
+                {#if pickedEntityVariant && pickedEntity}
+                    <section class="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="m-0 truncate font-bold">{pickedEntityVariant.defaultPrefab.name}</p>
+                                <p class="m-0 text-xs opacity-60">Choose a color and view before editing the asset.</p>
+                            </div>
+                            <ButtonClose
+                                onclick={clearEntitySelection}
+                                dataTestId="clearEntitySelection"
+                                size="sm"
+                                bgColor="bg-white/10"
+                                hoverColor="bg-white/20"
+                            />
+                        </div>
+                        <div class="mt-2 flex flex-wrap items-end gap-4">
                             <EntityVariantColorPicker
                                 colors={pickedEntityVariant.colors}
                                 {selectedColor}
@@ -329,52 +414,40 @@
                                 {onPickItem}
                             />
                         </div>
-                        {#if pickedEntity.type === "Custom"}
-                            <Button
-                                variant="secondary"
-                                dataTestId="editEntity"
-                                onclick={() => setIsEditingCustomEntity(true)}
-                            >
-                                {#snippet icon()}
-                                    <IconPencil font-size={16} />
-                                {/snippet}
-                                {$LL.mapEditor.entityEditor.buttons.editEntity()}
-                            </Button>
-                        {/if}
-                        <div class="absolute top-1 right-1 p-1">
-                            <ButtonClose
-                                onclick={clearEntitySelection}
-                                dataTestId="clearEntitySelection"
-                                size="sm"
-                                bgColor="bg-white/30"
-                                hoverColor="bg-white/40"
-                            />
+                    </section>
+
+                    {#if saveAsCustomError}
+                        <div class="rounded-lg border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-100">
+                            {saveAsCustomError}
                         </div>
-                        <!-- <button
-                            class="self-start absolute top-1 right-1"
-                            data-testid="clearEntitySelection"
-                            onclick={clearEntitySelection}><IconDeselect font-size={20} /></button
-                        > -->
                     {/if}
-                </div>
-            {/if}
-            {#if !isEditingCustomEntity}
-                <div class="flex flex-col gap-2" class:mt-52={pickedEntityVariant && pickedEntity}>
-                    {#if $selectCategoryStore}
-                        <span class="font-bold text-lg">
-                            {getCategoryLabel($selectCategoryStore)}
-                        </span>
-                    {/if}
-                    <EntitiesGrid
-                        entityPrefabVariants={filteredEntityPrefabVariants}
-                        onSelectEntity={onPickEntityVariant}
-                        currentSelectedEntityId={pickedEntity?.id}
-                    />
-                </div>
-            {/if}
+
+                    <div class="min-h-[520px] flex-1">
+                        {#key pickedEntity.id}
+                            <CustomEntityEditionForm
+                                customEntity={pickedEntity}
+                                isUploadForm={pickedEntity.type !== "Custom"}
+                                disabled={saveAsCustomPending}
+                                saveLabel={pickedEntity.type === "Custom" ? "Save asset" : "Save as custom"}
+                                description={pickedEntity.type === "Custom"
+                                    ? "Edit the asset and paint the areas players cannot cross."
+                                    : "Edit this built-in asset. Saving creates a custom copy for this room."}
+                                closeForm={clearEntitySelection}
+                                removeEntity={({ entityId }) => {
+                                    removeEntity(entityId);
+                                }}
+                                applyEntityModifications={saveEntity}
+                            />
+                        {/key}
+                    </div>
+                {:else}
+                    <div
+                        class="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed border-white/15 p-6 text-center text-sm opacity-60"
+                    >
+                        Select an asset above to preview it, edit its options, and add collision areas.
+                    </div>
+                {/if}
+            </div>
         {/if}
     </div>
-    {#if pickedEntity === undefined}
-        <EntityUpload />
-    {/if}
 </div>

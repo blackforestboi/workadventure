@@ -68,6 +68,16 @@ describe("PathfindingManager", () => {
         vi.clearAllMocks();
     });
 
+    it("converts tile positions relative to a negative map origin", () => {
+        const manager = new PathfindingManager(mockGrid, tileDimensions, { x: -64, y: -96 });
+
+        expect(manager.mapTileUnitToPixels({ x: 0, y: 0 })).toEqual({ x: -48, y: -80 });
+        expect(manager.mapTileUnitToPixels({ x: 2, y: 3 })).toEqual({ x: 16, y: 16 });
+
+        manager.setMapData(mockGrid, { x: -128, y: -160 });
+        expect(manager.mapTileUnitToPixels({ x: 0, y: 0 })).toEqual({ x: -112, y: -144 });
+    });
+
     describe("Basic pathfinding functionality", () => {
         it("should find a simple path between two walkable points", async () => {
             const start = { x: 16, y: 16 }; // Center of tile (0,0)

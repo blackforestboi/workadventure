@@ -253,7 +253,26 @@ message EditMapMessage {
     DeleteCustomEntityMessage deleteCustomEntityMessage = 11;
     ModifiyWAMMetadataMessage modifiyWAMMetadataMessage = 12;
     UploadFileMessage uploadFileMessage = 13;
+    ModifyTerrainMessage modifyTerrainMessage = 14;
   }
+}
+
+message ModifyTerrainMessage {
+  string mapUrl = 1;
+  repeated TerrainRegionMessage regions = 2;
+  string tilesetJson = 3;
+  bool removeTileset = 4;
+  reserved 5, 6;
+  reserved "prependLeft", "prependTop";
+}
+
+message TerrainRegionMessage {
+  string layer = 1;
+  sint32 x = 2;
+  sint32 y = 3;
+  uint32 width = 4;
+  uint32 height = 5;
+  repeated uint32 gids = 6;
 }
 
 message ErrorCommandMessage {

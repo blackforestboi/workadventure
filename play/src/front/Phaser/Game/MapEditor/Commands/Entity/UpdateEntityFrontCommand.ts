@@ -53,8 +53,8 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
                 ...this.newConfig,
             },
             {
-                width: entity.width,
-                height: entity.height,
+                width: entity.displayWidth,
+                height: entity.displayHeight,
             },
         );
     }
@@ -65,21 +65,29 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
             return;
         }
         const { x: oldX, y: oldY } = entity.getOldPosition();
+        const oldCollisionGrid = entity.getCollisionGrid();
         entity?.updateEntity(config);
         // If the entity is activable, and not in the activatable entities array of the entity manager,
         // we add it to the array
         if (entity.isActivatable() && !this.entitiesManager.getActivatableEntities().includes(entity)) {
             this.entitiesManager.getActivatableEntities().push(entity);
         }
-        this.updateCollisionGrid(entity, oldX, oldY);
+        this.updateCollisionGrid(entity, oldX, oldY, oldCollisionGrid);
         this.scene.markDirty();
     }
 
-    private updateCollisionGrid(entity: Entity, oldX: number, oldY: number): void {
-        const reversedGrid = entity.getReversedCollisionGrid();
+    private updateCollisionGrid(
+        entity: Entity,
+        oldX: number,
+        oldY: number,
+        oldCollisionGrid: number[][] | undefined,
+    ): void {
+        const reversedGrid = oldCollisionGrid?.map((row) => row.map((value) => (value === 1 ? -1 : value)));
         const grid = entity.getCollisionGrid();
-        if (reversedGrid && grid) {
+        if (reversedGrid) {
             this.scene.getGameMapFrontWrapper().modifyToCollisionsLayer(oldX, oldY, "0", reversedGrid);
+        }
+        if (grid) {
             this.scene.getGameMapFrontWrapper().modifyToCollisionsLayer(entity.x, entity.y, "0", grid);
         }
     }

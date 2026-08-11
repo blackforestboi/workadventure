@@ -5,8 +5,8 @@ export class UploadEntityCommand extends Command {
     protected uploadEntityMessage: UploadEntityMessage;
     protected hostname: string | undefined;
 
-    constructor(uploadEntityMessage: UploadEntityMessage, hostname?: string) {
-        super();
+    constructor(uploadEntityMessage: UploadEntityMessage, hostname?: string, commandId?: string) {
+        super(commandId);
         this.uploadEntityMessage = uploadEntityMessage;
         this.hostname = hostname;
     }

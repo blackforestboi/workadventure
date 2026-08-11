@@ -19,7 +19,7 @@ import { ProtobufClientUtils } from "../../Network/ProtobufClientUtils";
 import { WOKA_SPEED } from "../../Enum/EnvironmentVariable";
 
 import { UsernameDisplay } from "../Components/UsernameDisplay";
-import { lazyLoadPlayerCharacterTextures } from "./PlayerTexturesLoadingManager";
+import { lazyLoadPlayerCharacterTextures, preserveHighResolutionWokaSampling } from "./PlayerTexturesLoadingManager";
 import { SpeechBubble } from "./SpeechBubble";
 import { SpeechDomElement } from "./SpeechDomElement";
 import { ThinkingCloud } from "./ThinkingCloud";
@@ -32,13 +32,14 @@ import Tween = Phaser.Tweens.Tween;
 import Circle = Phaser.Geom.Circle;
 import Body = Phaser.Physics.Arcade.Body;
 
-const playerNameY = -18;
+const playerNameY = -25;
 const interactiveRadius = 25;
 
 export const CHARACTER_BODY_WIDTH = 16;
 export const CHARACTER_BODY_HEIGHT = 16;
 export const CHARACTER_BODY_OFFSET_X = 0;
 export const CHARACTER_BODY_OFFSET_Y = 8;
+export const CHARACTER_DISPLAY_SIZE = 40;
 
 export const PLAYTEXT_NEW_MEDIA_DEVICE_PREFIX = "playtext-mediadevice-";
 
@@ -206,6 +207,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         this.setClickable(isClickable);
 
         scene.add.existing(this);
+        scene.getGameRenderLayers().addWorldObject(this);
 
         this.scene.physics.world.enableBody(this);
         const body = this.getBody();
@@ -336,6 +338,7 @@ export abstract class Character extends Container implements OutlineableInterfac
 
     public addCompanion(texturePromise: CancelablePromise<string>): void {
         this.companion = new Companion(this.scene, this.x, this.y, texturePromise);
+        this.scene.getGameRenderLayers().addWorldObject(this.companion);
     }
 
     private addTextures(textures: string[], frame?: string | number): void {
@@ -347,8 +350,16 @@ export abstract class Character extends Container implements OutlineableInterfac
             if (this.scene && !this.scene.textures.exists(texture)) {
                 throw new CharacterTextureError(`Texture "${texture}" not found`);
             }
+            preserveHighResolutionWokaSampling(this.scene.textures.get(texture));
             const sprite = new Sprite(this.scene, 0, 0, texture, frame);
+            // Keep the original frame pixels and normalize only their world-space display size.
+            sprite.setDisplaySize(CHARACTER_DISPLAY_SIZE, CHARACTER_DISPLAY_SIZE);
             this.add(sprite);
+            // The on-demand renderer can retain the first low-detail frame
+            // until a camera change. Invalidate it after the full-resolution
+            // texture and its sampling mode have both been attached.
+            this.scene.markDirty();
+            requestAnimationFrame(() => this.scene.markDirty());
             getPlayerAnimations(texture).forEach((d) => {
                 if (!this.scene.anims.exists(d.key)) {
                     this.scene.anims.create({

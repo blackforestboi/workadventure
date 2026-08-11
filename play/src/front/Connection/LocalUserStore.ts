@@ -77,6 +77,7 @@ export type NoiseSuppressionProvider = "workadventure" | "voiceIsolation";
 const JwtAuthToken = z
     .object({
         accessToken: z.string().optional().nullable(),
+        authProvider: z.enum(["x", "openid"]).optional(),
     })
     .partial();
 
@@ -383,7 +384,10 @@ class LocalUserStore {
     }
 
     isLogged(): boolean {
-        return this.jwt?.accessToken !== undefined && this.jwt?.accessToken !== null;
+        return (
+            (this.jwt?.accessToken !== undefined && this.jwt.accessToken !== null) ||
+            this.jwt?.authProvider !== undefined
+        );
     }
 
     private static parseJwt(token: string) {

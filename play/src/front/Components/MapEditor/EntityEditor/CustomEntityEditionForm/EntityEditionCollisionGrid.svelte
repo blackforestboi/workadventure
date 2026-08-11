@@ -1,28 +1,35 @@
 <script lang="ts">
     interface Props {
         collisionGrid: number[][];
+        collisionGridWidth: number;
         collisionGridHeight: number;
         updateCollisionGrid: (rowIndex: number, columnIndex: number) => void;
     }
 
-    let { collisionGrid = [], collisionGridHeight, updateCollisionGrid }: Props = $props();
+    let { collisionGrid = [], collisionGridWidth, collisionGridHeight, updateCollisionGrid }: Props = $props();
+    let columnCount = $derived(Math.max(1, ...collisionGrid.map((row) => row.length)));
 </script>
 
-<div class="absolute w-32 grid gap" style={`height: ${collisionGridHeight}px`}>
+<div
+    class="absolute left-0 top-0 grid"
+    style:width={`${collisionGridWidth}px`}
+    style:height={`${collisionGridHeight}px`}
+    style:grid-template-columns={`repeat(${columnCount}, minmax(0, 1fr))`}
+    style:grid-template-rows={`repeat(${Math.max(1, collisionGrid.length)}, minmax(0, 1fr))`}
+    aria-label="Collision areas"
+>
     {#each collisionGrid as row, rowIndex (rowIndex)}
         {#each row as _, columnIndex (columnIndex)}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-                style={`grid-area: ${rowIndex + 1} / ${columnIndex + 1}`}
+            <button
+                type="button"
+                aria-label={`Collision cell ${rowIndex + 1}, ${columnIndex + 1}`}
+                aria-pressed={collisionGrid[rowIndex][columnIndex] === 1}
                 class={[
-                    "cursor-pointer border-solid border border-gray-400 rounded-sm",
-                    {
-                        "bg-red-600/30": collisionGrid[rowIndex][columnIndex] === 1,
-                    },
+                    "min-h-0 min-w-0 cursor-crosshair border border-solid border-white/35 p-0 transition-colors hover:bg-red-400/35",
+                    collisionGrid[rowIndex][columnIndex] === 1 ? "bg-red-500/55" : "bg-transparent",
                 ]}
                 onclick={() => updateCollisionGrid(rowIndex, columnIndex)}
-            ></div>
+            ></button>
         {/each}
     {/each}
 </div>

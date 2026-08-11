@@ -30,18 +30,71 @@ services:
           - "xmpp.workadventure.localhost"
           - "matrix.workadventure.localhost"
           - "pusher.workadventure.localhost"
+          - "mcp.workadventure.localhost"
+
+  node-modules-init:
+    image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown -R 1000:1000 /usr/src/app/node_modules"]
+    volumes:
+      - workadventure-linux-node-modules:/usr/src/app/node_modules
+
+  # The browser never talks to this service directly. Play authenticates users,
+  # replaces their identity with an opaque owner ID, and proxies bridge calls.
+  teapot-agent-bridge:
+    build:
+      context: .
+      dockerfile: teapot-cli-companion/Dockerfile
+    image: teapot-agent-bridge:development
+    init: true
+    environment:
+      TEAPOT_AGENT_BRIDGE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET:-development-only-teapot-agent-bridge-secret-change-me}"
+      TEAPOT_AGENT_BRIDGE_HOST: "0.0.0.0"
+      TEAPOT_AGENT_BRIDGE_PORT: "17375"
+      TEAPOT_AGENT_AUTH_ROOT: "/var/lib/teapot-agent-auth"
+      TEAPOT_HOSTED_BRIDGE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET:-development-only-teapot-agent-bridge-secret-change-me}"
+      TEAPOT_HOSTED_BRIDGE_HOST: "0.0.0.0"
+      TEAPOT_HOSTED_BRIDGE_PORT: "17375"
+      TEAPOT_CODEX_BRIDGE_SERVICE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET:-development-only-teapot-agent-bridge-secret-change-me}"
+      TEAPOT_CODEX_BRIDGE_HOST: "0.0.0.0"
+      TEAPOT_CODEX_BRIDGE_PORT: "17375"
+      TEAPOT_CODEX_AUTH_ROOT: "/var/lib/teapot-agent-auth/codex"
+      TEAPOT_CLAUDE_AUTH_ROOT: "/var/lib/teapot-agent-auth/claude"
+      TEAPOT_CLAUDE_CLI: "claude"
+    volumes:
+      - teapot-agent-auth:/var/lib/teapot-agent-auth
+    expose:
+      - "17375"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:17375/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
   play:
     image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
-    command: npm run dev
+    # Static type and Svelte checks run in the host validation suite. Keeping
+    # them out of the long-lived container avoids watch-process OOM exits.
+    command: npm run dev-docker
     # Uncomment to run the production build in dev (along STARTUP_COMMAND_4 and NODE_OPTIONS)
     #command: npm run start
     working_dir: /usr/src/app/play
     volumes:
       - .:/usr/src/app
+      - workadventure-linux-node-modules:/usr/src/app/node_modules
     tmpfs: /tmp
     ports:
       - "9231:9229"
       - "9235:9235"
+    depends_on:
+      node-modules-init:
+        condition: service_completed_successfully
+      teapot-postgres:
+        condition: service_healthy
+      teapot-agent-bridge:
+        condition: service_healthy
     environment:
       # On startup, we ask the messages container to regenerate the files.
       # Note: we need to use this "messages" container because of ARM64 processors that are not supported with protoc (used in "messages" container)
@@ -87,7 +140,26 @@ services:
       OPENID_LOCALE_CLAIM: ${OPENID_LOCALE_CLAIM:-}
       OPENID_LOGOUT_REDIRECT_URL: "${OPENID_LOGOUT_REDIRECT_URL:-}"
 
-      SECRET_KEY: "$SECRET_KEY"
+      # Keep the local stack bootable without a hand-created `.env`. Production
+      # overrides this through its own deployment environment.
+      SECRET_KEY: "${SECRET_KEY:-yourSecretKey2020}"
+      TEAPOT_DATABASE_URL: "postgresql://teapot:teapot@teapot-postgres:5432/teapot"
+      TEAPOT_REQUIRE_PERSISTENCE: "true"
+      TEAPOT_MAP_STORAGE_WRITE_TOKEN: "123"
+      TEAPOT_MCP_PUBLIC_URL: "http://mcp.workadventure.localhost/mcp"
+      # Development-only default. Production requires an explicit secret in
+      # contrib/docker/docker-compose.teapot.yaml.
+      TEAPOT_MCP_APPROVAL_SECRET: "${TEAPOT_MCP_APPROVAL_SECRET:-development-only-teapot-mcp-approval-secret-change-me}"
+      TEAPOT_AGENT_BRIDGE_URL: "http://teapot-agent-bridge:17375"
+      TEAPOT_AGENT_BRIDGE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET:-development-only-teapot-agent-bridge-secret-change-me}"
+      # Keep generated development assets on the bind-mounted workspace so
+      # the non-root Node container can create them and they survive restarts.
+      TEAPOT_WOKA_STORAGE_DIRECTORY: "/usr/src/app/.teapot-data/wokas"
+      TEAPOT_WOKA_PUBLIC_BASE_URL: "http://play.workadventure.localhost"
+      TEAPOT_X_CLIENT_ID: "${TEAPOT_X_CLIENT_ID:-}"
+      TEAPOT_X_CLIENT_SECRET: "${TEAPOT_X_CLIENT_SECRET:-}"
+      TEAPOT_X_REDIRECT_URI: "${TEAPOT_X_REDIRECT_URI:-}"
+      TEAPOT_X_BOOTSTRAP_USER_IDS: "${TEAPOT_X_BOOTSTRAP_USER_IDS:-}"
       ADMIN_API_URL: "${ADMIN_API_URL:-}"
       ADMIN_API_TOKEN: "$ADMIN_API_TOKEN"
       MAP_STORAGE_API_TOKEN: "FFVSGBSGBSGFB23SFGBSFG4BS"
@@ -163,8 +235,8 @@ services:
       MATRIX_DOMAIN: matrix.workadventure.localhost
       # oEmbed providers
       EMBEDLY_KEY: "$EMBEDLY_KEY"
-      # Map editor restrictions (allow all users when OIDC is enabled by default)
-      MAP_EDITOR_ALLOW_ALL_USERS: "false"
+      # Map editor restrictions (controlled by .env; defaults to allowing local users)
+      MAP_EDITOR_ALLOW_ALL_USERS: "$MAP_EDITOR_ALLOW_ALL_USERS"
       MAX_DISPLAYED_VIDEOS: ${MAX_DISPLAYED_VIDEOS:-}
       LIVEKIT_PIXEL_DENSITY: "${LIVEKIT_PIXEL_DENSITY:-}"
 
@@ -187,6 +259,12 @@ services:
       - "traefik.http.routers.play-vite.priority=2"
       - "traefik.http.routers.play-vite.service=front"
 
+      # Vite's HMR socket uses its own path so it can share the browser's
+      # play.* origin without colliding with the game's /ws/ socket.
+      - "traefik.http.routers.play-vite-hmr.rule=Host(`play.workadventure.localhost`) && Path(`/__vite_hmr`)"
+      - "traefik.http.routers.play-vite-hmr.priority=3"
+      - "traefik.http.routers.play-vite-hmr.service=front"
+
       - "traefik.http.routers.room-api.rule=Host(`room-api.workadventure.localhost`)"
       - "traefik.http.routers.room-api.service=room-api"
       - "traefik.http.services.room-api.loadbalancer.server.port=50051"
@@ -195,6 +273,13 @@ services:
       - "traefik.http.routers.play.rule=HostRegexp(`^.+$`)"
       - "traefik.http.routers.play.priority=1"
       - "traefik.http.routers.play.service=play"
+      # Stable local entry point for the browser. The catch-all remains for
+      # custom hosts, while this explicit rule survives proxy reloads.
+      - "traefik.http.routers.play-local.rule=Host(`play.workadventure.localhost`)"
+      # Keep this below the dedicated /ws/ router (priority 2), otherwise
+      # clients remain stuck on the connecting screen.
+      - "traefik.http.routers.play-local.priority=1"
+      - "traefik.http.routers.play-local.service=play"
       - "traefik.http.services.play.loadbalancer.server.port=3000"
 
       - "traefik.http.routers.play-ws.rule=HostRegexp(`^.+$`) && PathPrefix(`/ws/`)"
@@ -205,6 +290,29 @@ services:
       - "traefik.http.services.play-ws.loadbalancer.sticky.cookie.name=wa_ws_affinity"
       - "traefik.http.services.play-ws.loadbalancer.sticky.cookie.httpOnly=true"
       - "traefik.http.services.play-ws.loadbalancer.sticky.cookie.sameSite=lax"
+
+  teapot-mcp:
+    image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
+    command: npm run start
+    working_dir: /usr/src/app/teapot-mcp
+    depends_on:
+      play:
+        condition: service_started
+    environment:
+      STARTUP_COMMAND_1: ../npm-install.sh
+      TEAPOT_PUSHER_URL: "http://play:3000"
+      TEAPOT_MCP_HOST: "0.0.0.0"
+      TEAPOT_MCP_PORT: "17374"
+      TEAPOT_MCP_ALLOWED_HOSTS: "mcp.workadventure.localhost,localhost:17374,127.0.0.1:17374"
+    volumes:
+      - .:/usr/src/app
+      - workadventure-linux-node-modules:/usr/src/app/node_modules
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.teapot-mcp.rule=Host(`mcp.workadventure.localhost`)"
+      - "traefik.http.routers.teapot-mcp.entryPoints=web"
+      - "traefik.http.routers.teapot-mcp.service=teapot-mcp"
+      - "traefik.http.services.teapot-mcp.loadbalancer.server.port=17374"
 
   maps:
     image: thecodingmachine/php:8.1-v4-apache-node12
@@ -230,6 +338,9 @@ services:
     image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
     command: npm run dev
     working_dir: /usr/src/app/back
+    depends_on:
+      node-modules-init:
+        condition: service_completed_successfully
     environment:
       #DEBUG: "*"
       PLAY_URL: http://play.workadventure.localhost
@@ -269,6 +380,7 @@ services:
       SENTRY_RELEASE: ${SENTRY_RELEASE:-}
     volumes:
       - .:/usr/src/app
+      - workadventure-linux-node-modules:/usr/src/app/node_modules
     tmpfs: /tmp
     ports:
       - "9232:9229"
@@ -284,6 +396,9 @@ services:
     command: npm run start:dev
     #command: npm run profile
     working_dir: /usr/src/app/map-storage
+    depends_on:
+      node-modules-init:
+        condition: service_completed_successfully
     environment:
       #DEBUG: "*"
       STARTUP_COMMAND_1: ../wait-proto.sh
@@ -307,6 +422,7 @@ services:
       SECRET_KEY: "$SECRET_KEY"
     volumes:
       - .:/usr/src/app
+      - workadventure-linux-node-modules:/usr/src/app/node_modules
     tmpfs: /tmp
     ports:
       - "9233:9229"
@@ -326,6 +442,9 @@ services:
     command: npm run dev
     #command: npm run profile
     working_dir: /usr/src/app/uploader
+    depends_on:
+      node-modules-init:
+        condition: service_completed_successfully
     environment:
       DEBUG: "*"
       STARTUP_COMMAND_1: ../npm-install.sh
@@ -345,6 +464,7 @@ services:
       UPLOAD_MAX_FILESIZE: "${UPLOAD_MAX_FILESIZE:-}"
     volumes:
       - .:/usr/src/app
+      - workadventure-linux-node-modules:/usr/src/app/node_modules
     tmpfs: /tmp
     ports:
       - "9234:9229"
@@ -369,6 +489,20 @@ services:
 
   redis:
     image: redis:6
+
+  teapot-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: teapot
+      POSTGRES_PASSWORD: teapot
+      POSTGRES_DB: teapot
+    volumes:
+      - teapot-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teapot -d teapot"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   redisinsight:
     image: redislabs/redisinsight:latest
@@ -558,5 +692,9 @@ services:
 #      #- --cert=/root/letsencrypt/fullchain.pem
 #      #- --pkey=/root/letsencrypt/privkey.pem
 #    network_mode: host
-#volumes:
+volumes:
+  workadventure-linux-node-modules:
+  teapot-agent-auth:
+  teapot-woka-assets:
+  teapot-postgres-data:
 #  synapsedata:

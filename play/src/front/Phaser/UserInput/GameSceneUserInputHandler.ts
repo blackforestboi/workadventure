@@ -18,6 +18,7 @@ import { isPopupJustClosed } from "../Game/Say/SayManager";
 import LL from "../../../i18n/i18n-svelte";
 import { followRoleStore, followStateStore, followUsersStore } from "../../Stores/FollowStore";
 import { localUserStore } from "../../Connection/LocalUserStore";
+import { isSpaceKey } from "./KeyboardUtils";
 import type { Shortcut } from "./UserInputManager";
 
 import Pointer = Phaser.Input.Pointer;
@@ -108,7 +109,7 @@ export class GameSceneUserInputHandler implements UserInputHandlerInterface {
         deltaY: number,
         deltaZ: number,
     ): void {
-        this.gameScene.handleMouseWheel(deltaY);
+        this.gameScene.handleMouseWheel(pointer, deltaY);
     }
 
     public handlePointerUpEvent(pointer: Pointer, gameObjects: GameObject[]): void {
@@ -306,6 +307,12 @@ export class GameSceneUserInputHandler implements UserInputHandlerInterface {
     }
 
     public handleKeyUpEvent(event: KeyboardEvent): KeyboardEvent {
+        if (isSpaceKey(event)) {
+            this.handleActivableEntity();
+            event.preventDefault();
+            return event;
+        }
+
         switch (event.key) {
             case "Escape": {
                 const dismissed = this.gameScene.CurrentPlayer?.dismissNewMediaDevicePrompts((deviceId) => {
@@ -315,11 +322,6 @@ export class GameSceneUserInputHandler implements UserInputHandlerInterface {
                     event.preventDefault();
                     event.stopPropagation();
                 }
-                break;
-            }
-            // SPACE
-            case " ": {
-                this.handleActivableEntity();
                 break;
             }
             case "Control": {

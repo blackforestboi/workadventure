@@ -46,8 +46,8 @@ export abstract class AuthenticatedProviderController<T> extends BaseHttpControl
                 // Let's set the "uuid" param
                 uuid = jwtData.identifier;
             } catch (e) {
-                Sentry.captureException(`Connection refused for token: ${token} ${e}`);
-                console.error("Connection refused for token: " + token, e);
+                Sentry.captureException(e, { tags: { authentication: "invalid-provider-bearer" } });
+                console.error("Connection refused for an invalid provider token", e);
 
                 res.status(401).send("Invalid token sent");
                 return;

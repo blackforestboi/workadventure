@@ -51,6 +51,7 @@
             {getTextureUrl}
             {canvasSize}
             direction={directionsMapping[direction]}
+            animateFrames
         />
     </div>
 </div>

@@ -1,9 +1,18 @@
 import fs from "fs/promises";
 import type { WokaDetail, WokaList } from "@workadventure/messages";
 import { wokaPartNames } from "@workadventure/messages";
+import type { TeapotWokaCategory } from "../../common/Teapot/TeapotWoka";
+import type { TeapotWokaService } from "../teapot/TeapotWokaService";
+import { isGeneratedWokaTextureId } from "../teapot/TeapotWokaService";
 import type { WokaServiceInterface } from "./WokaServiceInterface";
 
-class LocalWokaService implements WokaServiceInterface {
+export class LocalWokaService implements WokaServiceInterface {
+    private generatedWokas: TeapotWokaService | undefined;
+
+    setGeneratedWokaService(service: TeapotWokaService): void {
+        this.generatedWokas = service;
+    }
+
     private async loadWokaData(): Promise<WokaList> {
         try {
             const file = new URL("../data/woka.json", import.meta.url);
@@ -33,10 +42,16 @@ class LocalWokaService implements WokaServiceInterface {
      *
      * If one of the textures cannot be found, undefined is returned (and the user should be redirected to Woka choice page!)
      */
-    async fetchWokaDetails(textureIds: string[]): Promise<WokaDetail[] | undefined> {
+    async fetchWokaDetails(textureIds: string[], providerSubject?: string): Promise<WokaDetail[] | undefined> {
         const wokaData: WokaList = await this.loadWokaData();
         const textures = new Map<string, string>();
-        const searchIds = new Set(textureIds);
+        const expectedCategories = expectedWokaCategories(textureIds.length);
+        const generatedSelections = textureIds.flatMap((textureId, index) => {
+            if (!isGeneratedWokaTextureId(textureId)) return [];
+            const category = expectedCategories?.[index];
+            return category === undefined ? [] : [{ textureId, category }];
+        });
+        const searchIds = new Set(textureIds.filter((textureId) => !isGeneratedWokaTextureId(textureId)));
 
         for (const part of wokaPartNames) {
             const wokaPartType = wokaData[part];
@@ -56,21 +71,42 @@ class LocalWokaService implements WokaServiceInterface {
             }
         }
 
+        if (textureIds.some(isGeneratedWokaTextureId)) {
+            if (
+                this.generatedWokas === undefined ||
+                providerSubject === undefined ||
+                generatedSelections.length !== textureIds.filter(isGeneratedWokaTextureId).length
+            ) {
+                return undefined;
+            }
+            const generatedDetails = await this.generatedWokas.resolveGeneratedWokaDetails(
+                providerSubject,
+                generatedSelections.map((selection) => selection.textureId),
+                generatedSelections.map((selection) => selection.category),
+            );
+            if (generatedDetails === undefined) return undefined;
+            for (const detail of generatedDetails) textures.set(detail.id, detail.url);
+        }
+
         if (textureIds.length !== textures.size) {
             return undefined;
         }
 
         const details: WokaDetail[] = [];
-
-        textures.forEach((value, key) => {
-            details.push({
-                id: key,
-                url: value,
-            });
-        });
+        for (const textureId of textureIds) {
+            const url = textures.get(textureId);
+            if (url === undefined) return undefined;
+            details.push({ id: textureId, url });
+        }
 
         return details;
     }
 }
 
 export const localWokaService = new LocalWokaService();
+
+function expectedWokaCategories(textureCount: number): readonly TeapotWokaCategory[] | undefined {
+    if (textureCount === 1) return ["woka"];
+    if (textureCount === 6) return ["body", "eyes", "hair", "clothes", "hat", "accessory"];
+    return undefined;
+}

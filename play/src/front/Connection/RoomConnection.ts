@@ -2,7 +2,13 @@ import axios from "axios";
 import Debug from "debug";
 import * as Sentry from "@sentry/svelte";
 
-import type { AreaData, AtLeast, EntityDimensions, WAMEntityData } from "@workadventure/map-editor";
+import type {
+    AreaData,
+    AtLeast,
+    EntityDimensions,
+    TeapotTerrainMutation,
+    WAMEntityData,
+} from "@workadventure/map-editor";
 import { Deferred } from "@workadventure/shared-utils";
 import type {
     AddSpaceFilterMessage,
@@ -1220,6 +1226,28 @@ export class RoomConnection implements RoomConnection {
                                 ...config,
                                 properties: config.properties ?? [],
                                 modifyProperties: config.properties !== undefined,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    public emitMapEditorModifyTerrain(commandId: string, mutation: TeapotTerrainMutation): void {
+        this.send({
+            message: {
+                $case: "editMapCommandMessage",
+                editMapCommandMessage: {
+                    id: commandId,
+                    editMapMessage: {
+                        message: {
+                            $case: "modifyTerrainMessage",
+                            modifyTerrainMessage: {
+                                mapUrl: mutation.mapId,
+                                regions: mutation.regions.map((region) => ({ ...region, gids: [...region.gids] })),
+                                tilesetJson: mutation.tilesetJson ?? "",
+                                removeTileset: mutation.removeTileset ?? false,
                             },
                         },
                     },

@@ -355,6 +355,8 @@ function createSocket(overrides: Partial<SocketData> = {}): RawSocket {
         activatedInviteUser: undefined,
         applications: null,
         canEdit: false,
+        legacyCanEdit: false,
+        legacyCanAdmin: false,
         spaceUserId: "space-user-id",
         backConnection: undefined,
         listenedZones: new Set(),

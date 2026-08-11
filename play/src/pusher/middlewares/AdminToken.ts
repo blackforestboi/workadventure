@@ -11,8 +11,8 @@ export function adminToken(req: Request, res: Response, next: NextFunction): voi
         return;
     }
     if (token !== ADMIN_API_TOKEN) {
-        console.error("Admin access refused for token: " + token);
-        Sentry.captureException("Admin access refused for token: " + token);
+        console.error("Admin access refused for an invalid token");
+        Sentry.captureException("Admin access refused for an invalid token");
         res.status(401).end("Incorrect token");
         return;
     }

@@ -314,6 +314,8 @@ export const EntityData = z.object({
     id: z.string(),
     x: z.number(),
     y: z.number(),
+    width: z.number().positive().optional(),
+    height: z.number().positive().optional(),
     name: z.string().optional(),
     properties: EntityDataProperties.optional(),
     prefab: EntityRawPrefab,

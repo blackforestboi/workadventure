@@ -13,7 +13,10 @@ import type { RemotePlayer } from "../Entity/RemotePlayer";
 import {
     SMOOTH_BUTTON_ZOOM_DURATION,
     SMOOTH_BUTTON_ZOOM_TARGET_EPSILON,
+    type CursorZoomAnchor,
     getContinuousButtonZoomFactor,
+    getCursorZoomAnchor,
+    getCursorZoomFocus,
     getRetargetedButtonZoomModifier,
     getSmoothButtonZoomModifier,
 } from "./CameraZoomUtils";
@@ -83,6 +86,8 @@ export class CameraManager extends EventEmitter {
     private readonly EDITOR_MODE_SCROLL_SPEED: number = 5;
 
     private readonly unsubscribeMapEditorModeStore: () => void;
+    private mapEditorModeActive = false;
+    private explorationModeActive = false;
 
     private _resistanceEndZoomLevel = 0.3;
 
@@ -100,7 +105,7 @@ export class CameraManager extends EventEmitter {
 
     constructor(
         private scene: GameScene,
-        private mapSize: { width: number; height: number },
+        private mapSize: { width: number; height: number; x?: number; y?: number },
         waScaleManager: WaScaleManager,
     ) {
         super();
@@ -120,31 +125,26 @@ export class CameraManager extends EventEmitter {
 
         // Subscribe to map editor mode store to change camera bounds when the map editor is opened or closed
         this.unsubscribeMapEditorModeStore = mapEditorModeStore.subscribe((isOpened) => {
-            // Define new bounds for camera if the map editor is opened
+            this.mapEditorModeActive = isOpened;
+            this.updateZoomOutLimit();
             if (isOpened) {
-                //this.camera.setBounds(0, 0, this.mapSize.width * 2, this.mapSize.height);
-                this.camera.setBounds(
-                    -this.mapSize.width,
-                    -this.mapSize.height,
-                    this.mapSize.width * 3,
-                    this.mapSize.height * 3,
-                );
+                this.camera.removeBounds();
             } else {
-                // We set the bounds back after a call to start following the player
-                this.camera.setBounds(0, 0, this.mapSize.width, this.mapSize.height);
+                this.updateNormalCameraBounds();
             }
         });
 
         // Set zoom out to the maximum possible value
-        this.waScaleManager.maxZoomOut = this.waScaleManager.getTargetZoomModifierFor(
-            this.mapSize.width,
-            this.mapSize.height,
-        );
+        this.updateZoomOutLimit();
 
         this.scene.game.events.on(WaScaleManagerEvent.ZoomChanged, this.onZoomChanged);
     }
 
     private readonly onZoomChanged = (): void => {
+        if (this.mapEditorModeActive) {
+            return;
+        }
+        this.updateNormalCameraBounds();
         this.doUpdateCameraOffset(true);
     };
 
@@ -165,11 +165,46 @@ export class CameraManager extends EventEmitter {
         return this.camera;
     }
 
+    public setMapSize(width: number, height: number, x = this.mapSize.x ?? 0, y = this.mapSize.y ?? 0): void {
+        this.mapSize.width = Math.max(this.mapSize.width, width);
+        this.mapSize.height = Math.max(this.mapSize.height, height);
+        this.mapSize.x = Math.min(this.mapSize.x ?? 0, x);
+        this.mapSize.y = Math.min(this.mapSize.y ?? 0, y);
+        this.updateZoomOutLimit();
+        if (!this.mapEditorModeActive) this.updateNormalCameraBounds();
+    }
+
+    private updateZoomOutLimit(): void {
+        const workspaceScale = this.mapEditorModeActive ? 2 : 1;
+        this.waScaleManager.maxZoomOut = this.waScaleManager.getTargetZoomModifierFor(
+            this.mapSize.width * workspaceScale,
+            this.mapSize.height * workspaceScale,
+        );
+    }
+
+    private clampExplorationFocus(): void {
+        const originX = this.mapSize.x ?? 0;
+        const originY = this.mapSize.y ?? 0;
+        const marginX = this.mapEditorModeActive ? this.mapSize.width / 2 : 0;
+        const marginY = this.mapEditorModeActive ? this.mapSize.height / 2 : 0;
+        this.explorerFocusOn.x = Clamp(
+            this.explorerFocusOn.x,
+            originX - marginX,
+            originX + this.mapSize.width + marginX,
+        );
+        this.explorerFocusOn.y = Clamp(
+            this.explorerFocusOn.y,
+            originY - marginY,
+            originY + this.mapSize.height + marginY,
+        );
+    }
+
     private animateToFocus(
         target: Character | { x: number; y: number },
         duration: number,
         callback?: () => void,
     ): void {
+        this.explorationModeActive = false;
         this.cameraAnimation?.onInterrupt();
 
         if (duration === 0) {
@@ -278,24 +313,24 @@ export class CameraManager extends EventEmitter {
         let sendViewportUpdate = false;
         if (moveEvents.get(UserInputEvent.MoveUp)) {
             this.explorerFocusOn.y -= this.EDITOR_MODE_SCROLL_SPEED;
-            this.explorerFocusOn.y = Clamp(this.explorerFocusOn.y, 0, this.mapSize.height);
+            this.clampExplorationFocus();
             this.scene.markDirty();
             sendViewportUpdate = true;
         } else if (moveEvents.get(UserInputEvent.MoveDown)) {
             this.explorerFocusOn.y += this.EDITOR_MODE_SCROLL_SPEED;
-            this.explorerFocusOn.y = Clamp(this.explorerFocusOn.y, 0, this.mapSize.height);
+            this.clampExplorationFocus();
             this.scene.markDirty();
             sendViewportUpdate = true;
         }
 
         if (moveEvents.get(UserInputEvent.MoveLeft)) {
             this.explorerFocusOn.x -= this.EDITOR_MODE_SCROLL_SPEED;
-            this.explorerFocusOn.x = Clamp(this.explorerFocusOn.x, 0, this.mapSize.width);
+            this.clampExplorationFocus();
             this.scene.markDirty();
             sendViewportUpdate = true;
         } else if (moveEvents.get(UserInputEvent.MoveRight)) {
             this.explorerFocusOn.x += this.EDITOR_MODE_SCROLL_SPEED;
-            this.explorerFocusOn.x = Clamp(this.explorerFocusOn.x, 0, this.mapSize.width);
+            this.clampExplorationFocus();
             this.scene.markDirty();
             sendViewportUpdate = true;
         }
@@ -382,6 +417,13 @@ export class CameraManager extends EventEmitter {
     }
 
     public doUpdateCameraOffset(instant = false): void {
+        if (this.mapEditorModeActive) {
+            this.cancelOffsetTween();
+            this.camera.setFollowOffset(0, 0);
+            this.scene.markDirty();
+            return;
+        }
+
         const targetFollowOffset = this.updateTargetFollowOffset();
 
         if (instant) {
@@ -457,7 +499,20 @@ export class CameraManager extends EventEmitter {
 
     private initCamera() {
         this.camera = this.scene.cameras.main;
-        this.camera.setBounds(0, 0, this.mapSize.width, this.mapSize.height);
+        this.updateNormalCameraBounds();
+    }
+
+    private updateNormalCameraBounds(): void {
+        const halfViewportWidth = this.camera.width / this.camera.zoom / 2;
+        const halfViewportHeight = this.camera.height / this.camera.zoom / 2;
+        const originX = this.mapSize.x ?? 0;
+        const originY = this.mapSize.y ?? 0;
+        this.camera.setBounds(
+            originX - halfViewportWidth,
+            originY - halfViewportHeight,
+            this.mapSize.width + halfViewportWidth * 2,
+            this.mapSize.height + halfViewportHeight * 2,
+        );
     }
 
     private onFollowUpdate = () => {
@@ -498,6 +553,15 @@ export class CameraManager extends EventEmitter {
 
     // Create function to define the camera on exploration mode. The camera can be moved anywhere on the map. The camera is not locked on the player. The camera can be zoomed in and out. The camera can be moved with the mouse. The camera can be moved with the keyboard. The camera can be moved with the touchpad.
     public setExplorationMode(): void {
+        this.explorationModeActive = true;
+
+        // Exploration mode owns the camera target. A player-follow/focus transition or an inherited zoom
+        // animation would keep writing to the same camera after the editor has taken control.
+        this.cameraAnimation?.onInterrupt();
+        this.cameraAnimation = undefined;
+        this.zoomAnimation?.onInterrupt();
+        this.zoomAnimation = undefined;
+
         this.camera.setFollowOffset(0, 0);
 
         // this.camera.setBounds(
@@ -513,6 +577,10 @@ export class CameraManager extends EventEmitter {
             y: this.camera.scrollY + this.camera.height / 2,
         };
         this.camera.startFollow(this.explorerFocusOn, true);
+    }
+
+    public isInExplorationMode(): boolean {
+        return this.explorationModeActive;
     }
 
     public setFollowMode(): void {
@@ -543,8 +611,13 @@ export class CameraManager extends EventEmitter {
     /**
      * Zooms the camera by a factor passed in parameter.
      */
-    public zoomByFactor(zoomFactor: number, duration: number, callback?: () => void): void {
-        this.animateToZoomLevel(this.waScaleManager.zoomModifier * zoomFactor, duration, callback);
+    public zoomByFactor(
+        zoomFactor: number,
+        duration: number,
+        callback?: () => void,
+        cursorPosition?: { x: number; y: number },
+    ): void {
+        this.animateToZoomLevel(this.waScaleManager.zoomModifier * zoomFactor, duration, callback, cursorPosition);
     }
 
     /**
@@ -605,8 +678,34 @@ export class CameraManager extends EventEmitter {
         this.stopButtonZoomAnimation();
     }
 
-    private animateToZoomLevel(targetZoomModifier: number, duration: number, callback?: () => void): void {
+    private animateToZoomLevel(
+        targetZoomModifier: number,
+        duration: number,
+        callback?: () => void,
+        cursorPosition?: { x: number; y: number },
+    ): void {
         this.zoomAnimation?.onInterrupt();
+        this.zoomAnimation = undefined;
+
+        const cursorZoomAnchor = cursorPosition
+            ? getCursorZoomAnchor(
+                  this.explorerFocusOn,
+                  cursorPosition,
+                  {
+                      x: this.camera.x + this.camera.width * this.camera.originX,
+                      y: this.camera.y + this.camera.height * this.camera.originY,
+                  },
+                  this.camera.zoom,
+              )
+            : undefined;
+
+        if (duration === 0) {
+            this.applyZoomModifier(targetZoomModifier, false, cursorZoomAnchor);
+            this.emit(CameraManagerEvent.CameraUpdate, this.getCameraUpdateEventData());
+            callback?.();
+            return;
+        }
+
         const startZoomModifier = this.waScaleManager.zoomModifier;
         const startDate = Date.now();
 
@@ -622,11 +721,11 @@ export class CameraManager extends EventEmitter {
                 if (value === null) {
                     return;
                 }
-                this.waScaleManager.setZoomModifier(value, this.camera, true);
+                this.applyZoomModifier(value, true, cursorZoomAnchor);
                 this.emit(CameraManagerEvent.CameraUpdate, this.getCameraUpdateEventData());
             },
             onComplete: () => {
-                this.waScaleManager.setZoomModifier(targetZoomModifier, this.camera, false);
+                this.applyZoomModifier(targetZoomModifier, false, cursorZoomAnchor);
                 callback?.();
             },
             onStop: () => {
@@ -650,7 +749,7 @@ export class CameraManager extends EventEmitter {
                 } else {
                     value = targetZoomModifier;
                 }
-                this.waScaleManager.setZoomModifier(value, this.camera, true);
+                this.applyZoomModifier(value, true, cursorZoomAnchor);
                 this.emit(CameraManagerEvent.CameraUpdate, this.getCameraUpdateEventData());
             },
         });
@@ -661,6 +760,17 @@ export class CameraManager extends EventEmitter {
                 zoomTween.destroy();
             },
         };
+    }
+
+    private applyZoomModifier(zoomModifier: number, animating: boolean, cursorZoomAnchor?: CursorZoomAnchor): void {
+        this.waScaleManager.setZoomModifier(zoomModifier, this.camera, animating);
+        if (!cursorZoomAnchor) {
+            return;
+        }
+
+        const focus = getCursorZoomFocus(cursorZoomAnchor, this.camera.zoom);
+        this.explorerFocusOn.x = focus.x;
+        this.explorerFocusOn.y = focus.y;
     }
 
     private startButtonZoomAnimation(): void {
@@ -766,8 +876,7 @@ export class CameraManager extends EventEmitter {
         this.explorerFocusOn.x += (cameraSpeed.speedX * delta) / 400;
         this.explorerFocusOn.y += (cameraSpeed.speedY * delta) / 400;
 
-        this.explorerFocusOn.x = Clamp(this.explorerFocusOn.x, 0, this.mapSize.width);
-        this.explorerFocusOn.y = Clamp(this.explorerFocusOn.y, 0, this.mapSize.height);
+        this.clampExplorationFocus();
 
         // Now, let's slow down the camera a bit
         cameraSpeed.speedX *= 1 - delta / 500;
@@ -811,11 +920,21 @@ export class CameraManager extends EventEmitter {
         this.explorerFocusOn.x += x;
         this.explorerFocusOn.y += y;
 
-        this.explorerFocusOn.x = Clamp(this.explorerFocusOn.x, 0, this.mapSize.width);
-        this.explorerFocusOn.y = Clamp(this.explorerFocusOn.y, 0, this.mapSize.height);
+        this.clampExplorationFocus();
 
         this.emit(CameraManagerEvent.CameraUpdate, this.getCameraUpdateEventData());
         this.scene.markDirty();
+    }
+
+    scrollCameraByScreenDelta(x: number, y: number): void {
+        this.scrollCamera(x / this.camera.zoom, y / this.camera.zoom);
+    }
+
+    setSpeedFromScreenVelocity(velocity: { x: number; y: number }): void {
+        this.setSpeed({
+            x: (-velocity.x * 10) / this.camera.zoom,
+            y: (-velocity.y * 10) / this.camera.zoom,
+        });
     }
 
     get playerFollowing(): Player | RemotePlayer | undefined {

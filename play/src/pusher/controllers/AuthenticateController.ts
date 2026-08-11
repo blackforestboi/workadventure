@@ -231,6 +231,18 @@ export class AuthenticateController extends BaseHttpController {
                     return;
                 }
 
+                if (authTokenData.authProvider === "x") {
+                    res.json({
+                        authToken: token,
+                        username: authTokenData.username,
+                        locale: authTokenData.locale,
+                        matrixUserId: authTokenData.matrixUserId,
+                        matrixServerUrl: MATRIX_PUBLIC_URI,
+                        ...resUserData,
+                    } satisfies MeResponse);
+                    return;
+                }
+
                 try {
                     const resCheckTokenAuth = await openIDClient.checkTokenAuth(authTokenData.accessToken);
                     res.json({

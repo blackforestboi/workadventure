@@ -1,8 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, expect, it, vi } from "vitest";
-import { JoinRoomMessage, PositionMessage_Direction, RoomJoinedMessage } from "@workadventure/messages";
+import {
+    EditMapCommandMessage,
+    JoinRoomMessage,
+    PositionMessage_Direction,
+    RoomJoinedMessage,
+} from "@workadventure/messages";
 import { LocalUrlError } from "@workadventure/map-editor/src/LocalUrlError";
 import { mapFetcher } from "@workadventure/map-editor/src/MapFetcher";
+import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import type { ConnectCallback, DisconnectCallback } from "../src/Model/GameRoom";
 import { GameRoom } from "../src/Model/GameRoom";
 import { Point } from "../src/Model/Websocket/MessageUserPosition";
@@ -98,11 +104,75 @@ function createWorld(): Promise<GameRoom> {
         emote,
         () => {},
         () => {},
-        () => {}
+        () => {},
     );
 }
 
 describe("GameRoom", () => {
+    it("detects a persisted terrain deletion under any live room user", async () => {
+        vi.spyOn(mapFetcher, "fetchMap").mockResolvedValueOnce({
+            orientation: "orthogonal",
+            infinite: false,
+            width: 2,
+            height: 2,
+            tilewidth: 32,
+            tileheight: 32,
+            layers: [
+                {
+                    id: 1,
+                    name: "floor",
+                    type: "tilelayer",
+                    width: 2,
+                    height: 2,
+                    data: [1, 1, 1, 1],
+                    opacity: 1,
+                    visible: true,
+                },
+            ],
+            tilesets: [],
+        } as unknown as ITiledMap);
+        const world = await createWorld();
+        const userSocket = createMockUserSocket();
+        await world.join(userSocket.socket, createJoinRoomMessage("occupied", 16, 16));
+        const containsOccupiedTerrainDeletion = (
+            world as unknown as {
+                containsOccupiedTerrainDeletion(message: EditMapCommandMessage): Promise<boolean>;
+            }
+        ).containsOccupiedTerrainDeletion.bind(world);
+
+        const deletion = EditMapCommandMessage.fromPartial({
+            id: "delete",
+            editMapMessage: {
+                message: {
+                    $case: "modifyTerrainMessage",
+                    modifyTerrainMessage: {
+                        mapUrl: "https://example.com/map.tmj",
+                        regions: [{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [0] }],
+                        tilesetJson: "",
+                        removeTileset: false,
+                    },
+                },
+            },
+        });
+        const replacement = EditMapCommandMessage.fromPartial({
+            id: "replace",
+            editMapMessage: {
+                message: {
+                    $case: "modifyTerrainMessage",
+                    modifyTerrainMessage: {
+                        mapUrl: "https://example.com/map.tmj",
+                        regions: [{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [2] }],
+                        tilesetJson: "",
+                        removeTileset: false,
+                    },
+                },
+            },
+        });
+
+        await expect(containsOccupiedTerrainDeletion(deletion)).resolves.toBe(true);
+        await expect(containsOccupiedTerrainDeletion(replacement)).resolves.toBe(false);
+    });
+
     it("should connect user1 and user2", async () => {
         let connectCalledNumber = 0;
         const connect: ConnectCallback = (user: User, group: Group): void => {
@@ -122,7 +192,7 @@ describe("GameRoom", () => {
             emote,
             () => {},
             () => {},
-            () => {}
+            () => {},
         );
 
         const user1Socket = createMockUserSocket();
@@ -162,7 +232,7 @@ describe("GameRoom", () => {
             emote,
             () => {},
             () => {},
-            () => {}
+            () => {},
         );
 
         const user1Socket = createMockUserSocket();
@@ -207,7 +277,7 @@ describe("GameRoom", () => {
             emote,
             () => {},
             () => {},
-            () => {}
+            () => {},
         );
 
         const user1Socket = createMockUserSocket();
@@ -240,7 +310,7 @@ describe("GameRoom", () => {
             emote,
             () => {},
             () => {},
-            () => {}
+            () => {},
         );
 
         const firstSocket = createMockUserSocket();
@@ -249,7 +319,7 @@ describe("GameRoom", () => {
         const secondSocket = createMockUserSocket();
         const reconnectedUser = await world.join(
             secondSocket.socket,
-            createJoinRoomMessage("duplicate-user", 100, 100, "tab-1")
+            createJoinRoomMessage("duplicate-user", 100, 100, "tab-1"),
         );
 
         expect(firstSocket.end).toHaveBeenCalledTimes(1);
@@ -272,7 +342,7 @@ describe("GameRoom", () => {
             emote,
             () => {},
             () => {},
-            () => {}
+            () => {},
         );
 
         const firstSocket = createMockUserSocket();
@@ -281,7 +351,7 @@ describe("GameRoom", () => {
         const secondSocket = createMockUserSocket();
         const secondUser = await world.join(
             secondSocket.socket,
-            createJoinRoomMessage("duplicate-user", 100, 100, "tab-2")
+            createJoinRoomMessage("duplicate-user", 100, 100, "tab-2"),
         );
 
         expect(firstSocket.end).not.toHaveBeenCalled();
@@ -304,7 +374,7 @@ describe("GameRoom", () => {
             emote,
             () => {},
             () => {},
-            () => {}
+            () => {},
         );
 
         const firstSocket = createMockUserSocket();

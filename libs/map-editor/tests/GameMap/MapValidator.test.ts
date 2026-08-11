@@ -1,7 +1,9 @@
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
+import { createCenteredMap } from "../../src/GameMap/CenteredMapCoordinates";
 import type { ErrorType, MapValidation } from "../../src/GameMap/MapValidator";
 import { isFailure, MapValidator } from "../../src/GameMap/MapValidator";
 import { ZipFileFetcher } from "../../src/GameMap/Validator/ZipFileFetcher";
@@ -129,26 +131,15 @@ describe("Map validator", () => {
         expect(errors.entities[0].type).toBe("error");
     });
 
-    it("should not be infinite", async () => {
-        const result = await loadMap(
-            fileURLToPath(new URL("../../../../maps/tests/Validation/Infini.json", import.meta.url)),
-        );
+    it("accepts a centered infinite map", async () => {
+        const mapPath = fileURLToPath(new URL("../../../../maps/tests/Validation/simplicity.json", import.meta.url));
+        const files = fs.readdirSync(path.dirname(mapPath)).map((file) => path.resolve(path.dirname(mapPath), file));
+        const source = ITiledMap.parse(JSON.parse(fs.readFileSync(mapPath, "utf8")));
+        const validator = new MapValidator("info", new ZipFileFetcher(mapPath, files));
 
-        expect(result.ok).toBe(false);
+        const result = await validator.validateMap(createCenteredMap(source));
 
-        if (!isFailure(result)) {
-            throw new Error("Not an error");
-        }
-
-        const errors = result.error;
-        expect(errors.map).toBeDefined();
-
-        if (!errors.map) {
-            throw new Error("Not existing map on errors");
-        }
-
-        expect(errors.map[0].message).toBe("Infinite map size is not supported. Please use a fixed map size.");
-        expect(errors.map[0].type).toBe("error");
+        expect(result.ok).toBe(true);
     });
 
     it("should warn on != 32x32 tiles", async () => {

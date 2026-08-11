@@ -13,6 +13,50 @@ export const BUTTON_ZOOM_FACTOR_PER_SECOND = Math.pow(
     1000 / CONTINUOUS_BUTTON_ZOOM_STEP_DURATION,
 );
 
+type Point = { x: number; y: number };
+
+export type CursorZoomAnchor = {
+    worldPosition: Point;
+    viewportOffset: Point;
+};
+
+/**
+ * Captures the world position under the cursor from the live exploration focus.
+ *
+ * This deliberately avoids the Camera transform matrix. Several wheel events can arrive before Phaser renders
+ * another frame, while the exploration focus has already moved. Using that live focus keeps every event on the same
+ * world-space anchor instead of alternating between the previous and next rendered camera transforms.
+ */
+export function getCursorZoomAnchor(
+    cameraFocus: Point,
+    cursorPosition: Point,
+    viewportCenter: Point,
+    currentZoom: number,
+): CursorZoomAnchor {
+    const viewportOffset = {
+        x: cursorPosition.x - viewportCenter.x,
+        y: cursorPosition.y - viewportCenter.y,
+    };
+
+    return {
+        viewportOffset,
+        worldPosition: {
+            x: cameraFocus.x + viewportOffset.x / currentZoom,
+            y: cameraFocus.y + viewportOffset.y / currentZoom,
+        },
+    };
+}
+
+/**
+ * Moves the camera focus so the captured world position remains under the cursor at the new zoom level.
+ */
+export function getCursorZoomFocus(anchor: CursorZoomAnchor, zoom: number): Point {
+    return {
+        x: anchor.worldPosition.x - anchor.viewportOffset.x / zoom,
+        y: anchor.worldPosition.y - anchor.viewportOffset.y / zoom,
+    };
+}
+
 /**
  * Retargets quick repeated clicks from the previous destination, not from the current in-flight zoom.
  * This avoids restarting from a partially animated value and makes repeated clicks feel like one continuous motion.

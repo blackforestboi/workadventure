@@ -41,6 +41,7 @@ import { UploadFileMapStorageCommand } from "./Commands/File/UploadFileMapStorag
 import { hookManager } from "./Modules/HookManager";
 import { UpdateEntityMapStorageCommand } from "./Commands/Entity/UpdateEntityMapStorageCommand";
 import { isModifyAreaMessageOnlyClaim } from "./Services/isModifyAreaMessageOnlyClaim";
+import { persistTerrainMutation } from "./Services/TerrainPersistenceService";
 
 /**
  * List of commands that can be executed even if the user does not have edit rights on the map
@@ -311,6 +312,8 @@ const mapStorageServer: MapStorageServer = {
                                     },
                                     x: message.x,
                                     y: message.y,
+                                    width: message.width,
+                                    height: message.height,
                                     properties: message.properties as EntityDataProperties,
                                     name: message.name,
                                 },
@@ -389,6 +392,10 @@ const mapStorageServer: MapStorageServer = {
                             new UploadFileMapStorageCommand(uploadFileMessage, mapUrl.hostname),
                         );
                         editMapMessage.uploadFileMessage.file = new Uint8Array(0);
+                        break;
+                    }
+                    case "modifyTerrainMessage": {
+                        await persistTerrainMutation(wamFile, mapUrl, editMapMessage.modifyTerrainMessage);
                         break;
                     }
                     default: {

@@ -20,6 +20,7 @@ export const AuthTokenData = z.object({
         }, z.string().array())
         .optional(),
     matrixUserId: z.string().optional(),
+    authProvider: z.enum(["x", "openid"]).optional(),
 });
 export type AuthTokenData = z.infer<typeof AuthTokenData>;
 
@@ -66,8 +67,9 @@ export class JWTTokenManager {
         locale?: string,
         tags?: string[],
         matrixUserId?: string,
+        authProvider?: "x" | "openid",
     ): Promise<string> {
-        return new SignJWT({ identifier, accessToken, username, locale, tags, matrixUserId })
+        return new SignJWT({ identifier, accessToken, username, locale, tags, matrixUserId, authProvider })
             .setExpirationTime("30d")
             .setProtectedHeader({ alg: "HS256" })
             .sign(secret);

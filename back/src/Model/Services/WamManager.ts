@@ -163,6 +163,8 @@ export class WamManager {
                         },
                         x: message.x,
                         y: message.y,
+                        width: message.width,
+                        height: message.height,
                         properties: message.properties as EntityDataProperties,
                         name: message.name,
                     },
@@ -195,6 +197,7 @@ export class WamManager {
             case "uploadEntityMessage":
             case "modifyCustomEntityMessage":
             case "uploadFileMessage":
+            case "modifyTerrainMessage":
             case "errorCommandMessage":
                 break;
             default: {

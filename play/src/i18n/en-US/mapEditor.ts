@@ -483,6 +483,78 @@ const mapEditor: BaseTranslation = {
                 },
             },
         },
+        editorAccess: {
+            title: "Room access",
+            description: "Choose who can view, edit, and administer this room.",
+            loading: "Loading room access…",
+            roleLabel: "Role",
+            hierarchyNotice:
+                "Roles are cumulative: admins can edit and view, and editors can view. The room's platform owners remain recovery admins.",
+            roles: {
+                view: {
+                    title: "View",
+                    description: "Enter and see the room.",
+                },
+                edit: {
+                    title: "Edit",
+                    description: "Change the room map.",
+                },
+                admin: {
+                    title: "Admin",
+                    description: "Manage room access and administrative tools.",
+                },
+            },
+            modes: {
+                everyone: {
+                    title: "Everyone",
+                },
+                specific: {
+                    title: "Specific people",
+                },
+                nobody: {
+                    title: "No one",
+                },
+            },
+            identifier: {
+                label: "Exact username or identifier",
+                placeholder: "user@example.com",
+            },
+            displayName: {
+                label: "Display label (optional)",
+                placeholder: "Alex",
+            },
+            addByUsername: {
+                title: "Add a person by username",
+                description: "Assign a role even if the person has never visited this room.",
+            },
+            visitors: {
+                title: "Visitor history",
+                description: "Every person who has successfully entered this room appears here.",
+                search: "Search visitors",
+                empty: "No visitors have been recorded yet.",
+                person: "Person",
+                lastVisit: "Last visit",
+                visitCount: "{count} visit{{s}}",
+            },
+            specificMembers: "Specific people",
+            saved: "Room access saved.",
+            saving: "Saving…",
+            actions: {
+                add: "Add person",
+                removeLabel: "Remove {name}",
+                reload: "Reload latest settings",
+                retry: "Try again",
+                save: "Save room access",
+            },
+            errors: {
+                load: "Room access could not be loaded.",
+                save: "Room access could not be saved. Your changes are still here.",
+                conflict:
+                    "Another admin changed room access while you were editing. Reload the latest settings before trying again.",
+                required: "Enter an exact username or identifier.",
+                duplicate: "That person already has this role.",
+            },
+        },
         room: {
             title: "Room Settings",
             description: "Configure your room",

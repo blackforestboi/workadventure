@@ -21,6 +21,7 @@ import type { EntitiesManager } from "../../GameMap/EntitiesManager";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { waScaleManager } from "../../../Services/WaScaleManager";
 import { enableUserInputsStore } from "../../../../Stores/UserInputStore";
+import { hasPointerDragged } from "../PanGesture";
 import type { MapEditorTool } from "./MapEditorTool";
 
 import Pointer = Phaser.Input.Pointer;
@@ -33,6 +34,7 @@ export class ExplorerTool implements MapEditorTool {
     private upIsPressed = false;
     private leftIsPressed = false;
     private rightIsPressed = false;
+    private explorationPanCandidate = false;
     private explorationMouseIsActive = false;
     private entitiesManager: EntitiesManager;
     private lastCameraCenterXToZoom = 0;
@@ -80,29 +82,35 @@ export class ExplorerTool implements MapEditorTool {
         deltaY: number,
         deltaZ: number,
     ) => {
-        this.scene.handleMouseWheel(deltaY);
+        this.scene.handleMouseWheel(pointer, deltaY);
     };
     private pointerDownHandler = (pointer: Pointer) => {
+        this.explorationPanCandidate = pointer.leftButtonDown();
+        if (!this.explorationPanCandidate) return;
         // The motion factor is used to smooth out the velocity of the camera.
         // By default, the 0.2 value is too low and if we release the pointer when the mouse is not moving but has
         // moved 0.1 second before, the camera will continue to move.
         // 0.35 seems a more sensible default.
         pointer.motionFactor = 0.35;
-
-        this.explorationMouseIsActive = true;
-        this.scene.input.setDefaultCursor("grabbing");
-        this.scene.getCameraManager().stopSpeed();
     };
     private pointerMoveHandler = (pointer: Pointer) => {
-        if (!this.explorationMouseIsActive) return;
+        if (!this.explorationPanCandidate || !pointer.leftButtonDown()) return;
+        if (!this.explorationMouseIsActive) {
+            if (!hasPointerDragged(pointer)) return;
+            this.explorationMouseIsActive = true;
+            this.scene.input.setDefaultCursor("grabbing");
+            this.scene.getCameraManager().stopSpeed();
+        }
 
         this.scene
             .getCameraManager()
-            .scrollCamera(pointer.prevPosition.x - pointer.x, pointer.prevPosition.y - pointer.y);
+            .scrollCameraByScreenDelta(pointer.prevPosition.x - pointer.x, pointer.prevPosition.y - pointer.y);
     };
     private pointerUpHandler = (pointer: Pointer, gameObjects: GameObject[]) => {
-        this.scene.input.setDefaultCursor("grab");
+        const wasPanning = this.explorationMouseIsActive;
+        this.explorationPanCandidate = false;
         this.explorationMouseIsActive = false;
+        this.scene.input.setDefaultCursor("auto");
 
         if (gameObjects.length > 0) {
             const gameObject = gameObjects[0];
@@ -111,9 +119,9 @@ export class ExplorerTool implements MapEditorTool {
         }
 
         // The velocity will be null if the cursor is no longer above the game when the button is released
-        if (pointer.velocity) {
+        if (wasPanning && pointer.velocity) {
             // Let's compute the remaining velocity
-            this.scene.getCameraManager().setSpeed({ x: -pointer.velocity.x * 10, y: -pointer.velocity.y * 10 });
+            this.scene.getCameraManager().setSpeedFromScreenVelocity(pointer.velocity);
         }
 
         this.scene.markDirty();
@@ -177,25 +185,30 @@ export class ExplorerTool implements MapEditorTool {
         waScaleManager.setFocusTarget(undefined);
 
         const cameraManager = this.scene.getCameraManager();
+        cameraManager.stopSpeed();
 
-        let targetZoom = undefined;
-        // If the current zoom level is above the resistance level, we need to zoom back in.
-        // This happens when we close the explorer mode via a button.
-        // If we close by zooming in, there is no need to override the zoom level.
-        if (waScaleManager.zoomModifier < cameraManager.resistanceEndZoomLevel) {
-            targetZoom = this.zoomLevelBeforeExplorerMode;
+        // Switching from Explore to another editor tool must keep the editor-owned camera target.
+        // Player-follow mode is restored only when the map editor itself is closing.
+        if (!this.mapEditorModeManager.isActive()) {
+            let targetZoom = undefined;
+            // If the current zoom level is above the resistance level, we need to zoom back in.
+            // This happens when we close the explorer mode via a button.
+            // If we close by zooming in, there is no need to override the zoom level.
+            if (waScaleManager.zoomModifier < cameraManager.resistanceEndZoomLevel) {
+                targetZoom = this.zoomLevelBeforeExplorerMode;
 
-            if (targetZoom === undefined || targetZoom < cameraManager.resistanceEndZoomLevel) {
-                // In case we zoomed out with the mouse, but we closed
-                targetZoom = cameraManager.resistanceEndZoomLevel;
+                if (targetZoom === undefined || targetZoom < cameraManager.resistanceEndZoomLevel) {
+                    // In case we zoomed out with the mouse, but we closed
+                    targetZoom = cameraManager.resistanceEndZoomLevel;
+                }
             }
-        }
 
-        // Restore camera mode
-        cameraManager.startFollowPlayer(this.scene.CurrentPlayer, 1000);
-        if (targetZoom) {
-            const targetZoomFactor = targetZoom / waScaleManager.zoomModifier;
-            cameraManager.zoomByFactor(targetZoomFactor, 1000);
+            // Restore camera mode
+            cameraManager.startFollowPlayer(this.scene.CurrentPlayer, 1000);
+            if (targetZoom) {
+                const targetZoomFactor = targetZoom / waScaleManager.zoomModifier;
+                cameraManager.zoomByFactor(targetZoomFactor, 1000);
+            }
         }
 
         // Make all entities non interactive
@@ -246,7 +259,7 @@ export class ExplorerTool implements MapEditorTool {
         mapExplorationEntitiesStore.set(entitySearchableMap);
 
         // Define new cursor
-        this.scene.input.setDefaultCursor("grab");
+        this.scene.input.setDefaultCursor("auto");
 
         // Disable controls of the scene
         this.scene.userInputManager.disableControls("explorerTool");

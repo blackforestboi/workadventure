@@ -19,6 +19,7 @@
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import ButtonClose from "../Input/ButtonClose.svelte";
     import SettingsSubMenu from "./SettingsSubMenu.svelte";
+    import AiGenerationSubMenu from "./AiGenerationSubMenu.svelte";
     import ProfileSubMenu from "./ProfileSubMenu.svelte";
     import AboutRoomSubMenu from "./AboutRoomSubMenu.svelte";
     import ContactSubMenu from "./ContactSubMenu.svelte";
@@ -79,6 +80,9 @@
                 case SubMenusInterface.settings:
                     activeComponent = SettingsSubMenu;
                     analyticsClient.menuSetting();
+                    break;
+                case SubMenusInterface.aiModels:
+                    activeComponent = AiGenerationSubMenu;
                     break;
                 case SubMenusInterface.aboutRoom:
                     activeComponent = AboutRoomSubMenu;

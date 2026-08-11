@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import { IconLoader, IconPhotoOff } from "@wa-icons";
 
     interface Props {
@@ -9,24 +10,31 @@
     }
 
     let { classNames = undefined, imageSource, imageAlt, imageLoad = () => {} }: Props = $props();
-    let imageElementRef: HTMLImageElement;
+    let imageElementRef = $state<HTMLImageElement | undefined>(undefined);
     let imageRetry = $state(false);
     let imageError = $state(false);
-    let MAX_RETRY = 10;
-    let retry = 0;
+    const MAX_RETRY = 10;
+    let retry = $state(0);
+    let retryTimeout: ReturnType<typeof setTimeout> | undefined;
 
     function retryImageLoading() {
         imageRetry = true;
-        if (retry <= MAX_RETRY) {
-            setTimeout(() => {
-                imageElementRef.src = imageSource;
+        if (retry < MAX_RETRY) {
+            clearTimeout(retryTimeout);
+            retryTimeout = setTimeout(() => {
+                retryTimeout = undefined;
                 retry += 1;
+                // Remounting the image triggers a fresh request without retaining a reference to an
+                // element that Svelte unmounted while the retry spinner was visible.
+                imageRetry = false;
             }, 500);
         } else {
             imageRetry = false;
             imageError = true;
         }
     }
+
+    onDestroy(() => clearTimeout(retryTimeout));
 </script>
 
 {#if imageRetry}
@@ -41,18 +49,22 @@
     </div>
 {/if}
 
-<img
-    loading="lazy"
-    draggable="false"
-    class={`${classNames} ${imageRetry || imageError ? "invisible flex-[0_1_0]" : "visible"}`}
-    style="image-rendering: pixelated"
-    src={imageSource}
-    alt={imageAlt}
-    onload={() => {
-        imageLoad(imageElementRef);
-        imageError = false;
-        imageRetry = false;
-    }}
-    bind:this={imageElementRef}
-    onerror={() => retryImageLoading()}
-/>
+{#key retry}
+    <img
+        loading="lazy"
+        draggable="false"
+        class={`${classNames} ${imageRetry || imageError ? "invisible flex-[0_1_0]" : "visible"}`}
+        style="image-rendering: pixelated"
+        src={imageSource}
+        alt={imageAlt}
+        onload={() => {
+            if (imageElementRef) {
+                imageLoad(imageElementRef);
+            }
+            imageError = false;
+            imageRetry = false;
+        }}
+        bind:this={imageElementRef}
+        onerror={() => retryImageLoading()}
+    />
+{/key}

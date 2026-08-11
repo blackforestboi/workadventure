@@ -78,6 +78,10 @@ class MapsManager {
         // Security check: Check that the map is valid after the change (it should be, but better safe than sorry)
         WAMFileFormat.parse(wamFile.getWam());
 
+        // An acknowledged editor command must already be durable. The background interval remains as a safety net,
+        // but connected players only receive the command after this write has completed.
+        await fileSystem.writeStringAsFile(mapKey, JSON.stringify(wamFile.getWam()));
+
         if (updatedWamFile != undefined) {
             this.mapListService
                 .updateWAMFileInCache(domain, mapKey.replace(domain, ""), updatedWamFile)

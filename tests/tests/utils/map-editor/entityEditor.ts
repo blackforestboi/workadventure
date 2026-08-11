@@ -108,7 +108,7 @@ class EntityEditor {
             .getByTestId("uploadCustomAsset")
             .setInputFiles(fileURLToPath(new URL(`../../assets/${this.getTestAssetFile()}`, import.meta.url)));
         await page.getByTestId("floatingObject").click();
-        await this.applyEntityModifications(page);
+        await this.applyEntityModifications(page, true);
     }
 
     async uploadTestAssetWithOddSize(page: Page) {
@@ -118,19 +118,23 @@ class EntityEditor {
                 fileURLToPath(new URL(`../../assets/${this.getTestAssetFileWithOddSize()}`, import.meta.url)),
             );
         await page.getByTestId("floatingObject").click();
-        await this.applyEntityModifications(page);
+        await this.applyEntityModifications(page, true);
     }
 
     async openEditEntityForm(page: Page) {
         await page.getByTestId("editEntity").click();
     }
 
-    async applyEntityModifications(page: Page) {
+    async applyEntityModifications(page: Page, awaitUploadAcknowledgement = false) {
         await page.getByTestId("applyEntityModifications").click();
-        // Wait for a bit for the image to be uploaded.
-        // TODO: find a way to be sure upload succeeded
-        // eslint-disable-next-line playwright/no-wait-for-timeout
-        await page.waitForTimeout(1000);
+        if (awaitUploadAcknowledgement) {
+            // Upload forms now close only after map-storage acknowledges durable persistence.
+            await expect(page.getByTestId("applyEntityModifications")).toHaveCount(0, { timeout: 30000 });
+        } else {
+            // Other entity modifications still settle through their existing asynchronous command path.
+            // eslint-disable-next-line playwright/no-wait-for-timeout
+            await page.waitForTimeout(1000);
+        }
         if (await page.getByTestId("entityImageLoader").isVisible({ timeout: 2000 })) {
             // Check loader end
             await expect(page.getByTestId("entityImageLoader")).toHaveCount(0, { timeout: 30000 });

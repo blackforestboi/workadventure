@@ -8,6 +8,8 @@ import type {
 import { upgradeMapToNewest } from "@workadventure/tiled-map-type-guard";
 import type { WAMFileFormat } from "../types";
 import { GameMapProperties } from "../types";
+import { getMapWorldBounds, materializeTileLayerData, worldToMapIndex } from "./CenteredMapCoordinates";
+import type { WorldBounds } from "./CenteredMapCoordinates";
 import { flattenGroupLayersMap } from "./LayersFlattener";
 import { WamFile } from "./WamFile";
 
@@ -32,7 +34,7 @@ export class GameMap {
     public constructor(map: ITiledMap, wam?: WAMFileFormat) {
         this.map = upgradeMapToNewest(map);
         this.wamFile = wam ? new WamFile(wam) : undefined;
-        this.flatLayers = flattenGroupLayersMap(this.map);
+        this.flatLayers = materializeFlatLayers(this.map);
         this.tiledObjects = GameMap.getObjectsFromLayers(this.flatLayers);
 
         for (const tileset of this.map.tilesets) {
@@ -75,14 +77,24 @@ export class GameMap {
     }
 
     public getTileIndexAt(x: number, y: number): { x: number; y: number } {
-        return {
-            x: Math.floor(x / (this.map.tilewidth ?? this.DEFAULT_TILE_SIZE)),
-            y: Math.floor(y / (this.map.tileheight ?? this.DEFAULT_TILE_SIZE)),
-        };
+        return worldToMapIndex(this.map, x, y);
+    }
+
+    public getMapBounds(): WorldBounds {
+        return getMapWorldBounds(this.map);
     }
 
     public getMap(): ITiledMap {
         return this.map;
+    }
+
+    public synchronizeTileLayers(source: ITiledMap): void {
+        this.map.infinite = source.infinite;
+        this.map.width = source.width;
+        this.map.height = source.height;
+        this.map.properties = structuredClone(source.properties);
+        this.map.layers = structuredClone(source.layers);
+        this.flatLayers.splice(0, this.flatLayers.length, ...materializeFlatLayers(this.map));
     }
 
     public getWamFile(): WamFile | undefined {
@@ -229,4 +241,10 @@ export class GameMap {
             this.map.nextobjectid++;
         }
     }
+}
+
+function materializeFlatLayers(map: ITiledMap): ITiledMapLayer[] {
+    return flattenGroupLayersMap(map).map((layer) =>
+        layer.type === "tilelayer" ? { ...layer, data: materializeTileLayerData(layer) } : layer,
+    );
 }
