@@ -45,7 +45,9 @@ RUN export SENTRY_RELEASE SENTRY_URL SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT
     cd play && \
     npm run typesafe-i18n && \
     npm run build-iframe-api && \
-    SENTRY_RELEASE=$SENTRY_RELEASE SENTRY_URL=$SENTRY_URL SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN SENTRY_ORG=$SENTRY_ORG SENTRY_PROJECT=$SENTRY_PROJECT SENTRY_ENVIRONMENT=$SENTRY_ENVIRONMENT npm run build
+    SENTRY_RELEASE=$SENTRY_RELEASE SENTRY_URL=$SENTRY_URL SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN SENTRY_ORG=$SENTRY_ORG SENTRY_PROJECT=$SENTRY_PROJECT SENTRY_ENVIRONMENT=$SENTRY_ENVIRONMENT npm run build && \
+    rm -rf node_modules/.vite node_modules/.vite-temp public && \
+    find dist -type f -name '*.map' -delete
 
 # final production image
 FROM node:24-trixie-slim
