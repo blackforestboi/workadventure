@@ -5,6 +5,7 @@ import { TeapotWokaValidationError } from "./TeapotWokaPngValidator";
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const TILE_SIZE = 32;
+const MAX_TILE_COUNT = 16;
 const CRC_TABLE = createCrcTable();
 
 export interface ValidatedTeapotTilesetPng {
@@ -55,8 +56,14 @@ export function validateTeapotTilesetPng(input: Buffer): ValidatedTeapotTilesetP
             const compression = data[10];
             const filter = data[11];
             const interlace = data[12];
-            if (width !== TILE_SIZE || height !== TILE_SIZE) {
-                throw new TeapotWokaValidationError("Terrain assets must contain exactly one 32×32px tile");
+            if (
+                width % TILE_SIZE !== 0 ||
+                height % TILE_SIZE !== 0 ||
+                (width / TILE_SIZE) * (height / TILE_SIZE) > MAX_TILE_COUNT
+            ) {
+                throw new TeapotWokaValidationError(
+                    `Terrain assets must contain 1-${MAX_TILE_COUNT} grid-aligned 32×32px tiles`,
+                );
             }
             if (compression !== 0 || filter !== 0 || (interlace !== 0 && interlace !== 1)) {
                 throw new TeapotWokaValidationError("Tileset PNG uses unsupported encoding settings");

@@ -3,6 +3,7 @@ import express from "express";
 import * as Sentry from "@sentry/node";
 import { asError } from "catch-unknown";
 import { z } from "zod";
+import { VisualAssetAnimation } from "@workadventure/map-editor";
 
 import type { ResponseWithUserIdentifier } from "../middlewares/Authenticated";
 import { authenticated } from "../middlewares/Authenticated";
@@ -13,12 +14,26 @@ import { TeapotWokaValidationError } from "../teapot/TeapotWokaPngValidator";
 import { validateQuery } from "../services/QueryValidator";
 import { BaseHttpController } from "./BaseHttpController";
 
+const animationQuery = z
+    .string()
+    .max(4096)
+    .transform((value, context) => {
+        try {
+            return JSON.parse(value) as unknown;
+        } catch {
+            context.addIssue({ code: z.ZodIssueCode.custom, message: "Animation metadata must be valid JSON" });
+            return z.NEVER;
+        }
+    })
+    .pipe(VisualAssetAnimation);
+
 const uploadQuery = z.object({
     name: z.string().min(1).max(80),
     kind: z.enum(["map-entity", "reference"]),
     source: z.literal("generated").default("generated"),
     providerId: z.string().max(80).optional(),
     modelId: z.string().max(160).optional(),
+    animation: animationQuery.optional(),
 });
 const listQuery = z.object({ kind: z.enum(["map-entity", "reference"]) });
 const assetParams = z.object({ assetId: z.string().min(1).max(128) });
@@ -124,11 +139,18 @@ export class TeapotGeneratedAssetController extends BaseHttpController {
                 }
                 try {
                     res.status(201).json(
-                        await this.service.accept(providerSubject, query.name, req.body, query.kind, {
-                            source: query.source,
-                            ...(query.providerId === undefined ? {} : { providerId: query.providerId }),
-                            ...(query.modelId === undefined ? {} : { modelId: query.modelId }),
-                        }),
+                        await this.service.accept(
+                            providerSubject,
+                            query.name,
+                            req.body,
+                            query.kind,
+                            {
+                                source: query.source,
+                                ...(query.providerId === undefined ? {} : { providerId: query.providerId }),
+                                ...(query.modelId === undefined ? {} : { modelId: query.modelId }),
+                            },
+                            query.animation,
+                        ),
                     );
                 } catch (error: unknown) {
                     sendError(res, error);

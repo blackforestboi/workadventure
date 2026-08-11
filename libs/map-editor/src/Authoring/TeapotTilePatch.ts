@@ -1,5 +1,6 @@
 import type { ITiledMap, ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 import { z } from "zod";
+import { toTiledVisualAssetAnimationFrames, type VisualAssetAnimation } from "../types";
 import {
     isCenteredMap,
     setCenteredTileLayerGid,
@@ -57,6 +58,7 @@ export interface TeapotEmbeddedTilesetInput {
     imageHeight: number;
     tileWidth?: number;
     tileHeight?: number;
+    animation?: VisualAssetAnimation;
 }
 
 export interface TeapotEmbeddedTilesetResult {
@@ -193,6 +195,16 @@ export function addTeapotEmbeddedTileset(
         tilecount: tileCount,
         tileheight: tileHeight,
         tilewidth: tileWidth,
+        ...(input.animation === undefined
+            ? {}
+            : {
+                  tiles: [
+                      {
+                          id: 0,
+                          animation: toTiledVisualAssetAnimationFrames(input.animation),
+                      },
+                  ],
+              }),
     });
     return { map, firstGid, tileCount };
 }

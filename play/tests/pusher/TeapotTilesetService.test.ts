@@ -63,13 +63,32 @@ describe("TeapotTilesetService", () => {
         await expect(service.getPublicRaster("../private-file")).resolves.toBeNull();
     });
 
-    it("rejects multi-tile PNGs even when their dimensions align to the grid", async () => {
+    it("accepts a validated animated strip and rejects dimensions outside its metadata", async () => {
         await expect(service.accept("owner-a", "Broken", createTestWokaPng({ width: 95 }))).rejects.toThrow(
-            "exactly one 32×32px tile",
+            "grid-aligned 32×32px tiles",
         );
-        await expect(service.accept("owner-a", "Sprite sheet", createTestWokaPng())).rejects.toThrow(
-            "exactly one 32×32px tile",
+        const animation = {
+            frameWidth: 32,
+            frameHeight: 32,
+            frameCount: 4,
+            frameDurationMs: 200,
+        };
+        const accepted = await service.accept(
+            "owner-a",
+            "Moving water",
+            createTestWokaPng({ width: 128, height: 32 }),
+            { source: "generated" },
+            animation,
         );
-        await expect(service.list("owner-a")).resolves.toEqual({ items: [] });
+        expect(accepted).toMatchObject({ columns: 4, rows: 1, animation });
+        await expect(
+            service.accept(
+                "owner-a",
+                "Mismatched water",
+                createTestWokaPng({ width: 64, height: 32 }),
+                { source: "generated" },
+                animation,
+            ),
+        ).rejects.toThrow("metadata must match");
     });
 });

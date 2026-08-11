@@ -10,6 +10,7 @@
     import Button from "../../../UI/Button.svelte";
     import EntityEditionCollisionGrid from "./EntityEditionCollisionGrid.svelte";
     import { createEmptyCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
+    import { ENTITY_SIZE_TILE_OPTIONS, MAP_TILE_SIZE } from "../../../../Utils/EntityPrefabSize";
     import { IconChevronLeft } from "@wa-icons";
 
     interface Props {
@@ -39,6 +40,7 @@
         tags,
         collisionGrid: customEntityCollisionGrid,
         depthOffset: depthOffsetCustomEntity,
+        defaultSizeInTiles: defaultSizeInTilesCustomEntity,
     } = $state((() => customEntity)());
     let inputTagOptions: InputTagOption[] | undefined = $state(tags.map((tag) => ({ value: tag, label: tag })));
     let collisionGrid = $state(customEntityCollisionGrid ? customEntityCollisionGrid.map((row) => [...row]) : []);
@@ -48,9 +50,17 @@
     let collisionGridHeight = $state(0);
     let displayDepthCustomSelector = $state(false);
     let previewPadding = $state(24);
-    let collisionCellSize = $state(32);
+    let defaultSizeInTiles = $state(defaultSizeInTilesCustomEntity ?? 1);
+    let collisionGridSizeIndex = $state(
+        Math.max(0, ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultSizeInTiles)),
+    );
     let imageResizeObserver: ResizeObserver | undefined;
     const hasCollisionAreas = $derived(collisionGrid.some((row) => row.some((cell) => cell === 1)));
+    const positivePreviewPadding = $derived(Math.max(0, previewPadding));
+    const previewCropInset = $derived(Math.max(0, -previewPadding));
+    const collisionFrameWidth = $derived(Math.max(1, collisionGridWidth + previewPadding * 2));
+    const collisionFrameHeight = $derived(Math.max(1, collisionGridHeight + previewPadding * 2));
+    const collisionFrameOffset = $derived(-previewPadding);
 
     const depthOptions = {
         GROUND_LEVEL: "GroundLevel",
@@ -63,8 +73,6 @@
         (() => (depthOffset === 0 ? depthOptions.STANDING : depthOptions.CUSTOM))(),
     );
 
-    const COLLISION_GRID_SIZE = 32;
-
     function getModifiedCustomEntity(): EntityPrefab {
         return {
             ...customEntity,
@@ -72,25 +80,22 @@
             tags: inputTagOptions?.map((tagOption) => tagOption.value) ?? [],
             collisionGrid: hasCollisionAreas ? collisionGrid : undefined,
             depthOffset: depthOffset !== 0 ? -depthOffset : 0,
+            defaultSizeInTiles,
         };
     }
 
     function generateCollisionGridIfNotExists(imageRef: HTMLImageElement) {
         entityImageRef = imageRef;
-        if (collisionGrid.length === 0) {
-            const columnCount = Math.ceil(imageRef.naturalWidth / COLLISION_GRID_SIZE);
-            const rowCount = Math.ceil(imageRef.naturalHeight / COLLISION_GRID_SIZE);
-            collisionGrid = createEmptyCollisionGrid(rowCount, columnCount);
-        }
-
         imageResizeObserver?.disconnect();
         imageResizeObserver = new ResizeObserver(([entry]) => {
             collisionGridWidth = entry?.contentRect.width ?? imageRef.width;
             collisionGridHeight = entry?.contentRect.height ?? imageRef.height;
+            resizeCollisionGridForFrame();
         });
         imageResizeObserver.observe(imageRef);
         collisionGridWidth = imageRef.width;
         collisionGridHeight = imageRef.height;
+        resizeCollisionGridForFrame();
     }
 
     function updateCollisionGrid(rowIndex: number, columnIndex: number) {
@@ -102,14 +107,24 @@
     }
 
     function updateCollisionCellSize(event: Event) {
-        const imageRef = entityImageRef;
-        if (imageRef === undefined) return;
-        collisionCellSize = Number((event.currentTarget as HTMLSelectElement).value);
-        collisionGrid = resizeCollisionGrid(
-            collisionGrid,
-            Math.ceil(imageRef.naturalHeight / collisionCellSize),
-            Math.ceil(imageRef.naturalWidth / collisionCellSize),
-        );
+        collisionGridSizeIndex = Number((event.currentTarget as HTMLInputElement).value);
+        defaultSizeInTiles = ENTITY_SIZE_TILE_OPTIONS[collisionGridSizeIndex] ?? 1;
+        resizeCollisionGridForFrame();
+    }
+
+    function updatePreviewPadding(event: Event) {
+        previewPadding = Number((event.currentTarget as HTMLInputElement).value);
+        resizeCollisionGridForFrame();
+    }
+
+    function resizeCollisionGridForFrame() {
+        if (collisionGridWidth <= 0 || collisionGridHeight <= 0) return;
+        const columns = Math.max(1, Math.ceil(defaultSizeInTiles));
+        const rows = Math.max(1, Math.ceil(defaultSizeInTiles * (collisionFrameHeight / collisionFrameWidth)));
+        collisionGrid =
+            collisionGrid.length === 0
+                ? createEmptyCollisionGrid(rows, columns)
+                : resizeCollisionGrid(collisionGrid, rows, columns);
     }
 
     function updateDepthOffset(depthOption: DepthOption) {
@@ -169,9 +184,12 @@
     <div class="min-h-0 flex-1 overflow-auto">
         <div
             class="relative flex min-h-[420px] w-full items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(-45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,rgba(255,255,255,.05)_75%),linear-gradient(-45deg,transparent_75%,rgba(255,255,255,.05)_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px]"
-            style:padding={`${previewPadding}px`}
+            style:padding={`${positivePreviewPadding}px`}
         >
-            <div class="relative inline-flex max-h-[560px] max-w-full items-center justify-center">
+            <div
+                class="relative inline-flex max-h-[560px] max-w-full items-center justify-center"
+                style:clip-path={previewCropInset > 0 ? `inset(${previewCropInset}px)` : undefined}
+            >
                 <EntityImage
                     classNames="max-h-[560px] max-w-full object-contain"
                     imageLoad={generateCollisionGridIfNotExists}
@@ -182,8 +200,10 @@
                     <EntityEditionCollisionGrid
                         {collisionGrid}
                         {updateCollisionGrid}
-                        {collisionGridWidth}
-                        {collisionGridHeight}
+                        collisionGridWidth={collisionFrameWidth}
+                        collisionGridHeight={collisionFrameHeight}
+                        offsetX={collisionFrameOffset}
+                        offsetY={collisionFrameOffset}
                     />
                 {/if}
             </div>
@@ -250,25 +270,41 @@
                     <input
                         id="previewPadding"
                         class="w-full cursor-grab active:cursor-grabbing"
-                        bind:value={previewPadding}
+                        value={previewPadding}
                         type="range"
-                        min="0"
+                        min="-64"
                         max="64"
                         step="4"
+                        oninput={updatePreviewPadding}
                     />
+                    <div class="mt-1 flex justify-between text-[11px] opacity-50">
+                        <span>Crop</span>
+                        <span>Add space</span>
+                    </div>
                 </div>
                 <div>
-                    <label class="mb-2 block" for="collisionCellSize">Grid size</label>
-                    <select
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <label for="collisionCellSize">Grid size</label>
+                        <span class="text-xs opacity-60">
+                            {defaultSizeInTiles}
+                            {defaultSizeInTiles === 1 ? "tile" : "tiles"} wide ·
+                            {defaultSizeInTiles * MAP_TILE_SIZE}px
+                        </span>
+                    </div>
+                    <input
                         id="collisionCellSize"
-                        class="w-full rounded-md border border-solid border-contrast-400 bg-contrast px-3 py-2.5 text-white"
-                        value={collisionCellSize}
-                        onchange={updateCollisionCellSize}
-                    >
-                        <option value="16">Fine · 16 px</option>
-                        <option value="32">Standard · 32 px</option>
-                        <option value="64">Large · 64 px</option>
-                    </select>
+                        class="w-full cursor-grab active:cursor-grabbing"
+                        type="range"
+                        min="0"
+                        max={ENTITY_SIZE_TILE_OPTIONS.length - 1}
+                        step="1"
+                        value={collisionGridSizeIndex}
+                        oninput={updateCollisionCellSize}
+                    />
+                    <div class="mt-1 flex justify-between text-[11px] opacity-50">
+                        <span>0.5 tile</span>
+                        <span>100 tiles</span>
+                    </div>
                     <p class="mb-0 mt-2 text-xs opacity-60">Larger cells make a simpler collision mask.</p>
                 </div>
                 <div>

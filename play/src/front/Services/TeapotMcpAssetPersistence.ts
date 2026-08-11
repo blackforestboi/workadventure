@@ -2,6 +2,7 @@ import type {
     TeapotPaidGenerationCompletionResult,
     TeapotPaidGenerationRequest,
 } from "@workadventure/teapot-mcp/contracts";
+import type { VisualAssetAnimation } from "@workadventure/map-editor";
 
 import type { TeapotWokaCategory } from "../../common/Teapot/TeapotWoka";
 import { ABSOLUTE_PUSHER_URL } from "../Enum/ComputedConst";
@@ -13,6 +14,7 @@ interface GeneratedCandidate {
     blob: Blob;
     providerId: "openrouter" | "codex-cli" | "claude-cli";
     modelId: string;
+    animation?: VisualAssetAnimation;
 }
 
 export class TeapotMcpAssetPersistence {
@@ -36,6 +38,7 @@ export class TeapotMcpAssetPersistence {
             source: "generated" as const,
             providerId: candidate.providerId,
             modelId: candidate.modelId,
+            ...(candidate.animation === undefined ? {} : { animation: candidate.animation }),
         };
 
         switch (request.purpose) {

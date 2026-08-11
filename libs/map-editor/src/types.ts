@@ -273,6 +273,46 @@ export const EntityDataProperties = z.array(EntityDataProperty);
 
 export const CollisionGrid = z.array(z.array(z.number()));
 
+/**
+ * A single looping horizontal frame strip. Placement dimensions deliberately
+ * live outside this source-image contract.
+ */
+export const VisualAssetAnimation = z.object({
+    frameWidth: z.number().int().positive(),
+    frameHeight: z.number().int().positive(),
+    frameCount: z.number().int().min(2).max(8),
+    frameDurationMs: z.number().int().min(50).max(2_000),
+});
+
+export function isVisualAssetAnimationStatic(animation: VisualAssetAnimation | undefined): boolean {
+    return animation === undefined;
+}
+
+export function getVisualAssetAnimationSourceDimensions(animation: VisualAssetAnimation): {
+    width: number;
+    height: number;
+} {
+    return {
+        width: animation.frameWidth * animation.frameCount,
+        height: animation.frameHeight,
+    };
+}
+
+export function toPhaserVisualAssetAnimationFrames(animation: VisualAssetAnimation, textureKey: string) {
+    return Array.from({ length: animation.frameCount }, (_, frame) => ({
+        key: textureKey,
+        frame,
+        duration: animation.frameDurationMs,
+    }));
+}
+
+export function toTiledVisualAssetAnimationFrames(animation: VisualAssetAnimation, firstTileId = 0) {
+    return Array.from({ length: animation.frameCount }, (_, frame) => ({
+        tileid: firstTileId + frame,
+        duration: animation.frameDurationMs,
+    }));
+}
+
 export const EntityRawPrefab = z.object({
     id: z.string(),
     name: z.string(),
@@ -282,6 +322,8 @@ export const EntityRawPrefab = z.object({
     color: z.string(),
     collisionGrid: CollisionGrid.optional(),
     depthOffset: z.number().optional(),
+    animation: VisualAssetAnimation.optional(),
+    defaultSizeInTiles: z.number().positive().optional(),
 });
 
 export const EntityPrefabType = z.union([z.literal("Default"), z.literal("Custom")]);
@@ -432,6 +474,7 @@ export const MapsCacheFileFormat = z.object({
 export type EntityRawPrefab = z.infer<typeof EntityRawPrefab>;
 export type EntityPrefab = z.infer<typeof EntityPrefab>;
 export type EntityPrefabType = z.infer<typeof EntityPrefabType>;
+export type VisualAssetAnimation = z.infer<typeof VisualAssetAnimation>;
 export type EntityCollection = z.infer<typeof EntityCollection>;
 export type EntityCollectionRaw = z.infer<typeof EntityCollectionRaw>;
 export type CollectionUrl = z.infer<typeof CollectionUrl>;

@@ -374,6 +374,8 @@ message UploadEntityMessage {
   string color = 7;
   optional google.protobuf.Value collisionGrid = 8;
   optional int32 depthOffset = 9;
+  optional google.protobuf.Value animation = 10;
+  optional double defaultSizeInTiles = 11;
 }
 
 message UploadFileMessage {
@@ -391,6 +393,8 @@ message ModifyCustomEntityMessage {
   repeated string tags = 3;
   optional google.protobuf.Value collisionGrid = 4;
   optional int32 depthOffset = 5;
+  optional google.protobuf.Value animation = 6;
+  optional double defaultSizeInTiles = 7;
 }
 
 message DeleteCustomEntityMessage {

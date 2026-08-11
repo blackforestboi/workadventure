@@ -198,4 +198,35 @@ describe("addTeapotEmbeddedTileset", () => {
             }),
         ).toThrowError(TeapotTilePatchError);
     });
+
+    it("attaches native Tiled animation metadata to the first logical terrain tile", () => {
+        const result = addTeapotEmbeddedTileset(createFiniteMap(), {
+            name: "Moving water",
+            image: "water.png",
+            imageWidth: 128,
+            imageHeight: 32,
+            animation: {
+                frameWidth: 32,
+                frameHeight: 32,
+                frameCount: 4,
+                frameDurationMs: 200,
+            },
+        });
+
+        expect(result.map.tilesets[result.map.tilesets.length - 1]).toMatchObject({
+            columns: 4,
+            tilecount: 4,
+            tiles: [
+                {
+                    id: 0,
+                    animation: [
+                        { tileid: 0, duration: 200 },
+                        { tileid: 1, duration: 200 },
+                        { tileid: 2, duration: 200 },
+                        { tileid: 3, duration: 200 },
+                    ],
+                },
+            ],
+        });
+    });
 });

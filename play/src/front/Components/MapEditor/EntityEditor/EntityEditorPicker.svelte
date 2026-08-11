@@ -120,6 +120,7 @@
                     imagePath: `${generatedId}-${sourceName}`,
                     collisionGrid: $state.snapshot(customEntity.collisionGrid),
                     depthOffset: customEntity.depthOffset,
+                    defaultSizeInTiles: customEntity.defaultSizeInTiles,
                     color: customEntity.color,
                 },
             });

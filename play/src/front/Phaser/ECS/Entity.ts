@@ -27,7 +27,7 @@ import LL from "../../../i18n/i18n-svelte";
 import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
 import { reverseEntityCollisionGrid, scaleEntityCollisionGrid } from "../Game/MapEditor/Entities/EntityCollisionGrid";
 
-import Image = Phaser.GameObjects.Image;
+import Sprite = Phaser.GameObjects.Sprite;
 import Graphics = Phaser.GameObjects.Graphics;
 
 export enum EntityEvent {
@@ -44,7 +44,7 @@ export enum EntityEvent {
 export const DEFAULT_ACTIVABLE_RADIUS = 14;
 
 // NOTE: Tiles-based entity for now. Individual images later on
-export class Entity extends Image implements ActivatableInterface, OutlineableInterface {
+export class Entity extends Sprite implements ActivatableInterface, OutlineableInterface {
     public readonly activationRadius: number = DEFAULT_ACTIVABLE_RADIUS;
     private readonly outlineColorStore = createColorStore();
     private readonly outlineColorStoreUnsubscribe: Unsubscriber;

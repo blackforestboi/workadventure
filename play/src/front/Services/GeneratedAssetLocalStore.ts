@@ -1,4 +1,5 @@
 import type { TeapotGeneratedAssetView } from "./TeapotGeneratedAssetApi";
+import { VisualAssetAnimation } from "@workadventure/map-editor";
 
 const DATABASE_NAME = "teapot-generated-map-assets";
 const DATABASE_VERSION = 1;
@@ -23,6 +24,7 @@ export interface GeneratedAssetLocalRecord {
     png: Blob;
     sha256: string;
     provenance: GeneratedAssetProvenance;
+    animation?: VisualAssetAnimation;
     syncStatus: GeneratedAssetSyncStatus;
     syncError?: string;
     serverAsset?: TeapotGeneratedAssetView;
@@ -221,6 +223,7 @@ function toLocalRecord(stored: StoredGeneratedAsset): GeneratedAssetLocalRecord 
         png: stored.png,
         sha256: stored.sha256.toLowerCase(),
         provenance: { ...stored.provenance },
+        ...(stored.animation === undefined ? {} : { animation: structuredClone(stored.animation) }),
         syncStatus: stored.syncStatus,
         ...(stored.syncError === undefined ? {} : { syncError: stored.syncError }),
         ...(stored.serverAsset === undefined ? {} : { serverAsset: { ...stored.serverAsset } }),
@@ -257,6 +260,9 @@ function assertStoredRecord(value: unknown): asserts value is StoredGeneratedAss
         throw new Error("Invalid generated asset fingerprint.");
     }
     if (!isProvenance(value.provenance)) throw new Error("Invalid generated asset provenance.");
+    if (value.animation !== undefined && !VisualAssetAnimation.safeParse(value.animation).success) {
+        throw new Error("Invalid generated asset animation metadata.");
+    }
     if (!isSyncStatus(value.syncStatus)) throw new Error("Invalid generated asset sync status.");
     if (value.syncError !== undefined && typeof value.syncError !== "string") {
         throw new Error("Invalid generated asset sync error.");
@@ -294,7 +300,8 @@ function isServerAsset(value: unknown): value is TeapotGeneratedAssetView {
         value.height > 0 &&
         typeof value.sha256 === "string" &&
         SHA256_PATTERN.test(value.sha256) &&
-        typeof value.createdAt === "string"
+        typeof value.createdAt === "string" &&
+        (value.animation === undefined || VisualAssetAnimation.safeParse(value.animation).success)
     );
 }
 

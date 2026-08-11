@@ -24,6 +24,7 @@ import { EntityResizeHandles } from "../Entities/EntityResizeHandles";
 import { MapEditorTool } from "./MapEditorTool";
 
 import Image = Phaser.GameObjects.Image;
+import Sprite = Phaser.GameObjects.Sprite;
 
 export abstract class EntityRelatedEditorTool extends MapEditorTool {
     private handleDeleteEntity: (entity: Entity) => void;
@@ -33,7 +34,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
     protected entitiesManager: EntitiesManager;
 
     protected entityPrefab: EntityPrefab | undefined;
-    protected entityPrefabPreview: Image | undefined;
+    protected entityPrefabPreview: Sprite | undefined;
     protected entityOldPositionPreview: Image | undefined;
 
     protected mapEditorSelectedEntityPrefabStoreUnsubscriber: Unsubscriber | undefined;
@@ -138,18 +139,19 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                     this.entityPrefabPreview?.destroy();
                     this.entityPrefabPreview = undefined;
                 } else {
-                    TexturesHelper.loadEntityImage(this.scene, entityPrefab.imagePath, entityPrefab.imagePath)
+                    TexturesHelper.loadEntityTexture(this.scene, entityPrefab, entityPrefab.imagePath)
                         .then(() => {
                             if (this.entityPrefabPreview) {
                                 this.entityPrefabPreview.setTexture(entityPrefab.imagePath);
                             } else {
                                 const pointer = this.scene.input.activePointer;
-                                this.entityPrefabPreview = this.scene.add.image(
+                                this.entityPrefabPreview = this.scene.add.sprite(
                                     Math.floor(pointer.worldX),
                                     Math.floor(pointer.worldY),
                                     entityPrefab.imagePath,
                                 );
                             }
+                            TexturesHelper.playEntityAnimation(this.entityPrefabPreview, entityPrefab);
                             this.scene.markDirty();
                         })
                         .catch(() => {

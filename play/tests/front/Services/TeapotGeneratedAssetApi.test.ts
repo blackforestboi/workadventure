@@ -21,18 +21,27 @@ function json(payload: unknown, status = 200): Response {
 
 describe("TeapotGeneratedAssetApi", () => {
     it("accepts a validated SHA-256 fingerprint in upload and list views", async () => {
+        const animation = {
+            frameWidth: 32,
+            frameHeight: 32,
+            frameCount: 3,
+            frameDurationMs: 200,
+        };
         const fetcher = vi
             .fn<Fetcher>()
-            .mockResolvedValueOnce(json(view, 201))
-            .mockResolvedValueOnce(json({ items: [view] }));
+            .mockResolvedValueOnce(json({ ...view, animation }, 201))
+            .mockResolvedValueOnce(json({ items: [{ ...view, animation }] }));
         const api = new TeapotGeneratedAssetApi("https://play.example.test/", () => "private-token", fetcher);
 
         await expect(
             api.upload(new Blob(["png"], { type: "image/png" }), "Forest shrine", "map-entity", {
                 source: "generated",
+                animation,
             }),
-        ).resolves.toEqual(view);
-        await expect(api.list("map-entity")).resolves.toEqual([view]);
+        ).resolves.toEqual({ ...view, animation });
+        const uploadUrl = fetcher.mock.calls[0]?.[0];
+        expect(new URL(String(uploadUrl)).searchParams.get("animation")).toBe(JSON.stringify(animation));
+        await expect(api.list("map-entity")).resolves.toEqual([{ ...view, animation }]);
     });
 
     it("rejects upload and list views without a valid SHA-256 fingerprint", async () => {

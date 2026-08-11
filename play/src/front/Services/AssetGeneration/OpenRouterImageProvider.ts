@@ -126,7 +126,7 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
 
         const first = generated[0];
         if (first === undefined) throw this.malformedResponse();
-        const assets = generated.map(({ asset }) => asset);
+        const assets = generated.map(({ asset }) => ({ ...asset, animation: request.animation }));
 
         return {
             assets,

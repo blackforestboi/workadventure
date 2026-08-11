@@ -115,6 +115,7 @@ export class HostedCliImageProvider implements ImageGenerationProvider {
                         id: crypto.randomUUID(),
                         blob: new Blob([copyToArrayBuffer(bytes)], { type: payload.mimeType }),
                         mimeType: payload.mimeType,
+                        animation: request.animation,
                     },
                 ],
                 provenance: {

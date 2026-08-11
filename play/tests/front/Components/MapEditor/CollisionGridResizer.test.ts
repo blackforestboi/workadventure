@@ -37,6 +37,15 @@ describe("collision grid resizer", () => {
         expect(customEntityEditionFormSource).toContain("Metadata");
         expect(customEntityEditionFormSource).toContain("Positioning");
         expect(customEntityEditionFormSource).toContain("Clear collision areas");
+        expect(customEntityEditionFormSource).toContain('min="-64"');
+        expect(customEntityEditionFormSource).toContain("style:clip-path");
+        expect(customEntityEditionFormSource).toContain("oninput={updateCollisionCellSize}");
+        expect(customEntityEditionFormSource).toContain(
+            "GRID_SIZE_TILE_OPTIONS = [0.5, 1, 2, 4, 8, 16, 32, 50, 75, 100]",
+        );
+        expect(customEntityEditionFormSource).toContain("collisionGridSizeInTiles * MAP_TILE_SIZE");
+        expect(customEntityEditionFormSource).toContain("100 tiles");
+        expect(customEntityEditionFormSource).not.toContain('<select\n                        id="collisionCellSize"');
         expect(customEntityEditionFormSource).not.toContain("Add collision areas");
         expect(customEntityEditionFormSource).not.toContain("Remove collision areas");
     });

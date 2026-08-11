@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import type { VisualAssetAnimation } from "@workadventure/map-editor";
     import type { MapEditorFloorTileset } from "../../../Stores/MapEditorFloorStore";
     import { mapEditorFloorStateStore, dispatchMapEditorFloorAction } from "../../../Stores/MapEditorFloorStore";
     import {
@@ -24,6 +25,7 @@
         IconWall,
     } from "../../Icons";
     import AssetGenerationPanel from "../../AssetGeneration/AssetGenerationPanel.svelte";
+    import AnimatedAssetPreview from "../../AssetGeneration/AnimatedAssetPreview.svelte";
     import {
         getActiveAuthoringPathTool,
         getActiveTerrainModeId,
@@ -42,7 +44,11 @@
     let assetDropActive = $state(false);
     let searchTerm = $state("");
     let selectedFamilyId: string | undefined = $state(undefined);
-    let singleTileAssets = $derived(savedTilesets.filter((tileset) => tileset.columns === 1 && tileset.rows === 1));
+    let singleTileAssets = $derived(
+        savedTilesets.filter(
+            (tileset) => (tileset.columns === 1 && tileset.rows === 1) || tileset.animation !== undefined,
+        ),
+    );
     let selectedFamily = $derived(BUILT_IN_TERRAIN_TILESET.groups.find((group) => group.id === selectedFamilyId));
 
     onMount(() => {
@@ -162,12 +168,17 @@
 
     async function saveTileset(
         blob: Blob,
-        provenance: { source: "generated" | "imported"; providerId?: string; modelId?: string },
+        provenance: {
+            source: "generated" | "imported";
+            providerId?: string;
+            modelId?: string;
+            animation?: VisualAssetAnimation;
+        },
     ) {
         assetBusy = true;
         assetError = "";
         try {
-            const normalized = await normalizeTilesetRaster(blob);
+            const normalized = await normalizeTilesetRaster(blob, provenance.animation);
             const saved = await teapotTilesetApi.upload(normalized, assetName, provenance);
             savedTilesets = [...savedTilesets.filter((candidate) => candidate.id !== saved.id), saved];
             embedTileset(saved);
@@ -188,6 +199,7 @@
                 url: tileset.url,
                 width: tileset.width,
                 height: tileset.height,
+                animation: tileset.animation,
             },
         });
     }
@@ -434,10 +446,11 @@
                                                 onclick={() => embedTileset(tileset)}
                                                 title={`Add ${tileset.name}`}
                                             >
-                                                <img
-                                                    src={tileset.url}
-                                                    alt={tileset.name}
-                                                    class="aspect-square w-full object-contain [image-rendering:pixelated]"
+                                                <AnimatedAssetPreview
+                                                    imageSource={tileset.url}
+                                                    imageAlt={tileset.name}
+                                                    animation={tileset.animation}
+                                                    classNames="aspect-square w-full object-contain [image-rendering:pixelated]"
                                                 />
                                             </button>
                                         {/each}
@@ -450,8 +463,8 @@
                                 title="Generate floor tiles"
                                 outputSize={{ width: 32, height: 32, pixelated: true }}
                                 promptGuidance="Describe one seamless, top-down 32px floor or terrain texture. Do not include furniture, props, borders, or multiple tiles."
-                                onAccept={({ blob, providerId, modelId }) =>
-                                    saveTileset(blob, { source: "generated", providerId, modelId })}
+                                onAccept={({ blob, providerId, modelId, animation }) =>
+                                    saveTileset(blob, { source: "generated", providerId, modelId, animation })}
                             />
                         {/if}
                     </div>

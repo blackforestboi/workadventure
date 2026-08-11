@@ -3,9 +3,10 @@
     import { onDestroy, onMount } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
     import { v4 as uuidv4 } from "uuid";
-    import type { EntityPrefab } from "@workadventure/map-editor";
+    import type { EntityPrefab, VisualAssetAnimation } from "@workadventure/map-editor";
     import { Direction, ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
     import AssetGenerationPanel from "../../../AssetGeneration/AssetGenerationPanel.svelte";
+    import AnimatedAssetPreview from "../../../AssetGeneration/AnimatedAssetPreview.svelte";
     import { teapotGeneratedAssetApi } from "../../../../Services/TeapotGeneratedAssetApi";
     import { GeneratedAssetLocalStore } from "../../../../Services/GeneratedAssetLocalStore";
     import {
@@ -35,7 +36,9 @@
     let dropZoneRef: HTMLDivElement | undefined = $state();
     let customEntityToUpload: EntityPrefab | undefined = $state(undefined);
     let errorOnFile: string | undefined = $state();
-    let selectedAsset: { source: Blob; name: string; previewUrl: string } | undefined = $state(undefined);
+    let selectedAsset:
+        | { source: Blob; name: string; previewUrl: string; animation?: VisualAssetAnimation }
+        | undefined = $state(undefined);
     let uploadDraft: MapEditorEntityUploadDraft | undefined = $state(undefined);
     let consumedGeneratedAsset: Blob | File | undefined;
     let savedAssets: GeneratedMapAssetCard[] = $state([]);
@@ -99,6 +102,7 @@
             source: draft.source,
             name: draft.sourceName,
             previewUrl: draft.previewUrl,
+            animation: draft.uploadEntityMessage.animation,
         };
         customEntityToUpload ??= mapDraftToEntityPrefab(draft);
 
@@ -139,13 +143,15 @@
                     imagePath: failedDraft?.uploadEntityMessage.imagePath ?? `${generatedId}-${selectedAsset.name}`,
                     collisionGrid: customEditedEntity.collisionGrid,
                     depthOffset: customEditedEntity.depthOffset,
+                    defaultSizeInTiles: customEditedEntity.defaultSizeInTiles,
                     color: "",
+                    animation: customEditedEntity.animation,
                 },
             });
         }
     }
 
-    function acceptAsset(source: Blob, name: string) {
+    function acceptAsset(source: Blob, name: string, animation?: VisualAssetAnimation) {
         if (!isASupportedFormat(source.type)) {
             console.error("File format not supported");
             errorOnFile = $LL.mapEditor.entityEditor.uploadEntity.errorOnFileFormat();
@@ -159,7 +165,7 @@
             mapEditorEntityUploadDraftStore.clear(uploadDraft.commandId);
         }
         const previewUrl = URL.createObjectURL(source);
-        selectedAsset = { source, name, previewUrl };
+        selectedAsset = { source, name, previewUrl, animation };
         customEntityToUpload = {
             collectionName: "custom entities",
             name,
@@ -169,6 +175,7 @@
             tags: [],
             color: "",
             type: BASIC_TYPE,
+            animation,
         };
         errorOnFile = undefined;
     }
@@ -177,7 +184,7 @@
         savedAssetItemErrors = { ...savedAssetItemErrors, [asset.key]: "" };
         try {
             const blob = await generatedAssetController?.open(asset, savedAssetsController.signal);
-            if (blob !== undefined) acceptAsset(blob, savedAssetFileName(asset));
+            if (blob !== undefined) acceptAsset(blob, savedAssetFileName(asset), asset.animation);
         } catch (reason: unknown) {
             if (reason instanceof DOMException && reason.name === "AbortError") return;
             savedAssetItemErrors = {
@@ -195,7 +202,7 @@
 
     async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
         if (persistedGeneratedAsset !== asset.blob) await persistGeneratedAsset(asset);
-        acceptAsset(asset.blob, `generated-${uuidv4()}.png`);
+        acceptAsset(asset.blob, `generated-${uuidv4()}.png`, asset.animation);
     }
 
     async function retrySavedAsset(asset: GeneratedMapAssetCard): Promise<void> {
@@ -326,10 +333,11 @@
                                 class="w-full text-left hover:opacity-80"
                                 onclick={() => reuseSavedAsset(asset)}
                             >
-                                <img
-                                    class="h-16 w-full object-contain [image-rendering:pixelated]"
-                                    src={savedAssetPreview(asset)}
-                                    alt=""
+                                <AnimatedAssetPreview
+                                    classNames="h-16 w-full object-contain [image-rendering:pixelated]"
+                                    imageSource={savedAssetPreview(asset)}
+                                    imageAlt={asset.name}
+                                    animation={asset.animation}
                                 />
                                 <span class="mt-1 block truncate text-xs">{asset.name}</span>
                             </button>

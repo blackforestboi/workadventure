@@ -41,4 +41,12 @@ describe("asset generation panel", () => {
         );
         expect(entityUploadSource).toContain("onGenerated={persistGeneratedAsset}");
     });
+
+    it("offers one simple optional animation strip for map assets", () => {
+        expect(assetGenerationPanelSource).toContain("Animate this asset");
+        expect(assetGenerationPanelSource).toContain("frameCount");
+        expect(assetGenerationPanelSource).toContain("frameDurationMs");
+        expect(assetGenerationPanelSource).toContain("one horizontal sprite strip");
+        expect(entityUploadSource).toContain("animation={asset.animation}");
+    });
 });

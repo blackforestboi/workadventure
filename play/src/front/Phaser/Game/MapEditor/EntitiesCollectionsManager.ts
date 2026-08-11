@@ -162,6 +162,7 @@ export class EntitiesCollectionsManager {
         tags: string[],
         depthOffset?: number,
         collisionGrid?: number[][],
+        defaultSizeInTiles?: number,
     ): void {
         this.entitiesPrefabsStore.update((currentEntitiesPrefabs) => {
             const indexOfCustomEntity = currentEntitiesPrefabs.findIndex((entityPrefab) => entityPrefab.id === id);
@@ -172,6 +173,7 @@ export class EntitiesCollectionsManager {
                     tags,
                     depthOffset,
                     collisionGrid,
+                    defaultSizeInTiles,
                 };
             }
             return currentEntitiesPrefabs;
@@ -187,6 +189,7 @@ export class EntitiesCollectionsManager {
                             tags,
                             depthOffset,
                             collisionGrid,
+                            defaultSizeInTiles,
                         });
                     }
                     resolve(existingEntitiesPrefabsMap);

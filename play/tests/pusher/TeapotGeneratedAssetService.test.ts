@@ -26,17 +26,31 @@ describe("TeapotGeneratedAssetService", () => {
     });
 
     it("durably stores map entities in an owner-scoped catalog with a stable public raster", async () => {
-        const saved = await service.accept("owner-a", "Notice board", createTestWokaPng(), "map-entity", {
-            source: "generated",
-            providerId: "openrouter",
-        });
+        const animation = {
+            frameWidth: 32,
+            frameHeight: 32,
+            frameCount: 3,
+            frameDurationMs: 200,
+        };
+        const saved = await service.accept(
+            "owner-a",
+            "Notice board",
+            createTestWokaPng({ height: 32 }),
+            "map-entity",
+            {
+                source: "generated",
+                providerId: "openrouter",
+            },
+            animation,
+        );
 
         expect(saved).toMatchObject({
             id: "asset_3",
             kind: "map-entity",
             width: 96,
-            height: 128,
+            height: 32,
             sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+            animation,
             url: "https://play.example.test/teapot/generated-assets/asset_3.png",
         });
         await expect(service.list("owner-a", "map-entity")).resolves.toEqual({ items: [saved] });

@@ -205,6 +205,7 @@ import { requestedScreenSharingState } from "../../Stores/ScreenSharingStore";
 import { EnterLeaveScriptingService } from "../Helpers/EnterLeaveScriptingService";
 import { GameMapFrontWrapper } from "./GameMap/GameMapFrontWrapper";
 import { GameRenderLayers } from "./GameRenderLayers";
+import { LocalPlayerAssetOcclusion } from "./LocalPlayerAssetOcclusion";
 import { resolveTilesetImageUrl } from "./GameMap/TilesetImageUrl";
 import { gameManager } from "./GameManager";
 import { EmoteManager } from "./EmoteManager";
@@ -353,6 +354,7 @@ export class GameScene extends DirtyScene {
     private entityPermissionsDeferred: Deferred<EntityPermissions> = new Deferred();
     private gameMapFrontWrapper!: GameMapFrontWrapper;
     private gameRenderLayers!: GameRenderLayers;
+    private readonly localPlayerAssetOcclusion = new LocalPlayerAssetOcclusion();
     private actionableItems: Map<number, ActionableItem> = new Map<number, ActionableItem>();
     private isReconnecting: boolean | undefined = undefined;
     private playerName!: string;
@@ -1467,6 +1469,20 @@ export class GameScene extends DirtyScene {
         for (const group of this.groups.values()) {
             if (group.needsStep || group.isAnimating || conversationBubblesToUpdate.has(group)) {
                 group.step(this.getConversationBubbleAvatars(group));
+            }
+        }
+
+        if (this.hasJoinedRoom) {
+            const currentPlayerSprite = this.CurrentPlayer.sprites.values().next().value;
+            if (
+                currentPlayerSprite !== undefined &&
+                this.localPlayerAssetOcclusion.update(
+                    this.CurrentPlayer.depth,
+                    currentPlayerSprite.getBounds(),
+                    this.gameMapFrontWrapper.getEntitiesManager().getEntities().values(),
+                )
+            ) {
+                this.markDirty();
             }
         }
         this.hasMovedThisFrame = false;

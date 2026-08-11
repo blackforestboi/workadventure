@@ -19,7 +19,7 @@ async function setup() {
 }
 
 describe("TeapotRoomAccessService", () => {
-    it("uses legacy WAM access and direct capabilities while a policy is absent", async () => {
+    it("allows authenticated WAM users by default while keeping direct access capability-based", async () => {
         const { services, creator, member } = await setup();
 
         await expect(
@@ -33,7 +33,14 @@ describe("TeapotRoomAccessService", () => {
             services.roomAccess.assertCanEdit({
                 actorId: member.id,
                 mapId: MAP_ID,
-                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false },
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: true },
+            }),
+        ).resolves.toBeUndefined();
+        await expect(
+            services.roomAccess.assertCanEdit({
+                actorId: member.id,
+                mapId: MAP_ID,
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true, isLogged: false },
             }),
         ).rejects.toBeInstanceOf(TeapotAuthorizationError);
         await expect(
