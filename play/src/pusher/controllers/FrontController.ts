@@ -293,8 +293,6 @@ export class FrontController extends BaseHttpController {
                 authToken: authToken,
                 googleDrivePickerClientId: GOOGLE_DRIVE_PICKER_CLIENT_ID,
                 cssVariablesOverride,
-                devEntryVersion:
-                    FRONT_ENVIRONMENT_VARIABLES.NODE_ENV === "development" ? `?v=${Date.now().toString(36)}` : "",
                 ...option,
             });
         } catch (e) {
