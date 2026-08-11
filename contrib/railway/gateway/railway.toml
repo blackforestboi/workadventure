@@ -4,7 +4,7 @@ dockerfilePath = "contrib/railway/gateway/Dockerfile"
 watchPatterns = ["/contrib/railway/gateway/**"]
 
 [deploy]
-healthcheckPath = "/teapot/health/ready"
+healthcheckPath = "/healthz"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

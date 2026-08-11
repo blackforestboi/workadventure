@@ -8,6 +8,13 @@
 	encode zstd gzip
 
 	route {
+		# Keep the proxy's own Railway health check independent of downstream
+		# services. The application readiness endpoints remain available through
+		# the normal play route below.
+		handle /healthz {
+			respond "ok" 200
+		}
+
 		@websocket path /ws /ws/*
 		handle @websocket {
 			reverse_proxy http://play.railway.internal:3001
