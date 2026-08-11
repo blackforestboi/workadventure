@@ -9,6 +9,8 @@
     import Input from "../../../Input/Input.svelte";
     import Button from "../../../UI/Button.svelte";
     import EntityEditionCollisionGrid from "./EntityEditionCollisionGrid.svelte";
+    import { createEmptyCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
+    import { IconChevronLeft } from "@wa-icons";
 
     interface Props {
         customEntity: EntityPrefab;
@@ -40,13 +42,15 @@
     } = $state((() => customEntity)());
     let inputTagOptions: InputTagOption[] | undefined = $state(tags.map((tag) => ({ value: tag, label: tag })));
     let collisionGrid = $state(customEntityCollisionGrid ? customEntityCollisionGrid.map((row) => [...row]) : []);
-    let floatingObject = $state((() => customEntityCollisionGrid === undefined)());
     let depthOffset: number = $state(depthOffsetCustomEntity ? depthOffsetCustomEntity * -1 : 0);
     let entityImageRef: HTMLImageElement | undefined = $state();
     let collisionGridWidth = $state(0);
     let collisionGridHeight = $state(0);
     let displayDepthCustomSelector = $state(false);
+    let previewPadding = $state(24);
+    let collisionCellSize = $state(32);
     let imageResizeObserver: ResizeObserver | undefined;
+    const hasCollisionAreas = $derived(collisionGrid.some((row) => row.some((cell) => cell === 1)));
 
     const depthOptions = {
         GROUND_LEVEL: "GroundLevel",
@@ -66,7 +70,7 @@
             ...customEntity,
             name,
             tags: inputTagOptions?.map((tagOption) => tagOption.value) ?? [],
-            collisionGrid: floatingObject ? undefined : collisionGrid,
+            collisionGrid: hasCollisionAreas ? collisionGrid : undefined,
             depthOffset: depthOffset !== 0 ? -depthOffset : 0,
         };
     }
@@ -76,7 +80,7 @@
         if (collisionGrid.length === 0) {
             const columnCount = Math.ceil(imageRef.naturalWidth / COLLISION_GRID_SIZE);
             const rowCount = Math.ceil(imageRef.naturalHeight / COLLISION_GRID_SIZE);
-            collisionGrid = Array.from({ length: rowCount }, () => Array(columnCount).fill(0));
+            collisionGrid = createEmptyCollisionGrid(rowCount, columnCount);
         }
 
         imageResizeObserver?.disconnect();
@@ -93,19 +97,19 @@
         collisionGrid[rowIndex][columnIndex] = collisionGrid[rowIndex][columnIndex] === 0 ? 1 : 0;
     }
 
-    function activateCollisionAreas() {
-        floatingObject = false;
-        if (entityImageRef) {
-            generateCollisionGridIfNotExists(entityImageRef);
-        }
-    }
-
-    function removeCollisionAreas() {
-        floatingObject = true;
-    }
-
     function clearCollisionAreas() {
         collisionGrid = collisionGrid.map((row) => row.map(() => 0));
+    }
+
+    function updateCollisionCellSize(event: Event) {
+        const imageRef = entityImageRef;
+        if (imageRef === undefined) return;
+        collisionCellSize = Number((event.currentTarget as HTMLSelectElement).value);
+        collisionGrid = resizeCollisionGrid(
+            collisionGrid,
+            Math.ceil(imageRef.naturalHeight / collisionCellSize),
+            Math.ceil(imageRef.naturalWidth / collisionCellSize),
+        );
     }
 
     function updateDepthOffset(depthOption: DepthOption) {
@@ -134,147 +138,168 @@
     onDestroy(() => imageResizeObserver?.disconnect());
 </script>
 
-<section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/15">
-    <header class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-white/10 px-4 py-3">
-        <div class="min-w-0">
-            <h3 class="m-0 truncate text-lg font-bold">{name || "Untitled asset"}</h3>
-            <p class="m-0 text-xs opacity-60">
-                {description ?? "Edit the asset and paint the areas players cannot cross."}
-            </p>
-        </div>
-        <div class="flex items-center justify-end gap-2">
-            {#if floatingObject}
-                <Button size="sm" variant="light" appearance="border" {disabled} onclick={activateCollisionAreas}>
-                    Add collision areas
-                </Button>
-            {:else}
-                <Button size="sm" variant="light" appearance="border" {disabled} onclick={removeCollisionAreas}>
-                    Remove collision areas
-                </Button>
-            {/if}
-            <Button
-                size="sm"
-                variant="secondary"
-                {disabled}
-                dataTestId="applyEntityModifications"
-                onclick={() => applyEntityModifications(getModifiedCustomEntity())}
-            >
-                {saveLabel ?? $LL.mapEditor.entityEditor.buttons.save()}
-            </Button>
-        </div>
+<section
+    class="flex min-h-0 flex-1 flex-col overflow-hidden"
+    aria-describedby={description === undefined ? undefined : "image-editor-description"}
+>
+    {#if description !== undefined}
+        <p id="image-editor-description" class="sr-only">{description}</p>
+    {/if}
+    <header class="flex items-center justify-between gap-3 px-1 pb-3">
+        <button
+            type="button"
+            class="flex min-w-0 items-center gap-2 rounded-full p-2 text-left hover:bg-white/10"
+            aria-label={$LL.mapEditor.entityEditor.buttons.back()}
+            onclick={closeForm}
+        >
+            <IconChevronLeft />
+            <span class="truncate text-lg font-semibold">Edit image</span>
+        </button>
+        <Button
+            size="sm"
+            variant="secondary"
+            {disabled}
+            dataTestId="applyEntityModifications"
+            onclick={() => applyEntityModifications(getModifiedCustomEntity())}
+        >
+            {saveLabel ?? $LL.mapEditor.entityEditor.buttons.save()}
+        </Button>
     </header>
 
-    <div
-        class="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-auto p-4 md:grid-cols-[minmax(240px,1.15fr)_minmax(220px,0.85fr)]"
-    >
-        <div class="flex min-h-[300px] flex-col rounded-xl border border-white/10 bg-black/20 p-3">
-            <div
-                class="relative flex min-h-[240px] flex-1 items-center justify-center overflow-hidden rounded-lg bg-[linear-gradient(45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(-45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,rgba(255,255,255,.05)_75%),linear-gradient(-45deg,transparent_75%,rgba(255,255,255,.05)_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px]"
-            >
-                <div class="relative inline-flex max-h-[420px] max-w-full items-center justify-center">
-                    <EntityImage
-                        classNames="max-h-[420px] max-w-full object-contain"
-                        imageLoad={generateCollisionGridIfNotExists}
-                        imageSource={customEntity.imagePath}
-                        imageAlt={customEntity.name}
+    <div class="min-h-0 flex-1 overflow-auto">
+        <div
+            class="relative flex min-h-[420px] w-full items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(-45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,rgba(255,255,255,.05)_75%),linear-gradient(-45deg,transparent_75%,rgba(255,255,255,.05)_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px]"
+            style:padding={`${previewPadding}px`}
+        >
+            <div class="relative inline-flex max-h-[560px] max-w-full items-center justify-center">
+                <EntityImage
+                    classNames="max-h-[560px] max-w-full object-contain"
+                    imageLoad={generateCollisionGridIfNotExists}
+                    imageSource={customEntity.imagePath}
+                    imageAlt={customEntity.name}
+                />
+                {#if collisionGridWidth > 0 && collisionGridHeight > 0}
+                    <EntityEditionCollisionGrid
+                        {collisionGrid}
+                        {updateCollisionGrid}
+                        {collisionGridWidth}
+                        {collisionGridHeight}
                     />
-                    {#if !floatingObject && collisionGridWidth > 0 && collisionGridHeight > 0}
-                        <EntityEditionCollisionGrid
-                            {collisionGrid}
-                            {updateCollisionGrid}
-                            {collisionGridWidth}
-                            {collisionGridHeight}
-                        />
-                    {/if}
-                </div>
-            </div>
-            <p class="mb-0 mt-3 text-xs opacity-70">
-                {#if floatingObject}
-                    This asset currently has no collision. Players can walk through it.
-                {:else}
-                    Click the squares that should block players. Unselected parts remain walk-behind scenery.
                 {/if}
-            </p>
+            </div>
         </div>
 
-        <div class="flex flex-col gap-4">
-            <div>
-                <label class="mb-2 block" for="name"
-                    ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.imageName()}</b></label
+        <div class="grid grid-cols-1 gap-6 py-4 md:grid-cols-2">
+            <section class="flex flex-col gap-4" aria-labelledby="metadata-heading">
+                <h3 id="metadata-heading" class="m-0 text-base font-semibold">Metadata</h3>
+                <div>
+                    <label class="mb-2 block" for="name"
+                        ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.imageName()}</b></label
+                    >
+                    <Input
+                        class="min-w-full rounded-md border border-solid border-contrast-400 bg-contrast px-2 py-2.5 text-[16px] text-white"
+                        bind:value={name}
+                        id="name"
+                        data-testid="name"
+                    />
+                </div>
+                <div>
+                    <label class="mb-2 block" for="tags"
+                        ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.tags()}</b></label
+                    >
+                    <InputTags
+                        bind:value={inputTagOptions}
+                        placeholder={$LL.mapEditor.entityEditor.customEntityEditorForm.writeTag()}
+                    />
+                </div>
+                <Select
+                    id="type"
+                    label={$LL.mapEditor.entityEditor.customEntityEditorForm.depth()}
+                    bind:value={selectedDepthOption}
                 >
-                <Input
-                    class="min-w-full rounded-md border border-solid border-contrast-400 bg-contrast px-2 py-2.5 text-[16px] text-white"
-                    bind:value={name}
-                    id="name"
-                    data-testid="name"
-                />
-            </div>
-            <div>
-                <label class="mb-2 block" for="tags"
-                    ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.tags()}</b></label
-                >
-                <InputTags
-                    bind:value={inputTagOptions}
-                    placeholder={$LL.mapEditor.entityEditor.customEntityEditorForm.writeTag()}
-                />
-            </div>
-            <Select
-                id="type"
-                label={$LL.mapEditor.entityEditor.customEntityEditorForm.depth()}
-                bind:value={selectedDepthOption}
-            >
-                {#each Object.values(depthOptions) as depthOption (depthOption)}
-                    <option value={depthOption}>{getTranslationForDepthOption(depthOption)}</option>
-                {/each}
-            </Select>
-            {#if displayDepthCustomSelector}
-                <div class="rounded-lg border border-white/10 p-3">
-                    <label class="mb-2 block text-sm" for="depthOffset">Character overlap</label>
+                    {#each Object.values(depthOptions) as depthOption (depthOption)}
+                        <option value={depthOption}>{getTranslationForDepthOption(depthOption)}</option>
+                    {/each}
+                </Select>
+                {#if displayDepthCustomSelector}
+                    <div>
+                        <label class="mb-2 block text-sm" for="depthOffset">Character overlap</label>
+                        <input
+                            id="depthOffset"
+                            class="w-full cursor-grab active:cursor-grabbing"
+                            bind:value={depthOffset}
+                            type="range"
+                            min="0"
+                            max={entityImageRef?.naturalHeight ?? 0}
+                        />
+                        <div class="flex justify-between text-xs opacity-60">
+                            <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaAbove()}</span>
+                            <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaBelow()}</span>
+                        </div>
+                    </div>
+                {/if}
+            </section>
+
+            <section class="flex flex-col gap-4" aria-labelledby="positioning-heading">
+                <h3 id="positioning-heading" class="m-0 text-base font-semibold">Positioning</h3>
+                <div>
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <label for="previewPadding">Padding</label>
+                        <span class="text-xs opacity-60">{previewPadding}px</span>
+                    </div>
                     <input
-                        id="depthOffset"
+                        id="previewPadding"
                         class="w-full cursor-grab active:cursor-grabbing"
-                        bind:value={depthOffset}
+                        bind:value={previewPadding}
                         type="range"
                         min="0"
-                        max={entityImageRef?.naturalHeight ?? 0}
+                        max="64"
+                        step="4"
                     />
-                    <div class="flex justify-between text-xs opacity-60">
-                        <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaAbove()}</span>
-                        <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaBelow()}</span>
+                </div>
+                <div>
+                    <label class="mb-2 block" for="collisionCellSize">Grid size</label>
+                    <select
+                        id="collisionCellSize"
+                        class="w-full rounded-md border border-solid border-contrast-400 bg-contrast px-3 py-2.5 text-white"
+                        value={collisionCellSize}
+                        onchange={updateCollisionCellSize}
+                    >
+                        <option value="16">Fine · 16 px</option>
+                        <option value="32">Standard · 32 px</option>
+                        <option value="64">Large · 64 px</option>
+                    </select>
+                    <p class="mb-0 mt-2 text-xs opacity-60">Larger cells make a simpler collision mask.</p>
+                </div>
+                <div>
+                    <div class="flex items-start justify-between gap-3">
+                        <p class="m-0 text-xs opacity-70">
+                            Click grid cells on the image to mark areas players cannot cross.
+                        </p>
+                        <Button
+                            size="xs"
+                            variant="light"
+                            appearance="border"
+                            disabled={disabled || !hasCollisionAreas}
+                            onclick={clearCollisionAreas}>Clear collision areas</Button
+                        >
                     </div>
                 </div>
-            {/if}
-            {#if !floatingObject}
-                <div class="rounded-lg border border-white/10 p-3">
-                    <div class="flex items-center justify-between gap-2">
-                        <div>
-                            <p class="m-0 font-bold">Collision mask</p>
-                            <p class="m-0 text-xs opacity-60">The mask scales together with the object.</p>
-                        </div>
-                        <Button size="xs" variant="light" appearance="ghost" {disabled} onclick={clearCollisionAreas}>
-                            Clear
+                {#if !isUploadForm}
+                    <div class="mt-auto pt-2">
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            appearance="border"
+                            {disabled}
+                            dataTestId="removeEntity"
+                            onclick={() => removeEntity({ entityId: customEntity.id })}
+                        >
+                            {$LL.mapEditor.entityEditor.buttons.delete()}
                         </Button>
                     </div>
-                </div>
-            {/if}
-
-            <div class="mt-auto flex flex-wrap gap-2 pt-2">
-                {#if !isUploadForm}
-                    <Button
-                        size="sm"
-                        variant="danger"
-                        appearance="border"
-                        {disabled}
-                        dataTestId="removeEntity"
-                        onclick={() => removeEntity({ entityId: customEntity.id })}
-                    >
-                        {$LL.mapEditor.entityEditor.buttons.delete()}
-                    </Button>
                 {/if}
-                <Button size="sm" variant="contrast" appearance="ghost" {disabled} onclick={closeForm}>
-                    {$LL.mapEditor.entityEditor.buttons.cancel()}
-                </Button>
-            </div>
+            </section>
         </div>
     </div>
 </section>

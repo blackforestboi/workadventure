@@ -323,7 +323,7 @@
                     >
                         <IconChevronLeft />
                     </button>
-                    <p class="m-0 truncate text-[22px]">{$LL.mapEditor.entityEditor.header.title()}</p>
+                    <p class="m-0 truncate text-lg">{$LL.mapEditor.entityEditor.header.title()}</p>
                 </div>
             {:else if $selectCategoryStore === undefined}
                 <p class="m-0 text-[22px]">{$LL.mapEditor.entityEditor.header.title()}</p>
@@ -366,7 +366,7 @@
 
     <div class="min-h-0 flex-1 overflow-auto">
         {#if showUpload}
-            <div class="min-h-full rounded-2xl border border-white/10 bg-black/10 p-3">
+            <div class="px-3 pb-3">
                 <EntityUpload />
             </div>
         {:else if $selectCategoryStore === undefined && searchTerm === ""}

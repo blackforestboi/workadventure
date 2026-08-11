@@ -12,6 +12,11 @@ import {
 } from "../teapot/TeapotDataErrors";
 import { TeapotMapPublicationError, teapotMapPublicationService } from "../teapot/TeapotMapPublicationService";
 import { resolveTeapotRequestIdentity } from "../teapot/TeapotRequestIdentityResolver";
+import {
+    TeapotWorldCreationError,
+    teapotWorldCreationService,
+    type TeapotWorldCreationService,
+} from "../teapot/TeapotWorldCreationService";
 import { BaseHttpController } from "./BaseHttpController";
 
 const RevisionQuery = z.object({ mapUrl: z.string().url().max(2_048) });
@@ -22,9 +27,13 @@ const PublicationBody = z
         map: ITiledMap,
     })
     .strict();
+const CreateWorldBody = z.object({ sourceRoomUrl: z.string().url().max(2_048).optional() }).strict();
 
 export class TeapotMapController extends BaseHttpController {
-    public constructor(app: Application) {
+    public constructor(
+        app: Application,
+        private readonly worldCreationService: Pick<TeapotWorldCreationService, "create"> = teapotWorldCreationService,
+    ) {
         super(app);
     }
 
@@ -74,10 +83,39 @@ export class TeapotMapController extends BaseHttpController {
                 }
             },
         );
+
+        this.app.post(
+            "/teapot/worlds",
+            [authenticated, teapotAuthoringGate],
+            async (req: Request, res: ResponseWithUserIdentifier) => {
+                const parsed = CreateWorldBody.safeParse(req.body ?? {});
+                if (!parsed.success || !res.userIdentifier) {
+                    res.status(parsed.success ? 401 : 400).json({
+                        error: "A valid world creation request is required",
+                    });
+                    return;
+                }
+                try {
+                    const identity = await resolveTeapotRequestIdentity(res.userIdentifier);
+                    const result = await this.worldCreationService.create({
+                        actorId: identity.id,
+                        sourceRoomUrl: parsed.data.sourceRoomUrl,
+                    });
+                    res.setHeader("Cache-Control", "no-store");
+                    res.status(201).json(result);
+                } catch (error: unknown) {
+                    this.sendError(res, error);
+                }
+            },
+        );
     }
 
     private sendError(res: ResponseWithUserIdentifier, error: unknown): void {
         if (error instanceof TeapotMapPublicationError) {
+            res.status(error.statusCode).json({ error: error.message });
+            return;
+        }
+        if (error instanceof TeapotWorldCreationError) {
             res.status(error.statusCode).json({ error: error.message });
             return;
         }

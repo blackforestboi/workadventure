@@ -38,6 +38,7 @@
         frontIdleFirst?: boolean;
         initialPrompt?: string;
         promptReadOnly?: boolean;
+        compact?: boolean;
         requiredReferenceCount?: number;
         maximumCostUsd?: number;
         authorizeGeneration?: () => Promise<string>;
@@ -55,6 +56,7 @@
         frontIdleFirst = false,
         initialPrompt = "",
         promptReadOnly = false,
+        compact = false,
         requiredReferenceCount,
         maximumCostUsd,
         authorizeGeneration,
@@ -351,13 +353,18 @@
     }
 </script>
 
-<section class="rounded-xl border border-white/15 bg-black/25 p-3 text-white" aria-label={title}>
-    <div class="mb-3 flex items-center justify-between gap-2">
+<section
+    class={compact ? "text-white" : "rounded-xl border border-white/15 bg-black/25 p-3 text-white"}
+    aria-label={title}
+>
+    <div class={compact ? "mb-2" : "mb-3 flex items-center justify-between gap-2"}>
         <div>
-            <h3 class="font-semibold">{title}</h3>
-            <p class="text-xs text-white/65">{promptGuidance}</p>
+            <h3 class={compact ? "text-sm font-medium" : "font-semibold"}>{title}</h3>
+            {#if !compact}<p class="text-xs text-white/65">{promptGuidance}</p>{/if}
         </div>
-        <span class="rounded-full bg-white/10 px-2 py-1 text-[11px]" aria-live="polite">{displayedLifecycle}</span>
+        {#if !compact}
+            <span class="rounded-full bg-white/10 px-2 py-1 text-[11px]" aria-live="polite">{displayedLifecycle}</span>
+        {/if}
     </div>
 
     {#if error}<p class="mb-3 text-sm text-red-300" role="alert">{error}</p>{/if}
@@ -377,7 +384,7 @@
         </ol>
     {/if}
 
-    {#if readySelection === undefined}
+    {#if readySelection === undefined && !compact}
         <div class="rounded-lg border border-white/15 bg-black/20 p-3">
             <p class="text-sm font-semibold">Set up AI generation once</p>
             <p class="mt-1 text-xs text-white/65">
@@ -407,16 +414,19 @@
             </div>
         {/if}
         <label class="mt-2 block text-xs">
-            Description
+            {#if !compact}Description{/if}
             <textarea
                 bind:value={prompt}
                 rows="3"
-                class="mt-1 w-full resize-y rounded bg-black/40 p-2"
+                class={compact
+                    ? "w-full resize-y rounded bg-black/40 p-2"
+                    : "mt-1 w-full resize-y rounded bg-black/40 p-2"}
                 placeholder={promptPlaceholder}
                 readonly={promptReadOnly}
+                aria-label={compact ? "Description" : undefined}
             ></textarea>
         </label>
-        {#if !stagedWoka || wokaStage === "idle-frame"}
+        {#if (!stagedWoka || wokaStage === "idle-frame") && !compact}
             <label class="mt-2 block text-xs">
                 Reference images (kept only for this generation)
                 <input
@@ -447,7 +457,15 @@
                 </p>
             {/if}
         {/if}
-        <div class="mt-3 flex flex-wrap gap-2">
+        <div class={compact ? "mt-3 flex items-center justify-between gap-2" : "mt-3 flex flex-wrap gap-2"}>
+            {#if compact}
+                <Button
+                    appearance="border"
+                    size="sm"
+                    onclick={() => aiGenerationSettingsVisibilityStore.open()}
+                    disabled={busy}>AI settings</Button
+                >
+            {/if}
             {#if lifecycle === "generating" || lifecycle === "cancelling"}
                 <Button variant="danger" size="sm" onclick={cancelGeneration}>Cancel</Button>
             {:else}
@@ -460,19 +478,23 @@
                         ((!stagedWoka || wokaStage === "idle-frame") &&
                             requiredReferenceCount !== undefined &&
                             referencePreviews.length !== requiredReferenceCount)}
-                    >{stagedWoka && wokaStage === "sprite-sheet"
-                        ? "Review direction generation"
-                        : stagedWoka
-                          ? "Review front-idle generation"
-                          : "Review generation"}</Button
+                    >{compact
+                        ? "Generate"
+                        : stagedWoka && wokaStage === "sprite-sheet"
+                          ? "Review direction generation"
+                          : stagedWoka
+                            ? "Review front-idle generation"
+                            : "Review generation"}</Button
                 >
             {/if}
-            <Button
-                appearance="border"
-                size="sm"
-                onclick={() => aiGenerationSettingsVisibilityStore.open()}
-                disabled={busy}>AI settings</Button
-            >
+            {#if !compact}
+                <Button
+                    appearance="border"
+                    size="sm"
+                    onclick={() => aiGenerationSettingsVisibilityStore.open()}
+                    disabled={busy}>AI settings</Button
+                >
+            {/if}
         </div>
     {/if}
 

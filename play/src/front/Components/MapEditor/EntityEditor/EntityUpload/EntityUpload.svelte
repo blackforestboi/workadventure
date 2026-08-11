@@ -240,8 +240,6 @@
     </div>
 {:else}
     <div class="no-padding">
-        <p class="m-0">{$LL.mapEditor.entityEditor.uploadEntity.title()}</p>
-        <p class="opacity-50">{$LL.mapEditor.entityEditor.uploadEntity.description()}</p>
         {#if savedAssetsLoading && savedAssets.length === 0}
             <p class="mt-3 text-xs opacity-60">Loading your saved generated assets…</p>
         {:else if savedAssets.length > 0}
@@ -315,12 +313,12 @@
                 </span></label
             >
         </div>
-        <div class="mt-4">
+        <div class="mt-3">
             <AssetGenerationPanel
                 target="environment-object"
-                title="Generate a map object"
+                title="Generate with AI"
                 promptPlaceholder="A mossy community notice board with small pinned cards, viewed from above…"
-                promptGuidance="Create an object here, then use the existing collision, depth, tags, and interaction controls before placing it."
+                compact
                 outputSize={{ width: 512, height: 512 }}
                 onAccept={({ blob }) => acceptAsset(blob, `generated-${uuidv4()}.png`)}
             />

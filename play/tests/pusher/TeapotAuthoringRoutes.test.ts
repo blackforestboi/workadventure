@@ -35,6 +35,10 @@ vi.mock("../../src/pusher/teapot/TeapotMapPublicationService", () => ({
     TeapotMapPublicationError: class extends Error {},
     teapotMapPublicationService: {},
 }));
+vi.mock("../../src/pusher/teapot/TeapotWorldCreationService", () => ({
+    TeapotWorldCreationError: class extends Error {},
+    teapotWorldCreationService: {},
+}));
 vi.mock("../../src/pusher/teapot/TeapotMcpAuthoringService", () => ({
     TeapotMcpAuthoringError: class extends Error {},
     teapotMcpAuthoringService: mcpMocks,
@@ -140,6 +144,7 @@ describe("Teapot authoring route coverage", () => {
         const authoringRoutes: [HttpMethod, string][] = [
             ["GET", "/teapot/maps/revision"],
             ["POST", "/teapot/maps/publish-tmj"],
+            ["POST", "/teapot/worlds"],
             ["GET", "/teapot/wokas"],
             ["POST", "/teapot/wokas"],
             ["PUT", "/teapot/wokas/:textureId/select"],
@@ -173,6 +178,37 @@ describe("Teapot authoring route coverage", () => {
         expectPublicRoute(app, "/teapot/tileset-assets/:assetId.png");
         expectPublicRoute(app, "/teapot/generated-assets/:assetId.png");
         expectPublicRoute(app, "/teapot/health/ready");
+    });
+
+    it("creates a new world for the resolved authenticated identity", async () => {
+        const create = vi.fn(() =>
+            Promise.resolve({
+                roomUrl: "https://play.test/~/worlds/world-1/maps/world.wam",
+                wamUrl: "https://play.test/map-storage/worlds/world-1/maps/world.wam",
+                mapUrl: "https://play.test/map-storage/worlds/world-1/maps/world.tmj",
+            }),
+        );
+        roomIdentityMocks.resolveTeapotRequestIdentity.mockResolvedValue({ id: "identity-1" });
+        const app = new RouteRecordingApp();
+        new TeapotMapController(app as unknown as Application, { create });
+        const handler = app.routes.get("POST /teapot/worlds")?.[1] as RequestHandler;
+        const response = Object.assign(new RecordingResponse(), { userIdentifier: "user-1" });
+
+        await handler(
+            {
+                body: { sourceRoomUrl: "https://play.test/~/maps/source.wam" },
+            } as Request,
+            response as unknown as Response,
+            vi.fn(),
+        );
+
+        expect(create).toHaveBeenCalledWith({
+            actorId: "identity-1",
+            sourceRoomUrl: "https://play.test/~/maps/source.wam",
+        });
+        expect(response.statusCode).toBe(201);
+        expect(response.setHeader).toHaveBeenCalledWith("Cache-Control", "no-store");
+        expect(response.json).toHaveBeenCalledWith(expect.objectContaining({ roomUrl: expect.any(String) }));
     });
 
     it("lets delegated room admins read visitor history and assign a never-visited username", async () => {
