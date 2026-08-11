@@ -16,6 +16,9 @@ if [ ! -e "$seed_marker" ]; then
     fi
 
     touch "$seed_marker"
+    chown -R node:node /maps
 fi
 
-exec npm run start
+# Railway mounts a new persistent volume as root-owned. The bootstrap needs
+# that privilege, but the map-storage server must still run unprivileged.
+exec su -s /bin/sh node -c 'npm run start'

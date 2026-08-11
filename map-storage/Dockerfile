@@ -58,5 +58,4 @@ WORKDIR /usr/src/map-storage
 RUN mkdir ./dist
 
 HEALTHCHECK --interval=5s --timeout=10s --start-period=5s --retries=10 CMD curl -f http://localhost:3000/ping || exit 1
-USER node
 CMD ["/usr/local/bin/tpot-map-storage-entrypoint"]
