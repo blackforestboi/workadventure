@@ -15,8 +15,11 @@ import { socketManager } from "../services/SocketManager";
 import {
     ADMIN_SOCKETS_TOKEN,
     DISABLE_ANONYMOUS,
+    FRONT_URL,
     PUSHER_ADMIN_WS_MAX_BACKPRESSURE_BYTES,
     SOCKET_IDLE_TIMER,
+    TEAPOT_X_CLIENT_ID,
+    TEAPOT_X_REDIRECT_URI,
 } from "../enums/EnvironmentVariable";
 import type { AdminSocketData } from "../models/Websocket/AdminSocketData";
 import type { AdminMessageInterface } from "../models/Websocket/Admin/AdminMessages";
@@ -33,6 +36,9 @@ import { videoQualityAnalyticsQueue } from "../services/VideoQualityAnalyticsQue
 import { PusherRoomSocketController } from "../services/PusherRoomSocketController";
 import { AdminWebSocketBackpressureWriter } from "../services/AdminWebSocketBackpressureWriter";
 import type { PusherWebSocket } from "../services/PusherWebSocket";
+import { getTeapotDataServices } from "../teapot/TeapotDataRuntime";
+import { TeapotWorldAdmissionGate } from "../teapot/TeapotWorldAdmissionGate";
+import { teapotWamRevisionCoordinator } from "../teapot/TeapotWamRevisionCoordinator";
 
 type PendingAnswerMessage = Omit<AnswerMessage, "answer"> & { answer?: AnswerMessage["answer"] };
 
@@ -160,7 +166,7 @@ export class IoSocketController {
                     try {
                         data = await jwtTokenManager.verifyAdminSocketToken(token);
                     } catch (e) {
-                        console.error("Admin socket access refused for token: " + token, e);
+                        console.error("Admin socket access refused for an invalid token", e);
                         ws.getUserData().sendMessage(
                             JSON.stringify({
                                 type: "Error",
@@ -327,12 +333,50 @@ export class IoSocketController {
 
                     const tokenData = token ? await jwtTokenManager.verifyJWTToken(token) : null;
 
+                    if (TEAPOT_X_CLIENT_ID && TEAPOT_X_REDIRECT_URI && FRONT_URL && tokenData?.authProvider !== "x") {
+                        reject({
+                            rejected: true,
+                            reason: "error",
+                            error: {
+                                status: "error",
+                                type: "error",
+                                title: "Sign in required",
+                                subtitle: "Use X to enter Teapot Maps",
+                                image: "",
+                                code: "TEAPOT_X_AUTH_REQUIRED",
+                                details: "Return to the sign-in screen and continue with X.",
+                            },
+                        } satisfies UpgradeFailedData);
+                        return;
+                    }
+
+                    if (tokenData?.authProvider === "x") {
+                        try {
+                            await new TeapotWorldAdmissionGate(getTeapotDataServices()).assertTokenCanEnter(tokenData);
+                        } catch {
+                            reject({
+                                rejected: true,
+                                reason: "error",
+                                error: {
+                                    status: "error",
+                                    type: "error",
+                                    title: "Invitations needed",
+                                    subtitle: "Three people must endorse you before you can enter",
+                                    image: "",
+                                    code: "TEAPOT_ADMISSION_PENDING",
+                                    details: "Share your invitation link and collect three endorsements.",
+                                },
+                            } satisfies UpgradeFailedData);
+                            return;
+                        }
+                    }
+
                     if (DISABLE_ANONYMOUS && !tokenData) {
                         throw new Error("Expecting token");
                     }
 
                     const userIdentifier = tokenData ? tokenData.identifier : "";
-                    const isLogged = !!tokenData?.accessToken;
+                    const isLogged = !!tokenData?.accessToken || tokenData?.authProvider !== undefined;
 
                     let memberTags: string[] = [];
                     let memberVisitCardUrl: string | null = null;
@@ -1066,7 +1110,33 @@ export class IoSocketController {
                                 break;
                             }
                             case "editMapCommandMessage": {
-                                socketManager.forwardMessageToBack(socket, message.message);
+                                const command = message.message.editMapCommandMessage;
+                                const socketData = socket.getUserData();
+                                try {
+                                    await teapotWamRevisionCoordinator.begin({
+                                        commandId: command.id,
+                                        roomId: socketData.roomId,
+                                        actorIdentifier: socketData.userUuid,
+                                        authToken: socketData.token,
+                                    });
+                                    socketManager.forwardMessageToBack(socket, message.message);
+                                } catch (error: unknown) {
+                                    const reason = asError(error).message;
+                                    socket.emitInBatch({
+                                        message: {
+                                            $case: "editMapCommandMessage",
+                                            editMapCommandMessage: {
+                                                id: command.id,
+                                                editMapMessage: {
+                                                    message: {
+                                                        $case: "errorCommandMessage",
+                                                        errorCommandMessage: { reason },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    });
+                                }
                                 break;
                             }
                             case "banPlayerMessage": {

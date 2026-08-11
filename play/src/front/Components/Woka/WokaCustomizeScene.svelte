@@ -4,6 +4,10 @@
     import { gameManager } from "../../Phaser/Game/GameManager";
     import { ABSOLUTE_PUSHER_URL } from "../../Enum/ComputedConst";
     import { areCharacterTexturesValid } from "../../Connection/LocalUserUtils";
+    import { rememberGeneratedWoka } from "../../Services/GeneratedWokaLocalStore";
+    import { teapotWokaApi } from "../../Services/TeapotWokaApi";
+    import type { TeapotWokaView } from "../../Services/TeapotWokaApi";
+    import AvatarGenerationWizard from "../AssetGeneration/AvatarGenerationWizard.svelte";
     import BodyIcon from "../Icons/BodyIcon.svelte";
     import EyesIcon from "../Icons/EyesIcon.svelte";
     import HairIcon from "../Icons/HairIcon.svelte";
@@ -16,6 +20,7 @@
     import type { WokaBodyPart, WokaData, WokaTexture } from "./WokaTypes";
     import { getItemsPerRow } from "./ItemsPerRow";
     import WokaImage from "./WokaImage.svelte";
+    import { generatedWokaName, isGeneratedWokaTexture, removeGeneratedWokaAsset } from "./WokaGeneratedAssets";
 
     interface Props {
         back: () => void;
@@ -36,14 +41,29 @@
     });
     let isLoading = $state(true);
     let error = $state("");
+    let generatedAssetError = $state("");
+    let generatedWokas: TeapotWokaView[] = $state([]);
+    let showGenerator = $state(false);
     let assetsDirection: number = $state(0);
+    let selectionVersion = 0;
+    let categoryVersion = 0;
+    let uploadController: AbortController | null = null;
+    let destroyed = false;
 
     const bodyPartOrder: WokaBodyPart[] = ["body", "eyes", "hair", "clothes", "hat", "accessory"];
 
     async function loadWokaData() {
         try {
             isLoading = true;
+            error = "";
+            generatedAssetError = "";
             wokaData = await gameManager.loadWokaData();
+
+            try {
+                generatedWokas = (await teapotWokaApi.list()).items;
+            } catch (reason) {
+                generatedAssetError = errorMessage(reason, "Generated avatar parts are temporarily unavailable.");
+            }
 
             loadSavedTextures();
         } catch (err) {
@@ -62,17 +82,14 @@
                 throw new Error("Woka data is not loaded");
             }
 
-            // Check if current textures is in the collections list
-            const hasCustomizeTexture = [
-                ...wokaData.body.collections,
-                ...wokaData.eyes.collections,
-                ...wokaData.hair.collections,
-                ...wokaData.clothes.collections,
-                ...wokaData.hat.collections,
-                ...wokaData.accessory.collections,
-            ].find((collection) =>
-                collection.textures.find((texture) => savedTextureIds != null && savedTextureIds.includes(texture.id)),
-            );
+            const hasCustomizeTexture =
+                savedTextureIds != null &&
+                savedTextureIds.length === bodyPartOrder.length &&
+                bodyPartOrder.every((bodyPart, index) =>
+                    wokaData?.[bodyPart].collections.some((collection) =>
+                        collection.textures.some((texture) => texture.id === savedTextureIds[index]),
+                    ),
+                );
 
             // Initialize textures of customize Woka scene
             if (hasCustomizeTexture && savedTextureIds && savedTextureIds.length > 0) {
@@ -95,17 +112,93 @@
         }
     }
 
-    function selectTexture(bodyPart: WokaBodyPart, textureId: string) {
+    function selectTextureLocally(bodyPart: WokaBodyPart, textureId: string) {
         selectedTextures[bodyPart] = textureId;
         selectedTextures = { ...selectedTextures };
     }
 
+    async function selectTexture(bodyPart: WokaBodyPart, textureId: string) {
+        const version = ++selectionVersion;
+        const categoryAtStart = categoryVersion;
+        generatedAssetError = "";
+        if (isGeneratedWokaTexture(textureId)) {
+            try {
+                const selected = await teapotWokaApi.select(textureId);
+                if (
+                    destroyed ||
+                    version !== selectionVersion ||
+                    categoryAtStart !== categoryVersion ||
+                    bodyPart !== selectedBodyPart
+                )
+                    return;
+                generatedWokas = generatedWokas.map((asset) => ({ ...asset, active: asset.id === selected.id }));
+            } catch (reason) {
+                if (version === selectionVersion && categoryAtStart === categoryVersion) {
+                    generatedAssetError = errorMessage(reason, "The generated avatar part could not be selected.");
+                }
+                return;
+            }
+        }
+        if (
+            destroyed ||
+            version !== selectionVersion ||
+            categoryAtStart !== categoryVersion ||
+            bodyPart !== selectedBodyPart
+        )
+            return;
+        selectTextureLocally(bodyPart, textureId);
+    }
+
+    async function deleteGeneratedPart(asset: TeapotWokaView) {
+        if (!window.confirm(`Delete “${asset.name}” from your generated avatar parts?`)) return;
+        generatedAssetError = "";
+        try {
+            await teapotWokaApi.delete(asset.id);
+            if (destroyed || wokaData === null) return;
+            const deletedSelectedTexture = asset.category !== "woka" && selectedTextures[asset.category] === asset.id;
+            wokaData = removeGeneratedWokaAsset(wokaData, asset);
+            generatedWokas = generatedWokas.filter((candidate) => candidate.id !== asset.id);
+            if (asset.category !== "woka" && deletedSelectedTexture) {
+                const fallback = wokaData[asset.category].collections[0]?.textures[0];
+                if (fallback !== undefined) selectTextureLocally(asset.category, fallback.id);
+            }
+        } catch (reason) {
+            generatedAssetError = errorMessage(reason, "The generated avatar part could not be deleted.");
+        }
+    }
+
+    function generatedAsset(textureId: string): TeapotWokaView | undefined {
+        return generatedWokas.find((asset) => asset.id === textureId);
+    }
+
+    async function acceptGeneratedAvatar(blob: Blob, prompt: string): Promise<string> {
+        uploadController?.abort();
+        const controller = new AbortController();
+        uploadController = controller;
+        generatedAssetError = "";
+        try {
+            const accepted = await teapotWokaApi.upload(
+                blob,
+                generatedWokaName("woka", prompt),
+                "woka",
+                controller.signal,
+            );
+            await rememberGeneratedWoka(accepted, blob);
+            if (!controller.signal.aborted && !destroyed) saveAndContinue([accepted.id]);
+            return accepted.id;
+        } finally {
+            if (uploadController === controller) uploadController = null;
+        }
+    }
+
     function randomizeOutfit() {
+        selectionVersion += 1;
         bodyPartOrder.forEach((bodyPart) => {
             if (wokaData?.[bodyPart]?.collections?.[0]?.textures) {
                 const textures = wokaData[bodyPart].collections[0].textures;
                 const randomIndex = Math.floor(Math.random() * textures.length);
-                selectedTextures[bodyPart] = textures[randomIndex].id;
+                const texture = textures[randomIndex];
+                if (texture !== undefined) selectedTextures[bodyPart] = texture.id;
             }
         });
         selectedTextures = { ...selectedTextures }; // Trigger reactivity
@@ -141,7 +234,7 @@
             return relativeUrl;
         }
 
-        return `${ABSOLUTE_PUSHER_URL}${relativeUrl}`;
+        return new URL(relativeUrl, ABSOLUTE_PUSHER_URL).toString();
     }
 
     function getBodyPartIcon(bodyPart: WokaBodyPart) {
@@ -165,6 +258,11 @@
 
     let timeOutToScroll: ReturnType<typeof setTimeout> | null = null;
     function selectBodyPart(bodyPart: WokaBodyPart) {
+        selectionVersion += 1;
+        categoryVersion += 1;
+        uploadController?.abort();
+        uploadController = null;
+        showGenerator = false;
         selectedBodyPart = bodyPart;
 
         // Clear previous timeout if it exists
@@ -218,7 +316,7 @@
                 newIndex = Math.min(currentIndex + itemsPerRow, textures.length - 1);
             }
             if (newIndex !== currentIndex) {
-                selectTexture(selectedBodyPart, textures[newIndex].id);
+                selectTexture(selectedBodyPart, textures[newIndex].id).catch(() => undefined);
                 // Scroll to the newly selected texture
                 const element = document.getElementById(`texture-${selectedBodyPart}-${textures[newIndex].id}`);
                 if (element) {
@@ -246,7 +344,7 @@
     function selectNextBodyPart() {
         const currentIndex = bodyPartOrder.indexOf(selectedBodyPart);
         const nextIndex = (currentIndex + 1) % bodyPartOrder.length;
-        selectedBodyPart = bodyPartOrder[nextIndex];
+        selectBodyPart(bodyPartOrder[nextIndex]);
     }
 
     onMount(async () => {
@@ -258,10 +356,19 @@
     });
 
     onDestroy(() => {
+        destroyed = true;
+        selectionVersion += 1;
+        categoryVersion += 1;
+        uploadController?.abort();
+        if (timeOutToScroll) clearTimeout(timeOutToScroll);
         // Remove keyboard navigation listener
         document.removeEventListener("keydown", useKeyBoardNavigation);
         document.removeEventListener("keyup", useKeyBoardNavigationUp);
     });
+
+    function errorMessage(reason: unknown, fallback: string): string {
+        return reason instanceof Error ? reason.message : fallback;
+    }
 </script>
 
 <div class="mobile-webkit bg-contrast w-screen md:!mt-[15vh] h-full md:!h-[70vh] flex items-center justify-center">
@@ -275,9 +382,14 @@
         {:else if error}
             <div class="text-center text-red-600 mb-4">
                 <p>{error}</p>
-                <button class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick={loadWokaData}>
-                    Retry
-                </button>
+                <div class="mt-2 flex justify-center gap-2">
+                    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick={loadWokaData}>
+                        Retry
+                    </button>
+                    <button class="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20" onclick={back}>
+                        Back to avatar selection
+                    </button>
+                </div>
             </div>
         {:else}
             <div class="flex-1 flex flex-col sm:flex-row items-start gap-6 min-h-0 p-6">
@@ -305,6 +417,15 @@
                                 {/snippet}
                                 <span>{$LL.woka.customWoka.randomize()}</span>
                             </Button>
+                            <Button
+                                size="sm"
+                                variant="light"
+                                appearance="border"
+                                class="w-full px-4 py-2 text-white rounded hover:bg-white/10"
+                                onclick={() => (showGenerator = true)}
+                            >
+                                Generate with AI
+                            </Button>
                         </div>
                     </div>
                     <div class="flex flex-col gap-0 mb-4 w-full lg:w-fit sm:hidden">
@@ -315,7 +436,7 @@
                                 bodyPart
                                     ? 'text-white border-white'
                                     : 'text-white/50 border-white/10'}"
-                                onclick={() => (selectedBodyPart = bodyPart)}
+                                onclick={() => selectBodyPart(bodyPart)}
                                 style="border-bottom-style: solid;"
                             >
                                 <BodyPartIcon
@@ -354,9 +475,13 @@
                     </div>
 
                     <div class="rounded-lg flex flex-col flex-1 min-h-0 min-w-0">
-                        <h3 class="text-lg font-semibold capitalize">
-                            {selectedBodyPart} Options
-                        </h3>
+                        <div>
+                            <h3 class="text-lg font-semibold capitalize">{selectedBodyPart} Options</h3>
+                            <p class="text-xs text-white/60">Generated parts remain separate transparent layers.</p>
+                        </div>
+                        {#if generatedAssetError}
+                            <p class="mt-2 text-sm text-red-300" role="alert">{generatedAssetError}</p>
+                        {/if}
                         <div
                             class="flex-none lg:flex-1 flex flex-col items-start gap-0 min-h-0 min-w-0 max-h-full overflow-y-scroll overflow-x-auto scroll-mask py-[20px]"
                         >
@@ -367,23 +492,33 @@
                                     id={`woka-line-${collectionIndex}`}
                                 >
                                     {#each getAvailableTextures(collectionIndex, selectedBodyPart) as texture (texture.id)}
-                                        <button
-                                            class="rounded border border-solid box-border p-0 h-fit {selectedTextures[
-                                                selectedBodyPart
-                                            ] === texture.id
-                                                ? 'bg-white/50 border-white'
-                                                : 'bg-white/10 hover:bg-white/20 border-transparent'}"
-                                            onclick={() => selectTexture(selectedBodyPart, texture.id)}
-                                            id={`texture-${selectedBodyPart}-${texture.id}`}
-                                        >
-                                            <WokaImage
-                                                selectedTextures={{ [selectedBodyPart]: texture.id }}
-                                                {wokaData}
-                                                {getTextureUrl}
-                                                classList="p-2"
-                                                direction={assetsDirection}
-                                            />
-                                        </button>
+                                        {@const ownedGeneratedAsset = generatedAsset(texture.id)}
+                                        <div class="relative h-fit" id={`texture-${selectedBodyPart}-${texture.id}`}>
+                                            <button
+                                                class="rounded border border-solid box-border p-0 h-fit {selectedTextures[
+                                                    selectedBodyPart
+                                                ] === texture.id
+                                                    ? 'bg-white/50 border-white'
+                                                    : 'bg-white/10 hover:bg-white/20 border-transparent'}"
+                                                onclick={() => selectTexture(selectedBodyPart, texture.id)}
+                                            >
+                                                <WokaImage
+                                                    selectedTextures={{ [selectedBodyPart]: texture.id }}
+                                                    {wokaData}
+                                                    {getTextureUrl}
+                                                    classList="p-2"
+                                                    direction={assetsDirection}
+                                                />
+                                            </button>
+                                            {#if ownedGeneratedAsset}
+                                                <button
+                                                    class="absolute -right-1 -top-1 rounded-full bg-red-700 px-1.5 py-0.5 text-xs text-white hover:bg-red-600"
+                                                    aria-label={`Delete ${ownedGeneratedAsset.name}`}
+                                                    title="Delete generated avatar part"
+                                                    onclick={() => deleteGeneratedPart(ownedGeneratedAsset)}>×</button
+                                                >
+                                            {/if}
+                                        </div>
                                     {/each}
                                 </div>
                             {/each}
@@ -408,6 +543,13 @@
         {/if}
     </div>
 </div>
+
+{#if showGenerator}
+    <AvatarGenerationWizard
+        onclose={() => (showGenerator = false)}
+        oncomplete={(blob, prompt) => acceptGeneratedAvatar(blob, prompt)}
+    />
+{/if}
 
 <style>
     .mobile-webkit {

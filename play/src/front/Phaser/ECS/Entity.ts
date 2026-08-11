@@ -25,6 +25,7 @@ import type { OutlineableInterface } from "../Game/OutlineableInterface";
 import { SpeechDomElement } from "../Entity/SpeechDomElement";
 import LL from "../../../i18n/i18n-svelte";
 import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
+import { reverseEntityCollisionGrid, scaleEntityCollisionGrid } from "../Game/MapEditor/Entities/EntityCollisionGrid";
 
 import Image = Phaser.GameObjects.Image;
 import Graphics = Phaser.GameObjects.Graphics;
@@ -48,7 +49,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
     private readonly outlineColorStore = createColorStore();
     private readonly outlineColorStoreUnsubscribe: Unsubscriber;
 
-    private entityData: Required<WAMEntityData>;
+    private entityData: WAMEntityData & { name: string; properties: EntityDataProperties };
     private prefab: EntityPrefab;
 
     private activatable!: boolean;
@@ -57,6 +58,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
     private updatePropertyActivableTimeOut: NodeJS.Timeout | undefined;
 
     private speechDomElement: SpeechDomElement | null = null;
+    private editorBoundsBeforeResize: { x: number; y: number; width: number; height: number } | undefined;
 
     private debugActivationZoneCircle: Graphics | null = null;
 
@@ -77,6 +79,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
             properties: data.properties ?? [],
         };
         this.prefab = prefab;
+        this.applyStoredDimensions();
 
         scene
             .getEntityPermissionsPromise()
@@ -140,6 +143,8 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
         }
 
         this.setPosition(this.entityData.x, this.entityData.y);
+        this.applyStoredDimensions();
+        this.setDepth(this.y + this.displayHeight + (this.prefab.depthOffset ?? 0));
         this.oldPosition = this.getPosition();
         const wasActivatable = this.activatable;
         this.activatable = this.hasAnyPropertiesSet();
@@ -167,6 +172,38 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
 
     public getPosition(): { x: number; y: number } {
         return { x: this.x, y: this.y };
+    }
+
+    public applyStoredDimensions(): void {
+        if (this.entityData.width !== undefined && this.entityData.height !== undefined) {
+            this.setDisplaySize(this.entityData.width, this.entityData.height);
+        }
+    }
+
+    public previewEditorBounds(bounds: { x: number; y: number; width: number; height: number }): void {
+        this.setPosition(bounds.x, bounds.y);
+        this.setDisplaySize(bounds.width, bounds.height);
+        this.setDepth(this.y + this.displayHeight + (this.prefab.depthOffset ?? 0));
+        this.updateDebugActivationZone();
+    }
+
+    public beginEditorResize(bounds: { x: number; y: number; width: number; height: number }): void {
+        this.editorBoundsBeforeResize = bounds;
+    }
+
+    public consumeEditorBoundsBeforeResize(): { x: number; y: number; width: number; height: number } | undefined {
+        const bounds = this.editorBoundsBeforeResize;
+        this.editorBoundsBeforeResize = undefined;
+        return bounds;
+    }
+
+    public commitEditorBounds(bounds: { x: number; y: number; width: number; height: number }): void {
+        this.entityData.x = bounds.x;
+        this.entityData.y = bounds.y;
+        this.entityData.width = bounds.width;
+        this.entityData.height = bounds.height;
+        this.previewEditorBounds(bounds);
+        this.emit(EntityEvent.Updated, this.appendId(bounds));
     }
 
     /**
@@ -219,11 +256,20 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
     }
 
     public getCollisionGrid(): number[][] | undefined {
-        return this.prefab.collisionGrid;
+        return scaleEntityCollisionGrid(this.prefab.collisionGrid, this.displayWidth, this.displayHeight);
     }
 
     public getReversedCollisionGrid(): number[][] | undefined {
-        return this.prefab.collisionGrid?.map((row) => row.map((value) => (value === 1 ? -1 : value)));
+        return reverseEntityCollisionGrid(this.getCollisionGrid());
+    }
+
+    public updatePrefabMetadata(collisionGrid: number[][] | undefined, depthOffset: number | undefined): void {
+        this.prefab = {
+            ...this.prefab,
+            collisionGrid,
+            depthOffset,
+        };
+        this.setDepth(this.y + this.displayHeight + (depthOffset ?? 0));
     }
 
     public setFollowOutlineColor(color: number): void {
@@ -282,7 +328,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
         return this.activatable;
     }
 
-    public getEntityData(): Required<WAMEntityData> {
+    public getEntityData(): WAMEntityData & { name: string; properties: EntityDataProperties } {
         return this.entityData;
     }
 

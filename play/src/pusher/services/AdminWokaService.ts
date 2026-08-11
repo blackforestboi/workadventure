@@ -1,5 +1,5 @@
 import type { AxiosResponse } from "axios";
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import type { WokaList } from "@workadventure/messages";
 import { wokaList } from "@workadventure/messages";
 import * as Sentry from "@sentry/node";
@@ -56,7 +56,11 @@ class AdminWokaService implements WokaServiceInterface {
                 return wokaList.parse(res.data);
             })
             .catch((err) => {
-                Sentry.captureException(`Cannot get woka list from admin API with token: ${token}`, err);
+                const status = isAxiosError(err) ? err.response?.status : undefined;
+                console.error("Cannot get Woka list from admin API", { status });
+                Sentry.captureException(new Error("Admin Woka list request failed"), {
+                    tags: { status: status?.toString() ?? "unknown" },
+                });
                 return undefined;
             });
     }

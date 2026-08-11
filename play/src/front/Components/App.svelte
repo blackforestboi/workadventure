@@ -36,6 +36,7 @@
     import GameOverlay from "./GameOverlay.svelte";
     import CoWebsitesContainer from "./EmbedScreens/CoWebsitesContainer.svelte";
     import BrowserNotSupported from "./BrowserNotSupported/BrowserNotSupported.svelte";
+    import TeapotAdmissionGate from "./Teapot/TeapotAdmissionGate.svelte";
 
     let WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer;
     let game: Game | undefined = $state();
@@ -272,6 +273,7 @@
 {#if browserNotSupported}
     <BrowserNotSupported />
 {:else}
+    <TeapotAdmissionGate />
     <div
         class="h-dvh w-dvw flex landscape:flex-row portrait:flex-col-reverse"
         id="main-container"

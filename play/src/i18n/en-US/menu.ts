@@ -160,6 +160,7 @@ const menu: BaseTranslation = {
     sub: {
         profile: "Profile",
         settings: "Settings",
+        aiModels: "AI models",
         credit: "Credit",
         globalMessages: "Global Messages",
         contact: "Contact",

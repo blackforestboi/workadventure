@@ -123,9 +123,26 @@ export class EntitiesCollectionsManager {
             ...this.parseRawEntityPrefab("custom entities", uploadedEntity, "Custom"),
             imagePath: new URL(uploadedEntity.imagePath, customEntityCollectionUrl).toString(),
         };
-        this.currentCollection.collection.push(uploadedEntityPrefab);
+        const currentCollectionIndex = this.currentCollection.collection.findIndex(
+            (entityPrefab) => entityPrefab.id === uploadedEntityPrefab.id,
+        );
+        if (currentCollectionIndex === -1) {
+            this.currentCollection.collection.push(uploadedEntityPrefab);
+        } else {
+            this.currentCollection.collection[currentCollectionIndex] = uploadedEntityPrefab;
+        }
 
-        this.entitiesPrefabsStore.update((currentEntitiesPrefabs) => [...currentEntitiesPrefabs, uploadedEntityPrefab]);
+        this.entitiesPrefabsStore.update((currentEntitiesPrefabs) => {
+            const existingEntityIndex = currentEntitiesPrefabs.findIndex(
+                (entityPrefab) => entityPrefab.id === uploadedEntityPrefab.id,
+            );
+            if (existingEntityIndex === -1) {
+                return [...currentEntitiesPrefabs, uploadedEntityPrefab];
+            }
+            return currentEntitiesPrefabs.map((entityPrefab, index) =>
+                index === existingEntityIndex ? uploadedEntityPrefab : entityPrefab,
+            );
+        });
         this.entitiesPrefabsMapPromise = new Promise<Map<string, EntityPrefab>>((resolve, reject) => {
             this.entitiesPrefabsMapPromise
                 .then((existingEntitiesPrefabsMap) => {

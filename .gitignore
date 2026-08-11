@@ -1,4 +1,8 @@
 .env
+.env.teapot
+contrib/docker/.env.teapot
+backups/teapot/
+play/storage/teapot-wokas/
 .idea
 .vagrant
 Vagrantfile
@@ -7,7 +11,9 @@ docker-compose.override.yaml
 maps/yarn.lock
 maps/dist/computer.js
 maps/dist/computer.js.map
+teapot-mcp/dist/
 node_modules
+.teapot-data/
 _
 *.code-workspace
 /install.lock

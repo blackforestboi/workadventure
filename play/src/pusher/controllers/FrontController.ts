@@ -28,24 +28,28 @@ export class FrontController extends BaseHttpController {
 
     constructor(protected app: Application) {
         super(app);
+        const developmentMode = FRONT_ENVIRONMENT_VARIABLES.NODE_ENV === "development";
 
         let indexPath: string;
-        if (fs.existsSync("dist/public/index.html")) {
-            // In prod mode
+        if (developmentMode && fs.existsSync("index.html")) {
+            // Development must always enter through Vite. A leftover production
+            // build in dist/public would otherwise pin the browser to stale
+            // hashed assets even while the source watcher is running.
+            indexPath = "index.html";
+        } else if (fs.existsSync("dist/public/index.html")) {
             indexPath = "dist/public/index.html";
         } else if (fs.existsSync("index.html")) {
-            // In dev mode
             indexPath = "index.html";
         } else {
             throw new Error("Could not find index.html file");
         }
 
         let redirectToAdminPath: string;
-        if (fs.existsSync("dist/public/redirectToAdmin.html")) {
-            // In prod mode
+        if (developmentMode && fs.existsSync("redirectToAdmin.html")) {
+            redirectToAdminPath = "redirectToAdmin.html";
+        } else if (fs.existsSync("dist/public/redirectToAdmin.html")) {
             redirectToAdminPath = "dist/public/redirectToAdmin.html";
         } else if (fs.existsSync("redirectToAdmin.html")) {
-            // In dev mode
             redirectToAdminPath = "redirectToAdmin.html";
         } else {
             throw new Error("Could not find redirectToAdmin.html file");
@@ -289,13 +293,21 @@ export class FrontController extends BaseHttpController {
                 authToken: authToken,
                 googleDrivePickerClientId: GOOGLE_DRIVE_PICKER_CLIENT_ID,
                 cssVariablesOverride,
+                devEntryVersion:
+                    FRONT_ENVIRONMENT_VARIABLES.NODE_ENV === "development" ? `?v=${Date.now().toString(36)}` : "",
                 ...option,
             });
         } catch (e) {
             console.info(`Cannot render metatags on "%"`, url, e);
         }
 
-        res.set("Cache-Control", "no-cache").type("html").send(html);
+        res.set({
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+            Pragma: "no-cache",
+            Expires: "0",
+        })
+            .type("html")
+            .send(html);
         return;
     }
 

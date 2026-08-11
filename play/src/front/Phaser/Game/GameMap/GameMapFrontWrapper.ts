@@ -897,6 +897,7 @@ export class GameMapFrontWrapper {
         const phaserLayer = this.findPhaserLayer(layer);
         if (phaserLayer) {
             if (tile === null) {
+                this.gameMap.putTileInFlatLayer(0, x, y, layer);
                 phaserLayer.putTileAt(-1, x, y);
             } else {
                 const tileIndex = this.gameMap.getIndexForTileType(tile);

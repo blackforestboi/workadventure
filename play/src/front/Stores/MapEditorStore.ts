@@ -1,10 +1,6 @@
 import type { AreaData, EntityDataProperties, EntityPrefab } from "@workadventure/map-editor";
 import { writable } from "svelte/store";
-import type {
-    DeleteCustomEntityMessage,
-    ModifyCustomEntityMessage,
-    UploadEntityMessage,
-} from "@workadventure/messages";
+import type { DeleteCustomEntityMessage, ModifyCustomEntityMessage } from "@workadventure/messages";
 import type { AreaPreview } from "../Phaser/Components/MapEditor/AreaPreview";
 import type { Entity } from "../Phaser/ECS/Entity";
 import type { EditorToolName } from "../Phaser/Game/MapEditor/MapEditorModeManager";
@@ -62,9 +58,15 @@ export const mapEditorCopiedEntityDataPropertiesStore = writable<EntityDataPrope
 
 export const mapEditorEntityModeStore = writable<MapEditorEntityToolMode>("ADD");
 
-export const mapEditorEntityUploadEventStore = writable<UploadEntityMessage | undefined>(undefined);
 export const mapEditorModifyCustomEntityEventStore = writable<ModifyCustomEntityMessage | undefined>(undefined);
 export const mapEditorDeleteCustomEntityEventStore = writable<DeleteCustomEntityMessage | undefined>(undefined);
+
+export {
+    mapEditorEntityUploadDraftStore,
+    type AcceptedMapEditorEntityUploadDraft,
+    type MapEditorEntityUploadDraft,
+    type MapEditorEntityUploadDraftStatus,
+} from "./MapEditorEntityUploadDraftStore";
 
 export const mapEditorEntityFileDroppedStore = writable<boolean>(false);
 

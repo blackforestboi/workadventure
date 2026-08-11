@@ -17,13 +17,12 @@ import { fileSystem } from "../fileSystem";
 import { mapPathUsingDomainWithPrefix } from "./PathMapper";
 
 export class CustomEntityCollectionService {
-    private readonly hostname: string;
+    private static readonly collectionLocks = new Map<string, Promise<void>>();
 
-    private lock: Promise<void>;
+    private readonly hostname: string;
 
     constructor(hostname: string) {
         this.hostname = hostname;
-        this.lock = Promise.resolve();
     }
 
     private getEntityCollectionFileVirtualPath() {
@@ -41,11 +40,26 @@ export class CustomEntityCollectionService {
 
     public async uploadEntity(uploadEntityMessage: UploadEntityMessage) {
         const { imagePath, file } = uploadEntityMessage;
-        await fileSystem.writeByteArrayAsFile(this.getEntityToUploadVirtualPath(imagePath), file);
-        await this.addEntityInEntityCollectionFile(
-            this.mapEntityFromUploadEntityMessageToEntityRawPrefab(uploadEntityMessage),
-        );
-        return;
+        const entity = this.mapEntityFromUploadEntityMessageToEntityRawPrefab(uploadEntityMessage);
+        await this.withEntityCollectionLock(async () => {
+            // Keep the binary and its catalog entry ordered against modify/delete/retry
+            // operations for this map. A retry upserts the same stable entity ID.
+            await fileSystem.writeByteArrayAsFile(this.getEntityToUploadVirtualPath(imagePath), file);
+            const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
+            const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
+            const existingEntityIndex = customEntityCollection.collection.findIndex(
+                (candidate) => candidate.id === entity.id,
+            );
+            if (existingEntityIndex === -1) {
+                customEntityCollection.collection.push(entity);
+            } else {
+                customEntityCollection.collection[existingEntityIndex] = entity;
+            }
+            await fileSystem.writeStringAsFile(
+                this.getEntityCollectionFileVirtualPath(),
+                JSON.stringify(customEntityCollection),
+            );
+        });
     }
 
     public async modifyEntity(modifyCustomEntityMessage: ModifyCustomEntityMessage) {
@@ -54,36 +68,40 @@ export class CustomEntityCollectionService {
         if (modifyCustomEntityMessage.collisionGrid) {
             collisionGrid = CollisionGrid.parse(modifyCustomEntityMessage.collisionGrid);
         }
-        const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
-        const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
-        const indexOfEntityToModify = customEntityCollection.collection.findIndex((entity) => entity.id === id);
-        if (indexOfEntityToModify !== -1) {
-            const entityToModify = customEntityCollection.collection[indexOfEntityToModify];
-            customEntityCollection.collection[indexOfEntityToModify] = {
-                ...entityToModify,
-                name,
-                tags,
-                depthOffset,
-                collisionGrid,
-            };
-            await fileSystem.writeStringAsFile(
-                this.getEntityCollectionFileVirtualPath(),
-                JSON.stringify(customEntityCollection),
-            );
-        } else {
-            console.error(`[${new Date().toISOString()}] Unable to find the entity to modify in custom entities file`);
-        }
+        await this.withEntityCollectionLock(async () => {
+            const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
+            const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
+            const indexOfEntityToModify = customEntityCollection.collection.findIndex((entity) => entity.id === id);
+            if (indexOfEntityToModify !== -1) {
+                const entityToModify = customEntityCollection.collection[indexOfEntityToModify];
+                customEntityCollection.collection[indexOfEntityToModify] = {
+                    ...entityToModify,
+                    name,
+                    tags,
+                    depthOffset,
+                    collisionGrid,
+                };
+                await fileSystem.writeStringAsFile(
+                    this.getEntityCollectionFileVirtualPath(),
+                    JSON.stringify(customEntityCollection),
+                );
+            } else {
+                console.error(
+                    `[${new Date().toISOString()}] Unable to find the entity to modify in custom entities file`,
+                );
+            }
+        });
     }
 
     public async deleteEntity(deleteCustomEntityMessage: DeleteCustomEntityMessage) {
         const { id } = deleteCustomEntityMessage;
-        const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
-        const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
-        const customEntityToDelete = customEntityCollection.collection.find((entity) => entity.id === id);
-        customEntityCollection.collection = customEntityCollection.collection.filter(
-            (customEntity) => customEntity.id !== id,
-        );
-        this.lock = this.lock.then(async () => {
+        await this.withEntityCollectionLock(async () => {
+            const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
+            const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
+            const customEntityToDelete = customEntityCollection.collection.find((entity) => entity.id === id);
+            customEntityCollection.collection = customEntityCollection.collection.filter(
+                (customEntity) => customEntity.id !== id,
+            );
             await fileSystem.writeStringAsFile(
                 this.getEntityCollectionFileVirtualPath(),
                 JSON.stringify(customEntityCollection),
@@ -119,15 +137,18 @@ export class CustomEntityCollectionService {
         });
     }
 
-    private async addEntityInEntityCollectionFile(entityToAddInCollection: EntityRawPrefab) {
-        const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
-        const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
-        customEntityCollection.collection.push(entityToAddInCollection);
-        this.lock = this.lock.then(async () => {
-            await fileSystem.writeStringAsFile(
-                this.getEntityCollectionFileVirtualPath(),
-                JSON.stringify(customEntityCollection),
-            );
-        });
+    private async withEntityCollectionLock(operation: () => Promise<void>): Promise<void> {
+        const collectionPath = this.getEntityCollectionFileVirtualPath();
+        const previousOperation =
+            CustomEntityCollectionService.collectionLocks.get(collectionPath) ?? Promise.resolve();
+        const currentOperation = previousOperation.catch(() => undefined).then(operation);
+        CustomEntityCollectionService.collectionLocks.set(collectionPath, currentOperation);
+        try {
+            await currentOperation;
+        } finally {
+            if (CustomEntityCollectionService.collectionLocks.get(collectionPath) === currentOperation) {
+                CustomEntityCollectionService.collectionLocks.delete(collectionPath);
+            }
+        }
     }
 }

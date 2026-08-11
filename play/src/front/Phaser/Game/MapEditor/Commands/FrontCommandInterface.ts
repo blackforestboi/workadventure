@@ -8,4 +8,8 @@ export interface FrontCommandInterface {
     getUndoCommand(): Command & FrontCommandInterface;
 
     emitEvent(roomConnection: RoomConnection): void;
+
+    onAcknowledged?(): void;
+
+    onRejected?(reason: string): void;
 }

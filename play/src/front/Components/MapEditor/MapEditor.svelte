@@ -14,6 +14,7 @@
     import TrashEditor from "./TrashEditor.svelte";
     import ConfigureMyRoom from "./WAMSettingsEditor.svelte";
     import MapEditorResizeHandle from "./MapEditorResizeHandle.svelte";
+    import FloorEditor from "./FloorEditor/FloorEditor.svelte";
     import { mapEditorSideBarWidthStore } from "./MapEditorSideBarWidthStore";
 
     let mapEditor: HTMLElement;
@@ -45,19 +46,14 @@
     id="map-editor-container"
     class="z-[500] flex flex-row items-start justify-end gap-4 absolute h-full max-w-full md:max-w-[calc(100%-18px)] top-0 end-0 pointer-events-none"
 >
-    <div
-        in:fly={{ x: 100, duration: 250, delay: 300 }}
-        out:fly={{ x: 100, duration: 200, delay: 100 }}
-        class="hidden md:block"
-        class:!block={$mapEditorVisibilityStore == false}
-    >
+    <div in:fly={{ x: 100, duration: 250, delay: 300 }} out:fly={{ x: 100, duration: 200, delay: 100 }} class="block">
         <MapEditorSideBar />
     </div>
     <div
         id="map-editor-right"
         bind:this={mapEditor}
         {@attach blocker}
-        class={`map-editor relative h-dvh max-w-full md:max-w-[calc(100%-64px)] pointer-events-auto ${$mapEditorSelectedToolStore}`}
+        class={`map-editor relative h-dvh max-w-full md:max-w-[calc(100%-88px)] pointer-events-auto ${$mapEditorSelectedToolStore}`}
     >
         {#if $mapEditorVisibilityStore && $mapEditorSelectedToolStore !== EditorToolName.WAMSettingsEditor}
             <div class="absolute h-dvh -start-0.5 top-0 flex flex-col z-[2000]">
@@ -81,6 +77,9 @@
                 {/if}
                 {#if $mapEditorSelectedToolStore === EditorToolName.AreaEditor}
                     <AreaEditor />
+                {/if}
+                {#if $mapEditorSelectedToolStore === EditorToolName.FloorEditor}
+                    <FloorEditor />
                 {/if}
                 {#if $mapEditorSelectedToolStore === EditorToolName.ExploreTheRoom}
                     <Explorer />

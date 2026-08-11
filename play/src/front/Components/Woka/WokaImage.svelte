@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
+    import { TEAPOT_WOKA_SPRITE_SHEET } from "../../../common/Teapot/TeapotWoka";
     import type { WokaData, WokaTexture } from "./WokaTypes";
 
     interface Props {
@@ -9,6 +10,8 @@
         direction?: number;
         getTextureUrl?: (url: string) => string;
         classList?: string;
+        animateFrames?: boolean;
+        frameDurationMs?: number;
     }
 
     let {
@@ -18,6 +21,8 @@
         direction = 0,
         getTextureUrl = (url) => url,
         classList = "",
+        animateFrames = false,
+        frameDurationMs = 240,
     }: Props = $props();
 
     const bodyPartOrder = ["body", "eyes", "hair", "clothes", "hat", "accessory", "woka"];
@@ -45,9 +50,9 @@
             const url = findTextureUrl(part);
             if (url) {
                 const img = new window.Image();
-                img.src = url;
                 // Load image with CORS headers to populate the cache with CORS headers
                 img.crossOrigin = "user-credentials";
+                img.src = url;
                 images[part] = img;
             }
         }
@@ -57,14 +62,29 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (const part of bodyPartOrder) {
             const img = images[part];
-            ctx.imageSmoothingEnabled = false;
             if (img && img.complete) {
-                ctx.drawImage(img, frame * 32, direction * 32, 32, 32, 0, 0, canvasSize, canvasSize);
+                const frameWidth = img.naturalWidth / TEAPOT_WOKA_SPRITE_SHEET.frameColumns;
+                const frameHeight = img.naturalHeight / TEAPOT_WOKA_SPRITE_SHEET.frameRows;
+                const highResolution = frameWidth > TEAPOT_WOKA_SPRITE_SHEET.frameWidth;
+                ctx.imageSmoothingEnabled = highResolution;
+                canvas.style.imageRendering = highResolution ? "auto" : "pixelated";
+                ctx.drawImage(
+                    img,
+                    frame * frameWidth,
+                    direction * frameHeight,
+                    frameWidth,
+                    frameHeight,
+                    0,
+                    0,
+                    canvasSize,
+                    canvasSize,
+                );
             }
         }
     }
 
-    function animate() {
+    function animate(timestamp: number) {
+        frame = animateFrames ? Math.floor(timestamp / frameDurationMs) % TEAPOT_WOKA_SPRITE_SHEET.frameColumns : 0;
         draw();
         raf = requestAnimationFrame(animate);
     }
@@ -80,12 +100,11 @@
         if (!context) return;
         ctx = context;
         loadImages();
-        animate();
+        raf = requestAnimationFrame(animate);
     });
     onDestroy(() => {
         cancelAnimationFrame(raf);
     });
 </script>
 
-<canvas bind:this={canvas} width={canvasSize} height={canvasSize} style="image-rendering: pixelated;" class={classList}
-></canvas>
+<canvas bind:this={canvas} width={canvasSize} height={canvasSize} class={classList}></canvas>

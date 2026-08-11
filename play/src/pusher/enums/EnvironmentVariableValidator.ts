@@ -85,6 +85,80 @@ export const EnvironmentVariables = z.object({
         .transform(emptyStringToUndefined)
         .describe('The internal URL to the map-storage server (for instance: "https://map-storage:3000")'),
 
+    // Teapot application data. Binary assets remain in map-storage/object storage.
+    TEAPOT_DATABASE_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("PostgreSQL connection URL for Teapot identities, catalogs, revisions, invitations, and audit data"),
+    TEAPOT_MIGRATIONS_DIRECTORY: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Optional absolute or working-directory-relative path to Teapot SQL migrations"),
+    TEAPOT_REQUIRE_PERSISTENCE: BoolAsString.optional()
+        .transform((val) => toBool(val, false))
+        .describe("Fail startup instead of using volatile storage when TEAPOT_DATABASE_URL is absent"),
+    TEAPOT_MAP_STORAGE_WRITE_TOKEN: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Bearer token used only by the pusher to publish validated Teapot map revisions"),
+    TEAPOT_MCP_PUBLIC_URL: z
+        .string()
+        .url()
+        .or(z.literal(""))
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Public Streamable HTTP endpoint for the Teapot authoring MCP server"),
+    TEAPOT_MCP_APPROVAL_SECRET: z
+        .string()
+        .min(32)
+        .or(z.literal(""))
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Dedicated HMAC secret for one-time Teapot MCP approval tokens; defaults to SECRET_KEY"),
+    TEAPOT_AGENT_BRIDGE_URL: z
+        .string()
+        .url()
+        .or(z.literal(""))
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Internal URL for the owner-isolated hosted Codex and Claude bridge"),
+    TEAPOT_AGENT_BRIDGE_SECRET: z
+        .string()
+        .min(32)
+        .or(z.literal(""))
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Dedicated bearer secret for pusher-to-agent-bridge requests"),
+    TEAPOT_WOKA_STORAGE_DIRECTORY: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Durable filesystem directory for immutable generated Woka PNG sprite sheets"),
+    TEAPOT_WOKA_PUBLIC_BASE_URL: AbsoluteOrRelativeUrl.optional()
+        .transform(emptyStringToUndefined)
+        .describe("Public base URL used in generated Woka texture URLs; defaults to PUSHER_URL"),
+    TEAPOT_X_CLIENT_ID: z.string().optional().transform(emptyStringToUndefined).describe("X OAuth 2.0 client ID"),
+    TEAPOT_X_CLIENT_SECRET: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("X OAuth 2.0 confidential-client secret"),
+    TEAPOT_X_REDIRECT_URI: z
+        .string()
+        .url()
+        .or(z.literal(""))
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Exact X OAuth callback URL; defaults to PUSHER_URL/teapot/auth/x/callback"),
+    TEAPOT_X_BOOTSTRAP_USER_IDS: z
+        .string()
+        .optional()
+        .transform((val) => toArray(val))
+        .describe("Comma-separated X user IDs admitted with the operator role during bootstrap"),
+
     OPID_CLIENT_ID: z
         .string()
         .optional()

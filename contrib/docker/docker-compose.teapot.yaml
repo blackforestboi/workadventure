@@ -1,0 +1,128 @@
+services:
+  play:
+    build:
+      context: ../..
+      dockerfile: play/Dockerfile
+    image: "${TEAPOT_PLAY_IMAGE:-teapot-play:${TEAPOT_IMAGE_TAG:-local}}"
+    environment:
+      TEAPOT_DATABASE_URL: "postgresql://${TEAPOT_POSTGRES_USER}:${TEAPOT_POSTGRES_PASSWORD}@postgres:5432/${TEAPOT_POSTGRES_DATABASE}"
+      TEAPOT_REQUIRE_PERSISTENCE: "true"
+      TEAPOT_MAP_STORAGE_WRITE_TOKEN: "${MAP_STORAGE_AUTHENTICATION_TOKEN}"
+      TEAPOT_MCP_PUBLIC_URL: "https://${DOMAIN}/mcp"
+      TEAPOT_MCP_APPROVAL_SECRET: "${TEAPOT_MCP_APPROVAL_SECRET}"
+      TEAPOT_AGENT_BRIDGE_URL: "http://teapot-agent-bridge:17375"
+      TEAPOT_AGENT_BRIDGE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET}"
+      TEAPOT_WOKA_STORAGE_DIRECTORY: /data/teapot-wokas
+      TEAPOT_WOKA_PUBLIC_BASE_URL: "https://${DOMAIN}"
+      TEAPOT_X_CLIENT_ID: "${TEAPOT_X_CLIENT_ID}"
+      TEAPOT_X_CLIENT_SECRET: "${TEAPOT_X_CLIENT_SECRET}"
+      TEAPOT_X_REDIRECT_URI: "https://${DOMAIN}/teapot/auth/x/callback"
+      TEAPOT_X_BOOTSTRAP_USER_IDS: "${TEAPOT_X_BOOTSTRAP_USER_IDS}"
+    volumes:
+      - teapot-woka-assets:/data/teapot-wokas
+    depends_on:
+      postgres:
+        condition: service_healthy
+      teapot-agent-bridge:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/teapot/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # Internal-only OAuth and generation runner. Deliberately has no ports or
+  # Traefik labels; only Play can reach it on the Compose network.
+  teapot-agent-bridge:
+    build:
+      context: ../..
+      dockerfile: teapot-cli-companion/Dockerfile
+      args:
+        CODEX_CLI_VERSION: "${TEAPOT_CODEX_CLI_VERSION:-0.147.0-alpha.6.5}"
+        CLAUDE_CODE_VERSION: "${TEAPOT_CLAUDE_CODE_VERSION:-2.1.220}"
+    image: "${TEAPOT_AGENT_BRIDGE_IMAGE:-teapot-agent-bridge:${TEAPOT_IMAGE_TAG:-local}}"
+    init: true
+    environment:
+      TEAPOT_AGENT_BRIDGE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET}"
+      TEAPOT_AGENT_BRIDGE_HOST: "0.0.0.0"
+      TEAPOT_AGENT_BRIDGE_PORT: "17375"
+      TEAPOT_AGENT_AUTH_ROOT: "/var/lib/teapot-agent-auth"
+      TEAPOT_HOSTED_BRIDGE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET}"
+      TEAPOT_HOSTED_BRIDGE_HOST: "0.0.0.0"
+      TEAPOT_HOSTED_BRIDGE_PORT: "17375"
+      TEAPOT_CODEX_BRIDGE_SERVICE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET}"
+      TEAPOT_CODEX_BRIDGE_HOST: "0.0.0.0"
+      TEAPOT_CODEX_BRIDGE_PORT: "17375"
+      TEAPOT_CODEX_AUTH_ROOT: "/var/lib/teapot-agent-auth/codex"
+      TEAPOT_CLAUDE_AUTH_ROOT: "/var/lib/teapot-agent-auth/claude"
+      TEAPOT_CLAUDE_CLI: "claude"
+    volumes:
+      - teapot-agent-auth:/var/lib/teapot-agent-auth
+    expose:
+      - "17375"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:17375/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: ${RESTART_POLICY}
+
+  teapot-mcp:
+    build:
+      context: ../..
+      dockerfile: teapot-mcp/Dockerfile
+    image: "${TEAPOT_MCP_IMAGE:-teapot-mcp:${TEAPOT_IMAGE_TAG:-local}}"
+    environment:
+      TEAPOT_MCP_HOST: 0.0.0.0
+      TEAPOT_MCP_PORT: "17374"
+      TEAPOT_MCP_ALLOWED_HOSTS: "${DOMAIN},localhost:17374,127.0.0.1:17374"
+      TEAPOT_PUSHER_URL: http://play:3000/
+    depends_on:
+      play:
+        condition: service_healthy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.teapot-mcp.rule: "Host(`${DOMAIN}`) && Path(`/mcp`)"
+      traefik.http.routers.teapot-mcp.entryPoints: "web"
+      traefik.http.routers.teapot-mcp.priority: "200"
+      traefik.http.routers.teapot-mcp.service: teapot-mcp
+      traefik.http.services.teapot-mcp.loadbalancer.server.port: "17374"
+      traefik.http.routers.teapot-mcp-ssl.rule: "Host(`${DOMAIN}`) && Path(`/mcp`)"
+      traefik.http.routers.teapot-mcp-ssl.entryPoints: "websecure"
+      traefik.http.routers.teapot-mcp-ssl.priority: "200"
+      traefik.http.routers.teapot-mcp-ssl.service: teapot-mcp
+      traefik.http.routers.teapot-mcp-ssl.tls: "true"
+      traefik.http.routers.teapot-mcp-ssl.tls.certresolver: myresolver
+    restart: ${RESTART_POLICY}
+
+  map-storage:
+    build:
+      context: ../..
+      dockerfile: map-storage/Dockerfile
+    image: "${TEAPOT_MAP_STORAGE_IMAGE:-teapot-map-storage:${TEAPOT_IMAGE_TAG:-local}}"
+    environment:
+      ENABLE_BEARER_AUTHENTICATION: "true"
+      AUTHENTICATION_TOKEN: "${MAP_STORAGE_AUTHENTICATION_TOKEN}"
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: "${TEAPOT_POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${TEAPOT_POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${TEAPOT_POSTGRES_DATABASE}"
+    volumes:
+      - teapot-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: ${RESTART_POLICY}
+
+volumes:
+  teapot-postgres:
+  teapot-agent-auth:
+  teapot-woka-assets:

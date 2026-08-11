@@ -20,6 +20,7 @@ import { DeleteEntityFrontCommand } from "../Commands/Entity/DeleteEntityFrontCo
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { TexturesHelper } from "../../../Helpers/TexturesHelper";
 import type { Entity } from "../../../ECS/Entity";
+import { EntityResizeHandles } from "../Entities/EntityResizeHandles";
 import { MapEditorTool } from "./MapEditorTool";
 
 import Image = Phaser.GameObjects.Image;
@@ -39,6 +40,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
     protected mapEntityEditorModeStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEditorSelectedEntityStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEditorSelectedEntityDraggedStoreUnsubscriber: Unsubscriber | undefined;
+    private entityResizeHandles: EntityResizeHandles | undefined;
 
     protected constructor(mapEditorModeManager: MapEditorModeManager) {
         super();
@@ -54,7 +56,9 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
         this.handleDeleteEntity = this.deleteEntity.bind(this);
     }
 
-    public update(time: number, dt: number): void {}
+    public update(_time: number, _dt: number): void {
+        this.entityResizeHandles?.update();
+    }
 
     public clear(): void {
         this.scene.input.topOnly = false;
@@ -63,6 +67,8 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
         this.entitiesManager.clearAllEntitiesTint();
         this.entitiesManager.clearAllEntitiesEditOutlines();
         this.cleanPreview();
+        this.entityResizeHandles?.destroy();
+        this.entityResizeHandles = undefined;
         this.unsubscribeToStores();
         this.entitiesManager.off(EntitiesManagerEvent.DeleteEntity, this.handleDeleteEntity);
     }
@@ -78,6 +84,8 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
 
     public destroy(): void {
         this.cleanPreview();
+        this.entityResizeHandles?.destroy();
+        this.entityResizeHandles = undefined;
         this.unsubscribeToStores();
     }
 
@@ -159,6 +167,8 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
 
         this.mapEditorSelectedEntityStoreUnsubscriber = mapEditorSelectedEntityStore.subscribe((entity) => {
             this.entityOldPositionPreview?.destroy();
+            this.entityResizeHandles?.destroy();
+            this.entityResizeHandles = undefined;
             if (!entity) {
                 return;
             }
@@ -166,6 +176,9 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                 .image(entity.x, entity.y, entity.texture)
                 .setOrigin(0)
                 .setAlpha(0.5);
+            if (entity.canEdit) {
+                this.entityResizeHandles = new EntityResizeHandles(this.scene, entity);
+            }
         });
 
         this.mapEntityEditorModeStoreUnsubscriber = mapEditorEntityModeStore.subscribe((mode) => {

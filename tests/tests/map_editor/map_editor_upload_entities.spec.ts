@@ -43,6 +43,22 @@ test.describe("Map editor @oidc @nomobile @nowebkit", () => {
         expect(uploadedEntityElement).toContain(EntityEditor.getTestAssetName());
     });
 
+    test("Acknowledged custom entity upload remains available after reload", async ({ browser, request }) => {
+        await resetWamMaps(request);
+        await using page = await getPage(browser, "Admin1", Map.url("empty"));
+
+        await Menu.openMapEditor(page);
+        await MapEditor.openEntityEditor(page);
+        await EntityEditor.uploadTestAsset(page);
+
+        await page.reload();
+        await Menu.openMapEditor(page);
+        await MapEditor.openEntityEditor(page);
+
+        const uploadedEntityLocator = await EntityEditor.searchEntity(page, EntityEditor.getTestAssetName());
+        await expect(uploadedEntityLocator).toContainText(EntityEditor.getTestAssetName());
+    });
+
     test("Successfully upload and use custom entity in the map", async ({ browser, request }) => {
         await resetWamMaps(request);
 

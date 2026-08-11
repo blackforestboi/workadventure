@@ -177,6 +177,31 @@ new UploadController(app, fileSystem, mapListService);
 new ValidatorController(app);
 new PingController(app);
 
+// Before terrain assets were persisted with an absolute Play URL, some maps stored the
+// bundled atlas as `/resources/...`. Older Play clients prepend the map directory and
+// consequently request `/maps//resources/...` from map-storage. Phaser rejects a
+// cross-origin redirect in its XHR loader, so proxy only this known asset from the
+// internal Play service while clients update. Deployments without the standard Docker
+// service name can supply PLAY_ASSET_INTERNAL_URL.
+app.get(/^\/maps\/+resources\/tilesets\/lpc-outdoor-terrain\.png$/, async (_req, res) => {
+    try {
+        const playAssetBaseUrl = process.env.PLAY_ASSET_INTERNAL_URL ?? "http://play:3000";
+        const assetResponse = await fetch(
+            new URL("/resources/tilesets/lpc-outdoor-terrain.png", playAssetBaseUrl),
+        );
+        if (!assetResponse.ok) {
+            res.sendStatus(assetResponse.status);
+            return;
+        }
+
+        res.setHeader("Content-Type", assetResponse.headers.get("content-type") ?? "image/png");
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.send(Buffer.from(await assetResponse.arrayBuffer()));
+    } catch {
+        res.sendStatus(502);
+    }
+});
+
 app.get(
     "/private/files/{*splat}",
     (req, res, next) => {

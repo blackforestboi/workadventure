@@ -1,4 +1,4 @@
-import type { BatchToPusherRoomMessage, PusherToBackRoomMessage } from "@workadventure/messages";
+import type { BatchToPusherRoomMessage, EditMapCommandMessage, PusherToBackRoomMessage } from "@workadventure/messages";
 import Debug from "debug";
 import type { ClientDuplexStream } from "@grpc/grpc-js";
 import * as Sentry from "@sentry/node";
@@ -8,6 +8,7 @@ import { GRPC_MAX_MESSAGE_SIZE } from "../enums/EnvironmentVariable";
 import { apiClientRepository } from "../services/ApiClientRepository";
 import { socketManager } from "../services/SocketManager";
 import type { PusherWebSocket } from "../services/PusherWebSocket";
+import { teapotWamRevisionCoordinator } from "../teapot/TeapotWamRevisionCoordinator";
 import { PositionDispatcher } from "./PositionDispatcher";
 import type { ViewportInterface } from "./Websocket/ViewportMessage";
 import type { ZoneEventListener } from "./Zone";
@@ -148,14 +149,18 @@ export class PusherRoom {
                             break;
                         }
                         case "editMapCommandMessage": {
-                            for (const listener of this.listeners) {
-                                listener.emitInBatch({
-                                    message: {
-                                        $case: "editMapCommandMessage",
-                                        editMapCommandMessage: message.message.editMapCommandMessage,
-                                    },
-                                });
-                            }
+                            const command = message.message.editMapCommandMessage;
+                            const isError = command.editMapMessage?.message?.$case === "errorCommandMessage";
+                            const finalization = isError
+                                ? teapotWamRevisionCoordinator.acknowledgeFailure(command.id)
+                                : teapotWamRevisionCoordinator.acknowledgeSuccess(command.id);
+                            finalization
+                                .catch((error: unknown) => {
+                                    Sentry.captureException(error, {
+                                        tags: { roomUrl: this.roomUrl, teapotCommandId: command.id },
+                                    });
+                                })
+                                .finally(() => this.broadcastEditMapCommand(command));
                             break;
                         }
                         case "errorMessage": {
@@ -249,7 +254,21 @@ export class PusherRoom {
     public close(): void {
         debug("Closing connection to room %s on back server", this.roomUrl);
         this.isClosing = true;
+        teapotWamRevisionCoordinator.releaseRoom(this.roomUrl).catch((error: unknown) => {
+            Sentry.captureException(error, { tags: { roomUrl: this.roomUrl } });
+        });
         this.backConnection.cancel();
+    }
+
+    private broadcastEditMapCommand(command: EditMapCommandMessage): void {
+        for (const listener of this.listeners) {
+            listener.emitInBatch({
+                message: {
+                    $case: "editMapCommandMessage",
+                    editMapCommandMessage: command,
+                },
+            });
+        }
     }
 
     /**

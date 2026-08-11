@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/svelte";
+import type { GameObjects, Input } from "phaser";
 import type { AreaData, Command } from "@workadventure/map-editor";
 import { UpdateWAMSettingCommand } from "@workadventure/map-editor";
 import type { Unsubscriber } from "svelte/store";
@@ -9,10 +10,13 @@ import debug from "debug";
 import { deepmergeInto } from "deepmerge-ts";
 import type { RoomConnection } from "../../../Connection/RoomConnection";
 import type { GameScene } from "../GameScene";
+import { hasMovedEventName } from "../../Player/Player";
 import {
     mapEditorAskToClaimPersonalAreaStore,
+    mapEditorEntityUploadDraftStore,
     mapEditorModeStore,
     mapEditorSelectedToolStore,
+    selectCategoryStore,
 } from "../../../Stores/MapEditorStore";
 import { mapEditorActivated, mapEditorActivatedForThematics } from "../../../Stores/MenuStore";
 import { localUserStore } from "../../../Connection/LocalUserStore";
@@ -30,6 +34,9 @@ import { TrashEditorTool } from "./Tools/TrashEditorTool";
 import { ExplorerTool } from "./Tools/ExplorerTool";
 import { CloseTool } from "./Tools/CloseTool";
 import { UpdateAreaFrontCommand } from "./Commands/Area/UpdateAreaFrontCommand";
+import { UploadEntityFrontCommand } from "./Commands/Entity/UploadEntityFrontCommand";
+import { getMapEditorHistoryAction, type MapEditorHistoryAction } from "./MapEditorKeyboardShortcuts";
+import { hasPointerDragged } from "./PanGesture";
 
 export enum EditorToolName {
     AreaEditor = "AreaEditor",
@@ -81,6 +88,47 @@ export class MapEditorModeManager {
 
     private mapEditorModeUnsubscriber: Unsubscriber | undefined;
 
+    private normalPanCandidate = false;
+    private normalPanActive = false;
+    private readonly normalPanPointerDownHandler = (pointer: Input.Pointer, gameObjects: GameObjects.GameObject[]) => {
+        if (this.active || gameObjects.length > 0 || !pointer.leftButtonDown()) return;
+        pointer.motionFactor = 0.35;
+        this.normalPanCandidate = true;
+    };
+    private readonly normalPanPointerMoveHandler = (pointer: Input.Pointer) => {
+        if (!this.normalPanCandidate || !pointer.leftButtonDown()) return;
+        if (this.active) {
+            this.cancelNormalPan();
+            return;
+        }
+        const cameraManager = this.scene.getCameraManager();
+        if (!this.normalPanActive) {
+            if (!hasPointerDragged(pointer)) return;
+            this.scene.CurrentPlayer.off(hasMovedEventName, this.resumePlayerFollowAfterNormalPan);
+            cameraManager.setExplorationMode();
+            cameraManager.stopSpeed();
+            this.scene.input.setDefaultCursor("grabbing");
+            this.normalPanActive = true;
+        }
+        cameraManager.scrollCameraByScreenDelta(pointer.prevPosition.x - pointer.x, pointer.prevPosition.y - pointer.y);
+    };
+    private readonly normalPanPointerUpHandler = (pointer: Input.Pointer) => {
+        if (!this.normalPanCandidate) return;
+        this.normalPanCandidate = false;
+        if (!this.normalPanActive) return;
+        this.normalPanActive = false;
+        this.scene.input.setDefaultCursor("auto");
+        if (pointer.velocity) {
+            this.scene.getCameraManager().setSpeedFromScreenVelocity(pointer.velocity);
+        }
+        this.scene.CurrentPlayer.off(hasMovedEventName, this.resumePlayerFollowAfterNormalPan);
+        this.scene.CurrentPlayer.once(hasMovedEventName, this.resumePlayerFollowAfterNormalPan);
+    };
+    private readonly resumePlayerFollowAfterNormalPan = () => {
+        if (this.active) return;
+        this.scene.getCameraManager().startFollowPlayer(this.scene.CurrentPlayer, 300);
+    };
+
     private isReverting: Promise<void> = Promise.resolve();
 
     constructor(
@@ -112,6 +160,7 @@ export class MapEditorModeManager {
 
         this.subscribeToStores();
         this.subscribeToGameMapFrontWrapperEvents();
+        this.bindNormalPanEvents();
 
         this.currentRunningCommand = this.scene.getGameMapFrontWrapper().initializedPromise.promise;
     }
@@ -152,6 +201,12 @@ export class MapEditorModeManager {
                 this.scene.getGameMap().getWamFile()?.updateLastCommandIdProperty(command.commandId);
                 return;
             } catch (error) {
+                if (command instanceof UploadEntityFrontCommand) {
+                    await this.rejectPendingUpload(
+                        command,
+                        error instanceof Error ? error.message : "The upload could not be submitted.",
+                    );
+                }
                 console.error(error);
                 Sentry.captureException(error);
                 return;
@@ -179,6 +234,7 @@ export class MapEditorModeManager {
     private runningUndoRedoCommand: Promise<void> = Promise.resolve();
 
     public async undoCommand(): Promise<void> {
+        await this.currentRunningCommand;
         if (this.localCommandsHistory.length === 0 || this.currentCommandIndex === -1) {
             return;
         }
@@ -201,6 +257,7 @@ export class MapEditorModeManager {
     }
 
     public async redoCommand(): Promise<void> {
+        await this.currentRunningCommand;
         if (
             this.localCommandsHistory.length === 0 ||
             this.currentCommandIndex === this.localCommandsHistory.length - 1
@@ -248,6 +305,7 @@ export class MapEditorModeManager {
     }
 
     public destroy(): void {
+        this.unbindNormalPanEvents();
         for (const tool of Object.values(this.editorTools)) {
             tool.destroy();
         }
@@ -259,6 +317,15 @@ export class MapEditorModeManager {
         const mapEditorModeStoreValue = get(mapEditorModeStore);
         if (!mapEditorModeStoreValue) return false;
 
+        const historyAction = getMapEditorHistoryAction(event);
+        if (historyAction !== undefined) {
+            event.preventDefault();
+            if (!this.currentlyActiveTool?.handleHistoryAction?.(historyAction)) {
+                this.queueHistoryAction(historyAction);
+            }
+            return true;
+        }
+
         const mapEditorModeActivated = get(mapEditorActivated);
         switch (event.key.toLowerCase()) {
             case "dead":
@@ -267,7 +334,11 @@ export class MapEditorModeManager {
                 break;
             }
             case "1": {
-                this.equipTool(EditorToolName.ExploreTheRoom);
+                if (!mapEditorModeActivated) {
+                    this.equipTool(EditorToolName.ExploreTheRoom);
+                    break;
+                }
+                this.equipTool(EditorToolName.FloorEditor);
                 break;
             }
             case "2": {
@@ -275,12 +346,12 @@ export class MapEditorModeManager {
                     this.equipTool(EditorToolName.CloseMapEditor);
                     break;
                 }
-                this.equipTool(EditorToolName.AreaEditor);
+                this.equipTool(EditorToolName.EntityEditor);
                 break;
             }
             case "3": {
                 if (!mapEditorModeActivated) break;
-                this.equipTool(EditorToolName.EntityEditor);
+                this.equipTool(EditorToolName.AreaEditor);
                 break;
             }
             case "4": {
@@ -298,32 +369,17 @@ export class MapEditorModeManager {
                 this.equipTool(EditorToolName.CloseMapEditor);
                 break;
             }
-            case "z": {
-                if (!mapEditorModeActivated) break;
-                // Todo replace with key combo https://photonstorm.github.io/phaser3-docs/Phaser.Input.Keyboard.KeyCombo.html
-                if (event.ctrlKey || event.metaKey) {
-                    if (event.shiftKey) {
-                        this.runningUndoRedoCommand = this.runningUndoRedoCommand
-                            .then(() => {
-                                return this.redoCommand();
-                            })
-                            .catch((e) => console.error(e));
-                    } else {
-                        this.runningUndoRedoCommand = this.runningUndoRedoCommand
-                            .then(() => {
-                                return this.undoCommand();
-                            })
-                            .catch((e) => console.error(e));
-                    }
-                }
-                break;
-            }
             default: {
                 return false;
-                break;
             }
         }
         return true;
+    }
+
+    private queueHistoryAction(action: MapEditorHistoryAction): void {
+        this.runningUndoRedoCommand = this.runningUndoRedoCommand
+            .then(() => (action === "undo" ? this.undoCommand() : this.redoCommand()))
+            .catch((error) => console.error(error));
     }
 
     public subscribeToRoomConnection(connection: RoomConnection): void {
@@ -333,16 +389,19 @@ export class MapEditorModeManager {
         connection.editMapCommandMessageStream.subscribe((editMapCommandMessage) => {
             limit(async () => {
                 if (editMapCommandMessage.editMapMessage?.message?.$case === "errorCommandMessage") {
-                    logger(
-                        "ErrorCommandMessage received",
-                        editMapCommandMessage.editMapMessage?.message.errorCommandMessage,
-                    );
+                    const errorCommandMessage = editMapCommandMessage.editMapMessage.message.errorCommandMessage;
+                    logger("ErrorCommandMessage received", errorCommandMessage);
                     const command = this.pendingCommands.find(
                         (command) => command.commandId === editMapCommandMessage.id,
                     );
                     if (command) {
                         logger("removing command of pendingList : ", editMapCommandMessage.id);
                         this.pendingCommands.splice(this.pendingCommands.indexOf(command), 1);
+                        if (command instanceof UploadEntityFrontCommand) {
+                            await this.rejectPendingUpload(command, errorCommandMessage.reason);
+                        } else {
+                            await this.rejectPendingCommand(command, errorCommandMessage.reason);
+                        }
                     }
                     return;
                 }
@@ -367,6 +426,12 @@ export class MapEditorModeManager {
                             await command.execute();
                         }
 
+                        if (command instanceof UploadEntityFrontCommand) {
+                            this.acknowledgePendingUpload(command.commandId);
+                        }
+
+                        command?.onAcknowledged?.();
+
                         return;
                     }
                     await this.revertPendingCommands();
@@ -379,6 +444,63 @@ export class MapEditorModeManager {
                 }
             }).catch((e) => console.error(e));
         });
+    }
+
+    private acknowledgePendingUpload(commandId: string): void {
+        mapEditorEntityUploadDraftStore.acknowledge(commandId);
+
+        // The upload component normally consumes the acknowledged state synchronously. If it was unmounted while
+        // the request was in flight, finish the same cleanup here so the object URL is not retained indefinitely.
+        const acknowledgedDraft = get(mapEditorEntityUploadDraftStore);
+        if (acknowledgedDraft?.commandId === commandId && acknowledgedDraft.status === "acknowledged") {
+            selectCategoryStore.set({
+                kind: "tag",
+                tag: acknowledgedDraft.uploadEntityMessage.tags[0] ?? "Custom",
+            });
+            URL.revokeObjectURL(acknowledgedDraft.previewUrl);
+            mapEditorEntityUploadDraftStore.clear(commandId);
+        }
+    }
+
+    private async rejectPendingUpload(command: UploadEntityFrontCommand, reason: string): Promise<void> {
+        try {
+            await command.getUndoCommand().execute();
+        } catch (error) {
+            console.error(error);
+            Sentry.captureException(error);
+        }
+
+        const historyIndex = this.localCommandsHistory.findIndex(
+            (localCommand) => localCommand.commandId === command.commandId,
+        );
+        if (historyIndex !== -1) {
+            this.localCommandsHistory.splice(historyIndex, 1);
+            if (historyIndex <= this.currentCommandIndex) {
+                this.currentCommandIndex -= 1;
+            }
+        }
+        mapEditorEntityUploadDraftStore.fail(
+            command.commandId,
+            reason.trim() === "" ? "Map storage rejected the upload." : reason,
+        );
+    }
+
+    private async rejectPendingCommand(command: FrontCommand, reason: string): Promise<void> {
+        try {
+            await command.getUndoCommand().execute();
+        } catch (error) {
+            console.error(error);
+            Sentry.captureException(error);
+        }
+
+        const historyIndex = this.localCommandsHistory.findIndex(
+            (localCommand) => localCommand.commandId === command.commandId,
+        );
+        if (historyIndex !== -1) {
+            this.localCommandsHistory.splice(historyIndex, 1);
+            if (historyIndex <= this.currentCommandIndex) this.currentCommandIndex -= 1;
+        }
+        command.onRejected?.(reason);
     }
 
     private async revertPendingCommands(): Promise<void> {
@@ -467,14 +589,18 @@ export class MapEditorModeManager {
             if (!this.active) {
                 this.lastlyUsedTool = get(mapEditorSelectedToolStore);
                 this.equipTool(undefined);
+                this.scene.input.setDefaultCursor("auto");
                 return;
             }
+            this.cancelNormalPan();
             this.equipTool(
                 this.lastlyUsedTool && this.lastlyUsedTool != EditorToolName.CloseMapEditor
                     ? this.lastlyUsedTool
-                    : get(mapEditorActivated) || get(mapEditorActivatedForThematics)
-                      ? EditorToolName.EntityEditor
-                      : EditorToolName.ExploreTheRoom,
+                    : get(mapEditorActivated)
+                      ? EditorToolName.FloorEditor
+                      : get(mapEditorActivatedForThematics)
+                        ? EditorToolName.EntityEditor
+                        : EditorToolName.ExploreTheRoom,
             );
         });
     }
@@ -483,6 +609,27 @@ export class MapEditorModeManager {
         for (const tool of Object.values(this.editorTools)) {
             tool.subscribeToGameMapFrontWrapperEvents(this.scene.getGameMapFrontWrapper());
         }
+    }
+
+    private bindNormalPanEvents(): void {
+        this.scene.input.on("pointerdown", this.normalPanPointerDownHandler);
+        this.scene.input.on("pointermove", this.normalPanPointerMoveHandler);
+        this.scene.input.on("pointerup", this.normalPanPointerUpHandler);
+        this.scene.input.on("gameout", this.normalPanPointerUpHandler);
+    }
+
+    private unbindNormalPanEvents(): void {
+        this.scene.input.off("pointerdown", this.normalPanPointerDownHandler);
+        this.scene.input.off("pointermove", this.normalPanPointerMoveHandler);
+        this.scene.input.off("pointerup", this.normalPanPointerUpHandler);
+        this.scene.input.off("gameout", this.normalPanPointerUpHandler);
+        this.cancelNormalPan();
+    }
+
+    private cancelNormalPan(): void {
+        this.normalPanCandidate = false;
+        this.normalPanActive = false;
+        this.scene.CurrentPlayer?.off(hasMovedEventName, this.resumePlayerFollowAfterNormalPan);
     }
 
     private unsubscribeFromStores(): void {

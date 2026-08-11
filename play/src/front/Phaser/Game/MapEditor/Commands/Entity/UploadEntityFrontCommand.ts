@@ -12,8 +12,9 @@ export class UploadEntityFrontCommand extends UploadEntityCommand implements Fro
         uploadEntityMessage: UploadEntityMessage,
         private entitiesManager: EntitiesManager,
         private entitiesCollectionManager: EntitiesCollectionsManager,
+        commandId?: string,
     ) {
-        super(uploadEntityMessage);
+        super(uploadEntityMessage, undefined, commandId);
     }
 
     emitEvent(roomConnection: RoomConnection): void {

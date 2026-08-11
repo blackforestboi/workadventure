@@ -53,7 +53,7 @@ export class WaScaleManager {
         this.lastEmittedZoomModifier = this.hdpiManager.zoomModifier;
     }
 
-    public applyNewSize(camera?: Camera, animating = false): void {
+    public applyNewSize(camera?: Camera, _animating = false): void {
         if (this.scaleManager === undefined) {
             return;
         }
@@ -68,30 +68,18 @@ export class WaScaleManager {
             this.actualZoom = realSize.width / gameSize.width / devicePixelRatio;
         }
 
-        // The performance shows us that having a game size bigger than its real size causes many lags and bad game performance.
-        // So we apply this condition: if the game size is greater than the real size, we don't zoom through the canvas.
-        // To zoom in and out, we use the camera. The zoom is calculated using the optimal zoom level.
-        // If the game size is smaller than the real size, we set the Phaser zoom level to 1 and we resize the canvas pixel size.
-        // It's more efficient to keep the canvas as small as possible.
-        // One exception: during camera zoom animations. The this.scaleManager.resize costs a lot of resources. So we don't
-        // want to do this in a loop when zooming. If we are in the middle of an animation, we scale the canvas number of pixels
-        // to the browser viewport and we use the Phaser camera zoom.
-        if (gameSize.width <= realSize.width && gameSize.height <= realSize.height && !animating) {
-            this.scaleManager.resize(gameSize.width, gameSize.height);
-            this.scaleManager.setZoom(this.actualZoom);
-            camera?.setZoom(1);
-        } else {
-            if (this.scaleManager.width !== realSize.width || this.scaleManager.height !== realSize.height) {
-                this.scaleManager.resize(realSize.width, realSize.height);
-            }
-
-            const zoom =
-                this.hdpiManager.zoomModifier * this.hdpiManager.getOptimalZoomLevel(realSize.width * realSize.height);
-            // In the camera-zoom branch, keep the DOM and canvas layers on the same display scale.
-            // The scale manager only compensates for DPR here; the gameplay zoom is fully handled by the camera.
-            this.scaleManager.setZoom(1 / devicePixelRatio);
-            camera?.setZoom(zoom);
+        // Keep the backing canvas at the full physical viewport resolution.
+        // Shrinking it to the logical game size and stretching it with CSS
+        // destroys detail in high-resolution generated avatars. Gameplay zoom
+        // belongs on the camera; it must never reduce the render target.
+        if (this.scaleManager.width !== realSize.width || this.scaleManager.height !== realSize.height) {
+            this.scaleManager.resize(realSize.width, realSize.height);
         }
+
+        const zoom =
+            this.hdpiManager.zoomModifier * this.hdpiManager.getOptimalZoomLevel(realSize.width * realSize.height);
+        this.scaleManager.setZoom(1 / devicePixelRatio);
+        camera?.setZoom(zoom);
 
         // Note: onResize will be called twice (once here and once in Game.ts), but we have no better way.
         for (const scene of this.game.scene.getScenes(true)) {

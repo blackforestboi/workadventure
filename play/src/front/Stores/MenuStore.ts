@@ -61,6 +61,7 @@ export const warningBannerStore = createWarningBannerStore();
 
 export enum SubMenusInterface {
     settings = "settings",
+    aiModels = "aiModels",
     profile = "profile",
     aboutRoom = "credit",
     globalMessages = "globalMessages",
@@ -112,6 +113,11 @@ function createSubMenusStore() {
         {
             type: "translated",
             key: SubMenusInterface.settings,
+            visible: alwaysVisible,
+        },
+        {
+            type: "translated",
+            key: SubMenusInterface.aiModels,
             visible: alwaysVisible,
         },
         {

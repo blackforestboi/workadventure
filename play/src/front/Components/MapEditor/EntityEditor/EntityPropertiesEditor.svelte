@@ -279,6 +279,7 @@
     <div class="overflow-x-hidden overflow-y-auto">
         <div class="header-container">
             <h3>{$LL.mapEditor.entityEditor.editing({ name: $mapEditorSelectedEntityStore.getPrefab().name })}</h3>
+            <p class="m-0 text-xs text-white/60">Drag the object to move it. Drag a corner handle to resize it.</p>
         </div>
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->

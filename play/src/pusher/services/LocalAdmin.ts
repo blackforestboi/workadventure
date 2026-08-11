@@ -104,7 +104,7 @@ class LocalAdmin implements AdminInterface {
 
         let isCharacterTexturesValid = true;
 
-        const characterTextures = await localWokaService.fetchWokaDetails(characterTextureIds);
+        const characterTextures = await localWokaService.fetchWokaDetails(characterTextureIds, userIdentifier);
         if (characterTextures === undefined) {
             isCharacterTexturesValid = false;
         }

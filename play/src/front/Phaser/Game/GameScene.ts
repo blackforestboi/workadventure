@@ -204,6 +204,7 @@ import { audioPlaybackStore } from "../../Stores/AudioPlaybackStore";
 import { requestedScreenSharingState } from "../../Stores/ScreenSharingStore";
 import { EnterLeaveScriptingService } from "../Helpers/EnterLeaveScriptingService";
 import { GameMapFrontWrapper } from "./GameMap/GameMapFrontWrapper";
+import { resolveTilesetImageUrl } from "./GameMap/TilesetImageUrl";
 import { gameManager } from "./GameManager";
 import { EmoteManager } from "./EmoteManager";
 import { OutlineManager } from "./UI/OutlineManager";
@@ -681,7 +682,6 @@ export class GameScene extends DirtyScene {
             );
             return;
         }
-        const mapDirUrl = this.mapUrlFile.substring(0, this.mapUrlFile.lastIndexOf("/"));
         this.mapFile.tilesets.forEach((tileset: ITiledMapTileset) => {
             if ("source" in tileset) {
                 throw new Error(
@@ -693,9 +693,10 @@ export class GameScene extends DirtyScene {
                     `Tilesets made of a collection of images are not supported in WorkAdventure in the Tiled map "${this.mapUrlFile}".`,
                 );
             }
+            const tilesetImageUrl = resolveTilesetImageUrl(tileset.image, this.mapUrlFile, window.location.origin);
             const tilesetImage = this.Map.addTilesetImage(
                 tileset.name,
-                `${mapDirUrl}/${tileset.image}`,
+                tilesetImageUrl,
                 tileset.tilewidth,
                 tileset.tileheight,
                 tileset.margin,
@@ -704,7 +705,7 @@ export class GameScene extends DirtyScene {
             if (tilesetImage) {
                 this.Terrains.push(tilesetImage);
             } else {
-                console.warn(`Failed to add TilesetImage ${tileset.name}: ${`${mapDirUrl}/${tileset.image}`}`);
+                console.warn(`Failed to add TilesetImage ${tileset.name}: ${tilesetImageUrl}`);
             }
         });
 
@@ -1329,7 +1330,13 @@ export class GameScene extends DirtyScene {
             : undefined;
 
         if (this.hasJoinedRoom) {
-            this.CurrentPlayer.moveUser(delta, this.userInputManager.getEventListForGameTick());
+            const movementEvents = this.userInputManager.getEventListForGameTick();
+            if (this.mapEditorModeManager?.isActive()) {
+                this.CurrentPlayer.stop();
+                this.cameraManager.move(movementEvents);
+            } else {
+                this.CurrentPlayer.moveUser(delta, movementEvents);
+            }
         }
         if (this.mapEditorModeManager?.isActive()) {
             this.mapEditorModeManager.update(time, delta);
@@ -1830,7 +1837,6 @@ export class GameScene extends DirtyScene {
             console.warn("Your map file seems to be invalid. Errors: ", parseResult.error);
         }*/
 
-        const url = this.mapUrlFile.substring(0, this.mapUrlFile.lastIndexOf("/"));
         this.mapFile.tilesets.forEach((tileset) => {
             if ("source" in tileset) {
                 throw new Error(
@@ -1841,14 +1847,15 @@ export class GameScene extends DirtyScene {
                 console.warn("Don't know how to handle tileset ", tileset);
                 return;
             }
+            const tilesetImageUrl = resolveTilesetImageUrl(tileset.image, this.mapUrlFile, window.location.origin);
             //TODO strategy to add access token
             if (tileset.image.includes(".svg")) {
-                this.load.svg(`${url}/${tileset.image}`, `${url}/${tileset.image}`, {
+                this.load.svg(tilesetImageUrl, tilesetImageUrl, {
                     width: tileset.imagewidth,
                     height: tileset.imageheight,
                 });
             } else {
-                this.load.image(`${url}/${tileset.image}`, `${url}/${tileset.image}`);
+                this.load.image(tilesetImageUrl, tilesetImageUrl);
             }
         });
 
@@ -2654,10 +2661,14 @@ export class GameScene extends DirtyScene {
 
         this.mapEditorModeStoreUnsubscriber = mapEditorModeStore.subscribe((isOn) => {
             if (isOn) {
+                this.CurrentPlayer.finishFollowingPath(true);
+                this.CurrentPlayer.stop();
+                this.cameraManager.setExplorationMode();
                 this.activatablesManager.deactivateSelectedObject();
                 this.activatablesManager.handlePointerOutActivatableObject();
                 this.activatablesManager.disableSelectingByDistance();
             } else {
+                this.cameraManager.startFollowPlayer(this.CurrentPlayer);
                 this.activatablesManager.handlePointerOutActivatableObject();
                 this.activatablesManager.enableSelectingByDistance();
                 // make sure all entities are non-interactive
@@ -4400,7 +4411,7 @@ ${escapedMessage}
         });
     }
 
-    handleMouseWheel(deltaY: number) {
+    handleMouseWheel(pointer: Pointer, deltaY: number) {
         // Calculate the velocity of the zoom
         //const velocity = deltaY / 30;
 
@@ -4417,17 +4428,22 @@ ${escapedMessage}
 
         debugZoom("DeltaY: ", deltaY, "Zoom factor", zoomFactor);
 
-        // Apply the zoom
-        this.zoomByFactor(zoomFactor, true);
+        const cursorPosition = this.mapEditorModeManager?.isActive()
+            ? { x: pointer.x, y: pointer.y }
+            : undefined;
+
+        // Wheel and trackpad input is already a stream of small updates. Applying it directly in the editor avoids
+        // overlapping tweens fighting over the camera focus while retaining smooth zoom outside edit mode.
+        this.zoomByFactor(zoomFactor, cursorPosition === undefined, cursorPosition);
     }
 
-    zoomByFactor(zoomFactor: number, smooth: boolean) {
+    zoomByFactor(zoomFactor: number, smooth: boolean, cursorPosition?: { x: number; y: number }) {
         if (this.cameraManager.isZoomLocked()) {
             return;
         }
 
         const time = zoomFactor > 1 ? zoomFactor * 250 : (1 / zoomFactor) * 250;
-        this.cameraManager.zoomByFactor(zoomFactor, smooth ? time : 0);
+        this.cameraManager.zoomByFactor(zoomFactor, smooth ? time : 0, undefined, cursorPosition);
     }
 
     get room(): Room {
