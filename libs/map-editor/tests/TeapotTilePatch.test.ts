@@ -123,9 +123,38 @@ describe("applyTeapotTilePatch", () => {
         expect(ground.chunks?.some((chunk) => chunk.x > 0)).toBe(true);
     });
 
-    it("rejects finite maps instead of rebasing them during an edit", () => {
+    it("updates legacy finite maps without rebasing them", () => {
+        const source = createFiniteMap();
+
+        const result = applyTeapotTilePatch(source, {
+            mapId: "world",
+            expectedRevision: 0,
+            regions: [{ layer: "ground", x: 1, y: 0, width: 1, height: 1, gids: [2] }],
+        });
+
+        expect(getTileLayerGid(getGround(source), 1, 0)).toBe(0);
+        expect(getTileLayerGid(getGround(result.map), 1, 0)).toBe(2);
+        expect(result.map.infinite).toBe(false);
+        expect(result.map.width).toBe(2);
+        expect(result.map.height).toBe(2);
+    });
+
+    it("keeps finite edits inside the existing map bounds", () => {
         expect(() =>
             applyTeapotTilePatch(createFiniteMap(), {
+                mapId: "world",
+                expectedRevision: 0,
+                regions: [{ layer: "ground", x: 2, y: 0, width: 1, height: 1, gids: [1] }],
+            }),
+        ).toThrowError(TeapotTilePatchError);
+    });
+
+    it("rejects ordinary infinite maps that do not use centered coordinates", () => {
+        const source = createFiniteMap();
+        source.infinite = true;
+
+        expect(() =>
+            applyTeapotTilePatch(source, {
                 mapId: "world",
                 expectedRevision: 0,
                 regions: [{ layer: "ground", x: 0, y: 0, width: 1, height: 1, gids: [1] }],
@@ -136,7 +165,7 @@ describe("applyTeapotTilePatch", () => {
 
 describe("addTeapotEmbeddedTileset", () => {
     it("appends a grid-aligned embedded tileset at the next stable GID without mutating the source", () => {
-        const source = Object.assign(createMap(), { teapotUnknown: { keep: true } });
+        const source = Object.assign(createFiniteMap(), { teapotUnknown: { keep: true } });
         const result = addTeapotEmbeddedTileset(source, {
             name: "Forest floor",
             image: "https://assets.example.test/forest.png",

@@ -28,6 +28,7 @@
     import CloseChatMenuItem from "./MenuIcons/CloseChatMenuItem.svelte";
     import SilentBlock from "./SilentBlock.svelte";
     import PictureInPictureMenuItem from "./MenuIcons/PictureInPictureMenuItem.svelte";
+    import EmojiMenuItem from "./MenuIcons/EmojiMenuItem.svelte";
 
     let rightDiv: HTMLDivElement | undefined = $state();
     let smallArrowVisible = true;
@@ -55,6 +56,7 @@
                             {#if !isSmallScreen && showUserListButton}
                                 <UserListMenuItem state={showUserListButton ? "normal" : "disabled"} />
                             {/if}
+                            <EmojiMenuItem />
                         {:else}
                             <CloseChatMenuItem />
                         {/if}

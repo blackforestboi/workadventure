@@ -20,6 +20,7 @@ export interface CollisionGridLayer {
 }
 
 export type AuthoringPathOverlayKind = "collision" | "exit" | "start";
+export type PhysicalTileCollisionMode = "occupied" | "properties" | "disabled";
 
 export interface AuthoringPathOverlay {
     kind: AuthoringPathOverlayKind;
@@ -32,6 +33,7 @@ const AUTHORING_COLLISION_LAYER_NAMES = new Set(["collision", "collisions", "col
 const LEGACY_COLLISION_LAYER_NAMES = new Set(["collision2", "collisions2"]);
 const AUTHORING_EXIT_LAYER_NAMES = new Set(["exit"]);
 const AUTHORING_START_LAYER_NAMES = new Set(["start", "start1"]);
+const RUNTIME_COLLISION_LAYER_NAMES = new Set(["entitiescollisionlayer", "areascollisionlayer", "voidcollisionlayer"]);
 
 export function isAuthoringCollisionLayer(name: string): boolean {
     return AUTHORING_COLLISION_LAYER_NAMES.has(normalizeLayerName(name));
@@ -44,6 +46,20 @@ export function isCollisionStorageLayer(name: string): boolean {
         AUTHORING_COLLISION_LAYER_NAMES.has(normalizedLayerName) ||
         LEGACY_COLLISION_LAYER_NAMES.has(normalizedLayerName)
     );
+}
+
+/**
+ * A primary authoring collision layer replaces persisted per-tile collision metadata as the map-level source of
+ * truth. Synthetic runtime collision layers remain additive and maps without an authoring layer keep legacy tile
+ * property behavior.
+ */
+export function getPhysicalTileCollisionMode(
+    layerName: string,
+    hasAuthoringCollisionLayer: boolean,
+): PhysicalTileCollisionMode {
+    if (isAuthoringCollisionLayer(layerName)) return "occupied";
+    if (RUNTIME_COLLISION_LAYER_NAMES.has(normalizeLayerName(layerName))) return "properties";
+    return hasAuthoringCollisionLayer ? "disabled" : "properties";
 }
 
 export function getAuthoringPathOverlayKind(layerName: string): AuthoringPathOverlayKind | undefined {

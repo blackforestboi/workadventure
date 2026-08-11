@@ -16,6 +16,7 @@ import {
     getAuthoringCollisionGrid,
     getAuthoringPathOverlay,
     getCollisionOverlayCells,
+    getPhysicalTileCollisionMode,
     getTileSupportGrid,
     isAuthoringCollisionLayer,
     isCollisionStorageLayer,
@@ -23,6 +24,16 @@ import {
 } from "../../../../../src/front/Phaser/Game/GameMap/AuthoringCollision";
 
 describe("authoring collision", () => {
+    it("uses the dedicated collision layer as the sole map-level physical collision source", () => {
+        expect(getPhysicalTileCollisionMode("collisions", true)).toBe("occupied");
+        expect(getPhysicalTileCollisionMode("floor", true)).toBe("disabled");
+        expect(getPhysicalTileCollisionMode("walls", true)).toBe("disabled");
+        expect(getPhysicalTileCollisionMode("collision 2", true)).toBe("disabled");
+        expect(getPhysicalTileCollisionMode("__entitiesCollisionLayer", true)).toBe("properties");
+        expect(getPhysicalTileCollisionMode("__voidCollisionLayer", true)).toBe("properties");
+        expect(getPhysicalTileCollisionMode("floor", false)).toBe("properties");
+    });
+
     it("recognizes only the primary collision layer aliases", () => {
         expect(isAuthoringCollisionLayer("Collisions")).toBe(true);
         expect(isAuthoringCollisionLayer("collision 1")).toBe(true);

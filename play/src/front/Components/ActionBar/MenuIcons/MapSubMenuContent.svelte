@@ -1,12 +1,7 @@
 <script lang="ts">
     import { warningMessageStore } from "../../../Stores/ErrorStore";
     import { isInsidePersonalAreaStore, personalAreaDataStore } from "../../../Stores/PersonalDeskStore";
-    import {
-        globalMessageVisibleStore,
-        mapManagerActivated,
-        mapEditorMenuVisibleStore,
-        openedMenuStore,
-    } from "../../../Stores/MenuStore";
+    import { globalMessageVisibleStore, mapManagerActivated, openedMenuStore } from "../../../Stores/MenuStore";
     import { LL } from "../../../../i18n/i18n-svelte";
     import { analyticsClient } from "../../../Administration/AnalyticsClient";
     import {
@@ -20,9 +15,8 @@
     import { isCalendarVisibleStore } from "../../../Stores/CalendarStore";
     import { chatVisibilityStore } from "../../../Stores/ChatStore";
     import ActionBarButton from "../ActionBarButton.svelte";
-    import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import AdditionalMenuItems from "./AdditionalMenuItems.svelte";
-    import { IconMapSearch, IconDesk, IconDeskExit, IconSpeakerPhone, IconMapEditor } from "@wa-icons";
+    import { IconMapSearch, IconDesk, IconDeskExit, IconSpeakerPhone } from "@wa-icons";
 
     function resetChatVisibility() {
         chatVisibilityStore.set(false);
@@ -45,22 +39,6 @@
         resetModalVisibility();
         mapEditorModeStore.switchMode(false);
         showModalGlobalComminucationVisibilityStore.set(true);
-    }
-
-    function toggleMapEditorMode() {
-        //if (isMobile) return;
-        if ($mapEditorModeStore && !$mapExplorationModeStore) {
-            analyticsClient.toggleMapEditor(false);
-            mapEditorModeStore.switchMode(false);
-            gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(undefined);
-        } else {
-            analyticsClient.toggleMapEditor(true);
-            mapEditorModeStore.switchMode(true);
-            gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(EditorToolName.EntityEditor);
-        }
-        isTodoListVisibleStore.set(false);
-        isCalendarVisibleStore.set(false);
-        closeMapMenu();
     }
 
     function toggleMapExplorerMode() {
@@ -123,15 +101,6 @@
     }
 </script>
 
-{#if $mapEditorMenuVisibleStore}
-    <ActionBarButton
-        onclick={toggleMapEditorMode}
-        label={$LL.actionbar.mapEditor()}
-        state={$mapEditorModeStore && !$mapExplorationModeStore ? "active" : "normal"}
-    >
-        <IconMapEditor font-size="20" />
-    </ActionBarButton>
-{/if}
 {#if $mapManagerActivated}
     <ActionBarButton
         onclick={toggleMapExplorerMode}

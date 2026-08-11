@@ -15,7 +15,6 @@
 
     import AppsMenuItem from "./AppsMenuItem.svelte";
     import FollowMenuItem from "./FollowMenuItem.svelte";
-    import EmojiMenuItem from "./EmojiMenuItem.svelte";
     import LockDiscussionMenuItem from "./LockDiscussionMenuItem.svelte";
     import MusicMenuItem from "./MusicMenuItem.svelte";
     import HeaderMenuItem from "./HeaderMenuItem.svelte";
@@ -24,6 +23,8 @@
     import { createRecordingMenuStateStore } from "./RecordingMenuUtils";
 
     const inProfileMenu = getContext("profileMenu");
+    // Keep the integrations launcher available for a future UI pass without showing it in the play header.
+    const showAppsMenu = false;
 
     const gameScene = gameManager.getCurrentGameScene();
     const recording = gameManager.currentStartedRoom.recording;
@@ -45,8 +46,7 @@
     <MusicMenuItem />
 {/if}
 
-{#if !inProfileMenu}
-    <EmojiMenuItem />
+{#if !inProfileMenu && showAppsMenu}
     <AppsMenuItem />
 {/if}
 
@@ -68,7 +68,7 @@
     <MegaphoneMenuItem />
 {/if}
 
-{#if inProfileMenu}
+{#if inProfileMenu && showAppsMenu}
     <!-- In the profile menu, the apps submenu is displayed at the end (because it contains a heading) -->
     <AppsMenuItem />
 {/if}

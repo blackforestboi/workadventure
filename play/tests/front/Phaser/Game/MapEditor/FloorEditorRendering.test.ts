@@ -50,15 +50,15 @@ describe("floor editor rendering", () => {
         );
     });
 
-    it("keeps collision, exit, and start tiles native so their gameplay state is applied", () => {
+    it("keeps collision markers native while exit and start markers remain overlay-only", () => {
         const renderTileSource = floorEditorToolSource.match(
             /private renderTile\([\s\S]*?\n {4}private getTileTexture/,
         )?.[0];
 
         expect(renderTileSource).toBeDefined();
-        expect(renderTileSource).toContain("if (getAuthoringPathOverlayKind(layer) !== undefined)");
-        expect(renderTileSource).toContain(
-            "gameMapFrontWrapper.putTile(gid === 0 ? null : gid, x, y, layer, { render: false })",
+        expect(renderTileSource).toContain("const pathOverlayKind = getAuthoringPathOverlayKind(layer)");
+        expect(renderTileSource).toMatch(
+            /gameMapFrontWrapper\.putTile\(gid === 0 \? null : gid, x, y, layer, \{\s*render: pathOverlayKind === "collision",\s*\}\)/,
         );
         expect(renderTileSource!.indexOf("getAuthoringPathOverlayKind(layer)")).toBeLessThan(
             renderTileSource!.indexOf("!tileLayerCanRenderGid(phaserLayer, gid)"),
@@ -76,6 +76,13 @@ describe("floor editor rendering", () => {
     });
 
     it("keeps collision storage markers invisible and derives blocking from canonical cell state", () => {
+        const playerCollisionSource = gameSceneSource.match(
+            /private createCollisionWithPlayer\(\)[\s\S]*?\n {4}private /,
+        )?.[0];
+        const putTileSource = gameMapFrontWrapperSource.match(
+            /public putTile\([\s\S]*?\n {4}public canEntityBePlacedOnMap/,
+        )?.[0];
+
         expect(gameMapFrontWrapperSource).toContain(
             ".setVisible(isCollisionStorageLayer(layer.name) ? false : layer.visible)",
         );
@@ -86,6 +93,14 @@ describe("floor editor rendering", () => {
             "if (isCollisionStorageLayer(layer.layer.name) && !isAuthoringCollision) continue",
         );
         expect(gameMapFrontWrapperSource).toContain("getAuthoringCollisionGrid(map)");
+        expect(playerCollisionSource).toContain("this.gameMapFrontWrapper.configurePhysicalCollision(phaserLayer)");
+        expect(gameMapFrontWrapperSource).toContain('case "occupied"');
+        expect(gameMapFrontWrapperSource).toContain("setCollisionByExclusion([-1], true)");
+        expect(gameMapFrontWrapperSource).toContain('case "disabled"');
+        expect(gameMapFrontWrapperSource).toContain("setCollisionByExclusion([], false)");
+        expect(putTileSource).toContain("getPhysicalTileCollisionMode(");
+        expect(putTileSource).toContain('physicalCollisionMode === "occupied"');
+        expect(putTileSource).toContain('physicalCollisionMode === "disabled"');
     });
 
     it("materializes unsupported map cells as hidden dynamic collision state", () => {
@@ -138,14 +153,30 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).toContain("containsOccupiedVisualTileDeletion(mutation.regions)");
     });
 
-    it("registers a newly embedded terrain tileset with the live tilemap before it is painted", () => {
+    it("registers an embedded terrain tileset before activating or persisting its brush", () => {
         const loadRuntimeTilesetSource = floorEditorToolSource.match(
             /private async loadRuntimeTileset\([\s\S]*?\n {4}private setState/,
+        )?.[0];
+        const addTilesetSource = floorEditorToolSource.match(
+            /private addTileset\([\s\S]*?\n {4}private activateEmbeddedSelection/,
         )?.[0];
 
         expect(loadRuntimeTilesetSource).toBeDefined();
         expect(loadRuntimeTilesetSource).toContain("new Phaser.Tilemaps.Tileset(");
         expect(loadRuntimeTilesetSource).toContain("gameMapFrontWrapper.addTerrain(runtimeTileset)");
+        expect(addTilesetSource).toBeDefined();
+        expect(addTilesetSource).toMatch(
+            /this\.loadRuntimeTileset\(result\.firstGid[\s\S]*?\.then\(\(\) =>\s*this\.mapEditorModeManager\s*\.executeCommand/,
+        );
+    });
+
+    it("does not paint with the previous brush while an embedded tile selection is loading", () => {
+        const getTileAtPointerSource = floorEditorToolSource.match(
+            /private getTileAtPointer\([\s\S]*?\n {4}private paintTile/,
+        )?.[0];
+
+        expect(getTileAtPointerSource).toBeDefined();
+        expect(getTileAtPointerSource).toContain("this.pendingTilesetSelection !== undefined");
     });
 
     it("renders the selected collision, exit, or start path overlay", () => {

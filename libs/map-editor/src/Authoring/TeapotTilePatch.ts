@@ -79,6 +79,7 @@ export class TeapotTilePatchError extends Error {
 export function applyTeapotTilePatch(source: ITiledMap, input: TeapotTilePatch): TeapotAppliedTilePatch {
     assertSupportedMap(source);
     const map = structuredClone(source);
+    const centered = map.infinite === true && isCenteredMap(map);
     const layers = flattenLayers(map.layers);
     let changedTiles = 0;
     let minX = Number.POSITIVE_INFINITY;
@@ -91,11 +92,25 @@ export function applyTeapotTilePatch(source: ITiledMap, input: TeapotTilePatch):
         if (layer === undefined) {
             throw new TeapotTilePatchError(`Tile layer ${region.layer} does not exist`, "unknown-layer");
         }
-        if (layer.type !== "tilelayer" || layer.chunks === undefined) {
-            throw new TeapotTilePatchError(
-                `Layer ${region.layer} is not a centered infinite tile layer`,
-                "invalid-layer",
-            );
+        if (layer.type !== "tilelayer") {
+            throw new TeapotTilePatchError(`Layer ${region.layer} is not a tile layer`, "invalid-layer");
+        }
+        if (centered && layer.chunks === undefined) {
+            throw new TeapotTilePatchError(`Layer ${region.layer} is not an infinite tile layer`, "invalid-layer");
+        }
+        if (!centered && !Array.isArray(layer.data)) {
+            throw new TeapotTilePatchError(`Layer ${region.layer} is not a finite tile layer`, "invalid-layer");
+        }
+        const layerStartX = layer.startx ?? 0;
+        const layerStartY = layer.starty ?? 0;
+        if (
+            !centered &&
+            (region.x < layerStartX ||
+                region.y < layerStartY ||
+                region.x + region.width > layerStartX + layer.width ||
+                region.y + region.height > layerStartY + layer.height)
+        ) {
+            throw new TeapotTilePatchError(`Region exceeds the bounds of layer ${region.layer}`, "out-of-bounds");
         }
         for (let localY = 0; localY < region.height; localY += 1) {
             for (let localX = 0; localX < region.width; localX += 1) {
@@ -103,7 +118,19 @@ export function applyTeapotTilePatch(source: ITiledMap, input: TeapotTilePatch):
                 if (gid === undefined || !isKnownGid(map, gid)) {
                     throw new TeapotTilePatchError(`Tile GID ${String(gid)} is not defined by this map`, "invalid-gid");
                 }
-                if (setCenteredTileLayerGid(map, layer, region.x + localX, region.y + localY, gid)) changedTiles += 1;
+                if (centered) {
+                    if (setCenteredTileLayerGid(map, layer, region.x + localX, region.y + localY, gid)) {
+                        changedTiles += 1;
+                    }
+                } else {
+                    const data = layer.data;
+                    if (!Array.isArray(data)) throw new Error("Finite tile layer data disappeared during editing");
+                    const offset = (region.y + localY - layerStartY) * layer.width + region.x + localX - layerStartX;
+                    if (data[offset] !== gid) {
+                        data[offset] = gid;
+                        changedTiles += 1;
+                    }
+                }
             }
         }
 
@@ -113,7 +140,7 @@ export function applyTeapotTilePatch(source: ITiledMap, input: TeapotTilePatch):
         maxY = Math.max(maxY, region.y + region.height);
     }
 
-    synchronizeCenteredMapBounds(map);
+    if (centered) synchronizeCenteredMapBounds(map);
 
     return {
         map,
@@ -171,30 +198,37 @@ export function addTeapotEmbeddedTileset(
 }
 
 function assertSupportedMap(map: ITiledMap): void {
-    if (map.orientation !== "orthogonal" || map.infinite !== true || !isCenteredMap(map)) {
-        throw new TeapotTilePatchError("Only centered infinite orthogonal TMJ maps can be edited", "unsupported-map");
+    const centered = map.infinite === true && isCenteredMap(map);
+    const finite = map.infinite !== true;
+    if (map.orientation !== "orthogonal" || (!finite && !centered)) {
+        throw new TeapotTilePatchError(
+            "Only finite or centered infinite orthogonal TMJ maps can be edited",
+            "unsupported-map",
+        );
     }
-    const invalidChunks = flattenLayers(map.layers).some((layer) => {
-        if (layer.type !== "tilelayer" || layer.chunks === undefined) return layer.type === "tilelayer";
-        const origins = new Set<string>();
-        return layer.chunks.some((chunk) => {
-            const origin = `${chunk.x},${chunk.y}`;
-            const invalid =
-                !Number.isInteger(chunk.x) ||
-                !Number.isInteger(chunk.y) ||
-                !Number.isInteger(chunk.width) ||
-                !Number.isInteger(chunk.height) ||
-                chunk.width <= 0 ||
-                chunk.height <= 0 ||
-                chunk.width > 16 ||
-                chunk.height > 16 ||
-                !Array.isArray(chunk.data) ||
-                chunk.data.length !== chunk.width * chunk.height ||
-                origins.has(origin);
-            origins.add(origin);
-            return invalid;
+    const invalidChunks =
+        centered &&
+        flattenLayers(map.layers).some((layer) => {
+            if (layer.type !== "tilelayer" || layer.chunks === undefined) return layer.type === "tilelayer";
+            const origins = new Set<string>();
+            return layer.chunks.some((chunk) => {
+                const origin = `${chunk.x},${chunk.y}`;
+                const invalid =
+                    !Number.isInteger(chunk.x) ||
+                    !Number.isInteger(chunk.y) ||
+                    !Number.isInteger(chunk.width) ||
+                    !Number.isInteger(chunk.height) ||
+                    chunk.width <= 0 ||
+                    chunk.height <= 0 ||
+                    chunk.width > 16 ||
+                    chunk.height > 16 ||
+                    !Array.isArray(chunk.data) ||
+                    chunk.data.length !== chunk.width * chunk.height ||
+                    origins.has(origin);
+                origins.add(origin);
+                return invalid;
+            });
         });
-    });
     if (invalidChunks) {
         throw new TeapotTilePatchError("Centered terrain chunks must use JSON tile arrays", "unsupported-map");
     }

@@ -11,9 +11,7 @@ class Menu {
     }
 
     async openMapEditor(page: Page) {
-        await page.getByTestId("map-menu").click({ timeout: 30_000 });
-        await page.getByRole("button", { name: "Map editor" }).click();
-        await expect(page.getByRole("button", { name: "Map editor" })).toBeHidden();
+        await page.getByTestId("map-editor-button").click({ timeout: 30_000 });
     }
 
     async openMapExplorer(page: Page) {

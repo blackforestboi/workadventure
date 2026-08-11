@@ -4040,7 +4040,7 @@ ${escapedMessage}
                     object2: Body | StaticBody | Tile | Phaser.Types.Physics.Arcade.GameObjectWithBody,
                 ) => {},
             );
-            phaserLayer.setCollisionByProperty({ collides: true });
+            this.gameMapFrontWrapper.configurePhysicalCollision(phaserLayer);
             if (DEBUG_MODE) {
                 //debug code to see the collision hitbox of the object in the top layer
                 phaserLayer.renderDebug(this.add.graphics(), {

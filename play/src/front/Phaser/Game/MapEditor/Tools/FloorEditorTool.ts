@@ -430,7 +430,8 @@ export class FloorEditorTool extends MapEditorTool {
     }
 
     private getTileAtPointer(pointer: Phaser.Input.Pointer): { layer: string; x: number; y: number } | undefined {
-        if (this.publishedMap === undefined || this.selectedLayer === "") return undefined;
+        if (this.publishedMap === undefined || this.selectedLayer === "" || this.pendingTilesetSelection !== undefined)
+            return undefined;
         const visibleMap = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
         const coordinates = worldToTileCoordinates(visibleMap, pointer.worldX, pointer.worldY);
         const targetLayer =
@@ -711,16 +712,29 @@ export class FloorEditorTool extends MapEditorTool {
                     resolveTilesetImage(tileset.url, this.scene.getMapUrl()),
         );
         if (existingTileset !== undefined) {
-            if (selection !== undefined) {
-                const firstGid = existingTileset.firstgid ?? 1;
-                const tileCount =
-                    "tilecount" in existingTileset && typeof existingTileset.tilecount === "number"
-                        ? existingTileset.tilecount
-                        : 1;
-                this.activateEmbeddedSelection(selection, firstGid, tileCount);
-            } else {
-                this.setState({ status: "saved", error: undefined });
+            const firstGid = existingTileset.firstgid ?? 1;
+            const tileCount =
+                "tilecount" in existingTileset && typeof existingTileset.tilecount === "number"
+                    ? existingTileset.tilecount
+                    : 1;
+            const pendingSelection = selection === undefined ? undefined : { ...selection, firstGid, tileCount };
+            if (pendingSelection !== undefined) {
+                this.pendingTilesetSelection = pendingSelection;
+                this.clearHoverPreview();
             }
+            this.loadRuntimeTileset(firstGid, tileCount, tileset.url, tileset.id)
+                .then(() => {
+                    if (pendingSelection !== undefined && this.pendingTilesetSelection === pendingSelection) {
+                        this.pendingTilesetSelection = undefined;
+                        this.activateEmbeddedSelection(pendingSelection, firstGid, tileCount);
+                    } else if (pendingSelection === undefined) {
+                        this.setState({ status: "saved", error: undefined });
+                    }
+                })
+                .catch((error: unknown) => {
+                    if (this.pendingTilesetSelection === pendingSelection) this.pendingTilesetSelection = undefined;
+                    this.setState({ status: "failed", error: asError(error).message });
+                });
             return;
         }
         const result = addTeapotEmbeddedTileset(base, {
@@ -737,6 +751,7 @@ export class FloorEditorTool extends MapEditorTool {
                 firstGid: result.firstGid,
                 tileCount: result.tileCount,
             };
+            this.clearHoverPreview();
         }
         this.saving = true;
         this.setState({ status: "saving", changedTiles: 0, error: undefined });
@@ -746,21 +761,18 @@ export class FloorEditorTool extends MapEditorTool {
             tilesetJson: JSON.stringify(addedTileset),
         };
         const inverseMutation: TeapotTerrainMutation = { ...mutation, removeTileset: true };
-        this.mapEditorModeManager
-            .executeCommand(new ModifyTerrainFrontCommand(this, mutation, inverseMutation))
-            .catch((error) => this.rejectTerrainMutation(asError(error).message));
         this.loadRuntimeTileset(result.firstGid, result.tileCount, tileset.url, tileset.id)
+            .then(() =>
+                this.mapEditorModeManager.executeCommand(
+                    new ModifyTerrainFrontCommand(this, mutation, inverseMutation),
+                ),
+            )
             .then(() => {
                 if (this.draftMap !== undefined && this.previewRegions.length > 0) {
                     this.renderRegions(this.previewRegions, this.draftMap);
                 }
             })
-            .catch((error: unknown) => {
-                this.setState({
-                    status: "failed",
-                    error: asError(error).message,
-                });
-            });
+            .catch((error: unknown) => this.rejectTerrainMutation(asError(error).message));
     }
 
     private activateEmbeddedSelection(selection: TilesetSelection, firstGid: number, tileCount: number): void {
@@ -906,9 +918,12 @@ export class FloorEditorTool extends MapEditorTool {
         this.tileOverlays.delete(overlayKey);
         const gameMapFrontWrapper = this.scene.getGameMapFrontWrapper();
         const phaserLayer = gameMapFrontWrapper.findPhaserLayer(layer);
-        if (getAuthoringPathOverlayKind(layer) !== undefined) {
-            // Path layers need tile properties for gameplay, while their checker overlay owns the visuals.
-            gameMapFrontWrapper.putTile(gid === 0 ? null : gid, x, y, layer, { render: false });
+        const pathOverlayKind = getAuthoringPathOverlayKind(layer);
+        if (pathOverlayKind !== undefined) {
+            // Collision markers must stay non-empty for Arcade Physics; checker overlays own all path visuals.
+            gameMapFrontWrapper.putTile(gid === 0 ? null : gid, x, y, layer, {
+                render: pathOverlayKind === "collision",
+            });
             return;
         }
         if (!tileLayerCanRenderGid(phaserLayer, gid)) {

@@ -16,6 +16,7 @@ import MapSubMenu from "../Components/ActionBar/MenuIcons/MapSubMenu.svelte";
 import ParticipantMenuItem from "../Components/ActionBar/MenuIcons/ParticipantMenuItem.svelte";
 import LoginMenuItem from "../Components/ActionBar/MenuIcons/LoginMenuItem.svelte";
 import InviteMenuItem from "../Components/ActionBar/MenuIcons/InviteMenuItem.svelte";
+import MapEditorMenuItem from "../Components/ActionBar/MenuIcons/MapEditorMenuItem.svelte";
 import CustomActionBarButton from "../Components/ActionBar/MenuIcons/CustomActionBarButton.svelte";
 import { analyticsClient } from "../Administration/AnalyticsClient";
 
@@ -334,6 +335,16 @@ const mapsMenuItem: RightMenuItem<RightActionBarButtonProps> = {
     props: {},
 };
 
+// Keep the tools menu implementation available without exposing it in the play header.
+const showToolsMenu = false;
+
+const mapEditorMenuItem: RightMenuItem<RightActionBarButtonProps> = {
+    id: "map-editor",
+    fallsInBurgerMenuStore: writable(false),
+    component: MapEditorMenuItem,
+    props: {},
+};
+
 const participantMenuItem: RightMenuItem<RightActionBarButtonProps> = {
     id: "participant",
     fallsInBurgerMenuStore: writable(false),
@@ -366,11 +377,20 @@ export const rightActionBarMenuItems: Readable<RightMenuItem<RightActionBarButto
     ([$additionalButtonsMenu, $userIsConnected, $inviteUserActivated]) => {
         const menuItems: RightMenuItem<RightActionBarButtonProps>[] = [...$additionalButtonsMenu.values()];
 
-        if ($inviteUserActivated) {
-            menuItems.push(inviteMenuItem);
+        if (showToolsMenu) {
+            menuItems.push(mapsMenuItem);
         }
+
+        menuItems.push(participantMenuItem);
+
         if (!$userIsConnected && ENABLE_OPENID) {
             menuItems.push(loginMenuItem);
+        }
+
+        menuItems.push(mapEditorMenuItem);
+
+        if ($inviteUserActivated) {
+            menuItems.push(inviteMenuItem);
         }
 
         const itemsWithPosition = menuItems.map((item, index) => ({
@@ -382,7 +402,7 @@ export const rightActionBarMenuItems: Readable<RightMenuItem<RightActionBarButto
             },
         }));
 
-        return [...itemsWithPosition, mapsMenuItem, participantMenuItem];
+        return itemsWithPosition;
     },
 );
 

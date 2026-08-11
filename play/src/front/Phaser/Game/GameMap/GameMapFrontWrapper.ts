@@ -44,6 +44,7 @@ import { replacePhaserTileProperties } from "./TilePropertySync";
 import {
     composeCollisionGrid,
     getAuthoringCollisionGrid,
+    getPhysicalTileCollisionMode,
     getTileSupportGrid,
     isAuthoringCollisionLayer,
     isCollisionStorageLayer,
@@ -527,7 +528,7 @@ export class GameMapFrontWrapper {
         if (phaserLayer != undefined) {
             const renderedVisible = visible && !isCollisionStorageLayer(phaserLayer.layer.name);
             phaserLayer.setVisible(renderedVisible);
-            phaserLayer.setCollisionByProperty({ collides: true }, renderedVisible);
+            this.configurePhysicalCollision(phaserLayer, renderedVisible);
             this.rebuildVoidCollisionLayer();
         } else {
             const phaserLayers = this.findPhaserLayers(layerName + "/");
@@ -542,9 +543,26 @@ export class GameMapFrontWrapper {
             for (let i = 0; i < phaserLayers.length; i++) {
                 const renderedVisible = visible && !isCollisionStorageLayer(phaserLayers[i].layer.name);
                 phaserLayers[i].setVisible(renderedVisible);
-                phaserLayers[i].setCollisionByProperty({ collides: true }, renderedVisible);
+                this.configurePhysicalCollision(phaserLayers[i], renderedVisible);
             }
             this.rebuildVoidCollisionLayer();
+        }
+    }
+
+    public configurePhysicalCollision(phaserLayer: RenderableTilemapLayer, enabled = true): void {
+        const hasAuthoringCollisionLayer = this.phaserLayers.some((layer) =>
+            isAuthoringCollisionLayer(layer.layer.name),
+        );
+        switch (getPhysicalTileCollisionMode(phaserLayer.layer.name, hasAuthoringCollisionLayer)) {
+            case "occupied":
+                phaserLayer.setCollisionByExclusion([-1], true);
+                break;
+            case "disabled":
+                phaserLayer.setCollisionByExclusion([], false);
+                break;
+            case "properties":
+                phaserLayer.setCollisionByProperty({ collides: true }, enabled);
+                break;
         }
     }
 
@@ -1114,6 +1132,16 @@ export class GameMapFrontWrapper {
             }
             if (phaserTile !== null) {
                 replacePhaserTileProperties(phaserTile, tileProperties);
+                const hasAuthoringCollisionLayer = this.phaserLayers.some((candidate) =>
+                    isAuthoringCollisionLayer(candidate.layer.name),
+                );
+                const physicalCollisionMode = getPhysicalTileCollisionMode(layer, hasAuthoringCollisionLayer);
+                if (physicalCollisionMode === "occupied") {
+                    phaserTile.resetCollision();
+                    if (tile !== null) phaserTile.setCollision(true);
+                } else if (physicalCollisionMode === "disabled") {
+                    phaserTile.resetCollision();
+                }
             }
             if (this.isGpuTilemapLayer(phaserLayer)) {
                 phaserLayer.generateLayerDataTexture();

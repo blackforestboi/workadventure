@@ -128,16 +128,19 @@ describe("persistTerrainMutation", () => {
         expect(fileSystemMock.writeStringAsFile).not.toHaveBeenCalled();
     });
 
-    it("rejects a finite source instead of rebasing it during persistence", async () => {
+    it("persists a legacy finite source without rebasing it", async () => {
         fileSystemMock.readFileAsString.mockResolvedValue(JSON.stringify(createFiniteSource()));
 
-        await expect(
-            persistTerrainMutation(
-                new WamFile(wam),
-                new URL("http://maps.example.test/maps/map.wam"),
-                message([{ layer: "floor", x: -1, y: 0, width: 1, height: 1, gids: [8] }]),
-            ),
-        ).rejects.toThrow("centered infinite");
-        expect(fileSystemMock.writeStringAsFile).not.toHaveBeenCalled();
+        await persistTerrainMutation(
+            new WamFile(wam),
+            new URL("http://maps.example.test/maps/map.wam"),
+            message([{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }]),
+        );
+
+        const persisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;
+        expect(getTileLayerGid(floorLayer(persisted), 0, 0)).toBe(8);
+        expect(persisted.infinite).toBe(false);
+        expect(persisted.width).toBe(1);
+        expect(persisted.height).toBe(1);
     });
 });
