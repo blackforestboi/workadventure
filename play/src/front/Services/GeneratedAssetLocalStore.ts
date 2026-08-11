@@ -292,6 +292,8 @@ function isServerAsset(value: unknown): value is TeapotGeneratedAssetView {
         typeof value.height === "number" &&
         Number.isInteger(value.height) &&
         value.height > 0 &&
+        typeof value.sha256 === "string" &&
+        SHA256_PATTERN.test(value.sha256) &&
         typeof value.createdAt === "string"
     );
 }

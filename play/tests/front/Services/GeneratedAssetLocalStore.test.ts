@@ -98,6 +98,7 @@ describe("generated map asset local storage", () => {
             kind: "map-entity",
             width: 256,
             height: 256,
+            sha256: SHA256_A,
             createdAt: "2026-08-12T09:01:00.000Z",
         };
 
