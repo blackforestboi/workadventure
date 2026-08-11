@@ -10,6 +10,7 @@ const TeapotGeneratedAssetViewSchema = z.object({
     kind: z.enum(["map-entity", "reference"]),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
     createdAt: z.string(),
 });
 const TeapotGeneratedAssetListSchema = z.object({ items: z.array(TeapotGeneratedAssetViewSchema) });

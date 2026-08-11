@@ -17,12 +17,12 @@ class MemoryGeneratedAssetStorage implements GeneratedAssetLocalStorage {
 
     public list(): Promise<unknown[]> {
         if (this.failList !== undefined) return Promise.reject(this.failList);
-        return Promise.resolve([...this.records.values()].map((record) => structuredClone(record)));
+        return Promise.resolve([...this.records.values()].map(cloneStoredRecord));
     }
 
     public write(record: { storageKey: string }, removeStorageKeys: readonly string[]): Promise<void> {
         if (this.failWrite !== undefined) return Promise.reject(this.failWrite);
-        this.records.set(record.storageKey, structuredClone(record));
+        this.records.set(record.storageKey, cloneStoredRecord(record));
         for (const storageKey of removeStorageKeys) this.records.delete(storageKey);
         return Promise.resolve();
     }
@@ -35,6 +35,20 @@ class MemoryGeneratedAssetStorage implements GeneratedAssetLocalStorage {
     public insertRaw(storageKey: string, value: unknown): void {
         this.records.set(storageKey, value);
     }
+}
+
+function cloneStoredRecord(record: unknown): unknown {
+    const cloned = structuredClone(record);
+    if (
+        typeof record === "object" &&
+        record !== null &&
+        "png" in record &&
+        typeof cloned === "object" &&
+        cloned !== null
+    ) {
+        return { ...cloned, png: record.png };
+    }
+    return cloned;
 }
 
 function makeStore(
@@ -98,6 +112,7 @@ describe("generated map asset local storage", () => {
             kind: "map-entity",
             width: 256,
             height: 256,
+            sha256: SHA256_A,
             createdAt: "2026-08-12T09:01:00.000Z",
         };
 

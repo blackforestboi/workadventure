@@ -60,6 +60,7 @@ function createPersistence() {
             kind,
             width: 256,
             height: 256,
+            sha256: "a".repeat(64),
             createdAt: "2026-08-09T12:00:00.000Z",
         }),
     );

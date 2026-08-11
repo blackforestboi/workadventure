@@ -1,3 +1,6 @@
+/Users/oliversauter/.bash_profile: line 16: alias: -s: not found
+/Users/oliversauter/.rvm/scripts/rvm: line 29: /bin/ps: Operation not permitted
+pyenv: cannot rehash: /Users/oliversauter/.pyenv/shims isn't writable
 ---
 title: "fix: Persist generated map assets"
 date: 2026-08-12

@@ -36,6 +36,7 @@ describe("TeapotGeneratedAssetService", () => {
             kind: "map-entity",
             width: 96,
             height: 128,
+            sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
             url: "https://play.example.test/teapot/generated-assets/asset_3.png",
         });
         await expect(service.list("owner-a", "map-entity")).resolves.toEqual({ items: [saved] });
@@ -45,6 +46,31 @@ describe("TeapotGeneratedAssetService", () => {
             etag: expect.stringMatching(/^[0-9a-f]{64}$/),
         });
         expect((await repository.getAsset(saved.id))?.published).toBe(true);
+    });
+
+    it("reuses the same owner and kind asset when its PNG fingerprint already exists", async () => {
+        const png = createTestWokaPng();
+
+        const first = await service.accept("owner-a", "First name", png, "map-entity");
+        const duplicate = await service.accept("owner-a", "Second name", png, "map-entity");
+
+        expect(duplicate).toEqual(first);
+        const data = await repository.exportData();
+        expect(data.assets).toHaveLength(1);
+        expect(data.catalogAssets).toHaveLength(1);
+    });
+
+    it("does not reconcile matching PNGs across owners or asset kinds", async () => {
+        const png = createTestWokaPng();
+
+        const mapEntity = await service.accept("owner-a", "Map entity", png, "map-entity");
+        const reference = await service.accept("owner-a", "Reference", png, "reference");
+        const otherOwner = await service.accept("owner-b", "Other owner", png, "map-entity");
+
+        expect(new Set([mapEntity.id, reference.id, otherOwner.id]).size).toBe(3);
+        const data = await repository.exportData();
+        expect(data.assets).toHaveLength(3);
+        expect(data.catalogAssets).toHaveLength(3);
     });
 
     it("keeps reference and map-entity catalogs distinct and rejects malformed raster bytes", async () => {

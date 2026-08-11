@@ -7,14 +7,12 @@ import type { TeapotDataRepository } from "./TeapotDataRepository";
 import { validateTeapotGeneratedPng } from "./TeapotGeneratedRasterValidator";
 import type { TeapotAssetRecord, TeapotJsonValue } from "./TeapotRecords";
 import type { TeapotIdentityService } from "./TeapotIdentityService";
-import {
-    resolveTeapotOwnerIdentity,
-    TEAPOT_WORKADVENTURE_IDENTITY_PROVIDER,
-} from "./TeapotOwnerIdentityResolver";
+import { resolveTeapotOwnerIdentity, TEAPOT_WORKADVENTURE_IDENTITY_PROVIDER } from "./TeapotOwnerIdentityResolver";
 import type { TeapotWokaObjectStore } from "./TeapotWokaObjectStore";
 import { TeapotWokaValidationError } from "./TeapotWokaPngValidator";
 
 const ASSET_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_NAME_LENGTH = 80;
 
 export type TeapotGeneratedAssetKind = "map-entity" | "reference";
@@ -26,6 +24,7 @@ export interface TeapotGeneratedAssetView {
     kind: TeapotGeneratedAssetKind;
     width: number;
     height: number;
+    sha256: string;
     createdAt: string;
 }
 
@@ -57,6 +56,11 @@ export class TeapotGeneratedAssetService {
         const validated = validateTeapotGeneratedPng(bytes);
         const owner = await this.resolveOwner(providerSubject);
         await this.authorization.assertCapability(owner.id, "asset.create");
+        const existing = (await this.repository.listAssets(owner.id, kind)).find(
+            (asset) => readString(asset.metadata, "sha256") === validated.sha256,
+        );
+        if (existing !== undefined) return this.toView(existing, kind);
+
         const objectReference = await this.objectStore.put(validated.bytes);
         try {
             const accepted = await this.repository.acceptCatalogAsset({
@@ -146,9 +150,18 @@ export class TeapotGeneratedAssetService {
             kind,
             width: readNumber(asset.metadata, "width"),
             height: readNumber(asset.metadata, "height"),
+            sha256: readSha256(asset.metadata),
             createdAt: asset.createdAt,
         };
     }
+}
+
+function readSha256(metadata: TeapotJsonValue): string {
+    const sha256 = readString(metadata, "sha256");
+    if (sha256 === null || !SHA256_PATTERN.test(sha256)) {
+        throw new Error("Generated asset metadata contains an invalid SHA-256 fingerprint");
+    }
+    return sha256;
 }
 
 function readString(metadata: TeapotJsonValue, key: string): string | null {

@@ -250,7 +250,7 @@ function assertStoredRecord(value: unknown): asserts value is StoredGeneratedAss
     if (typeof value.name !== "string" || value.name.length === 0 || value.name.length > MAX_NAME_LENGTH) {
         throw new Error("Invalid generated asset name.");
     }
-    if (!(value.png instanceof Blob) || value.png.type !== "image/png" || value.png.size === 0) {
+    if (!isPngBlob(value.png)) {
         throw new Error("Invalid generated asset PNG.");
     }
     if (typeof value.sha256 !== "string" || !SHA256_PATTERN.test(value.sha256)) {
@@ -292,6 +292,8 @@ function isServerAsset(value: unknown): value is TeapotGeneratedAssetView {
         typeof value.height === "number" &&
         Number.isInteger(value.height) &&
         value.height > 0 &&
+        typeof value.sha256 === "string" &&
+        SHA256_PATTERN.test(value.sha256) &&
         typeof value.createdAt === "string"
     );
 }
@@ -302,6 +304,21 @@ function isSyncStatus(value: unknown): value is GeneratedAssetSyncStatus {
 
 function isTimestamp(value: unknown): value is string {
     return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+
+function isPngBlob(value: unknown): value is Blob {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        Object.prototype.toString.call(value) === "[object Blob]" &&
+        "type" in value &&
+        value.type === "image/png" &&
+        "size" in value &&
+        typeof value.size === "number" &&
+        value.size > 0 &&
+        "arrayBuffer" in value &&
+        typeof value.arrayBuffer === "function"
+    );
 }
 
 function normalizeName(value: unknown): string {
@@ -340,9 +357,9 @@ function persistenceError(message: string, cause: unknown): GeneratedAssetLocalS
         : new GeneratedAssetLocalStoreError(message, { cause });
 }
 
-function requestResult(request: IDBRequest<unknown>): Promise<unknown[]> {
+function requestResult<T>(request: IDBRequest<T>): Promise<T> {
     return new Promise((resolve, reject) => {
-        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+        request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error ?? new Error("Generated asset storage could not be read."));
     });
 }
