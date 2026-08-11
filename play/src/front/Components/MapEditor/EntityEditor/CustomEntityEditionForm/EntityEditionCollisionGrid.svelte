@@ -3,15 +3,26 @@
         collisionGrid: number[][];
         collisionGridWidth: number;
         collisionGridHeight: number;
+        offsetX?: number;
+        offsetY?: number;
         updateCollisionGrid: (rowIndex: number, columnIndex: number) => void;
     }
 
-    let { collisionGrid = [], collisionGridWidth, collisionGridHeight, updateCollisionGrid }: Props = $props();
+    let {
+        collisionGrid = [],
+        collisionGridWidth,
+        collisionGridHeight,
+        offsetX = 0,
+        offsetY = 0,
+        updateCollisionGrid,
+    }: Props = $props();
     let columnCount = $derived(Math.max(1, ...collisionGrid.map((row) => row.length)));
 </script>
 
 <div
-    class="absolute left-0 top-0 grid"
+    class="absolute grid"
+    style:left={`${offsetX}px`}
+    style:top={`${offsetY}px`}
     style:width={`${collisionGridWidth}px`}
     style:height={`${collisionGridHeight}px`}
     style:grid-template-columns={`repeat(${columnCount}, minmax(0, 1fr))`}

@@ -1,4 +1,5 @@
 import { AssetGenerationError } from "./AssetGenerationError";
+import type { VisualAssetAnimation } from "@workadventure/map-editor";
 
 const TILE_SIZE = 32;
 const MAX_DIMENSION = 2048;
@@ -28,9 +29,25 @@ export function terrainTileCrop(width: number, height: number): TerrainTileCrop 
 }
 
 /** Re-encodes an import as one centered, self-contained 32px terrain tile. */
-export async function normalizeTilesetRaster(blob: Blob): Promise<Blob> {
+export async function normalizeTilesetRaster(blob: Blob, animation?: VisualAssetAnimation): Promise<Blob> {
     const bitmap = await createImageBitmap(blob);
     try {
+        if (animation !== undefined) {
+            if (animation.frameWidth !== TILE_SIZE || animation.frameHeight !== TILE_SIZE) {
+                throw new AssetGenerationError(
+                    "invalid_request",
+                    "Animated terrain must use one horizontal row of 32×32px frames.",
+                );
+            }
+            const expectedWidth = animation.frameCount * TILE_SIZE;
+            if (bitmap.width !== expectedWidth || bitmap.height !== TILE_SIZE) {
+                throw new AssetGenerationError(
+                    "invalid_request",
+                    `Animated terrain must be exactly ${expectedWidth}×${TILE_SIZE}px.`,
+                );
+            }
+            return await encodeRaster(bitmap, expectedWidth, TILE_SIZE);
+        }
         const crop = terrainTileCrop(bitmap.width, bitmap.height);
         const canvas = document.createElement("canvas");
         canvas.width = TILE_SIZE;
@@ -60,4 +77,22 @@ export async function normalizeTilesetRaster(blob: Blob): Promise<Blob> {
     } finally {
         bitmap.close();
     }
+}
+
+async function encodeRaster(bitmap: ImageBitmap, width: number, height: number): Promise<Blob> {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (context === null) throw new AssetGenerationError("invalid_request", "The terrain tile cannot be decoded.");
+    context.clearRect(0, 0, width, height);
+    context.imageSmoothingEnabled = false;
+    context.drawImage(bitmap, 0, 0, width, height);
+    return await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((normalized) => {
+            if (normalized === null)
+                reject(new AssetGenerationError("invalid_request", "The terrain tile cannot be normalized."));
+            else resolve(normalized);
+        }, "image/png");
+    });
 }

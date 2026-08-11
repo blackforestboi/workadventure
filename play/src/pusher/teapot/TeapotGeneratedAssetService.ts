@@ -2,6 +2,10 @@ import * as Sentry from "@sentry/node";
 import { asError } from "catch-unknown";
 
 import type { TeapotIdentity } from "../../common/Teapot/TeapotIdentity";
+import {
+    VisualAssetAnimation,
+    type VisualAssetAnimation as VisualAssetAnimationValue,
+} from "@workadventure/map-editor";
 import type { TeapotAuthorizationService } from "./TeapotAuthorizationService";
 import type { TeapotDataRepository } from "./TeapotDataRepository";
 import { validateTeapotGeneratedPng } from "./TeapotGeneratedRasterValidator";
@@ -24,6 +28,7 @@ export interface TeapotGeneratedAssetView {
     kind: TeapotGeneratedAssetKind;
     width: number;
     height: number;
+    animation?: VisualAssetAnimationValue;
     sha256: string;
     createdAt: string;
 }
@@ -48,12 +53,20 @@ export class TeapotGeneratedAssetService {
         bytes: Buffer,
         kind: TeapotGeneratedAssetKind,
         provenance?: TeapotJsonValue,
+        animation?: VisualAssetAnimationValue,
     ): Promise<TeapotGeneratedAssetView> {
         const name = requestedName.trim();
         if (name.length === 0 || name.length > MAX_NAME_LENGTH) {
             throw new TeapotWokaValidationError(`Asset name must be between 1 and ${MAX_NAME_LENGTH} characters`);
         }
         const validated = validateTeapotGeneratedPng(bytes);
+        if (
+            animation !== undefined &&
+            (validated.width !== animation.frameWidth * animation.frameCount ||
+                validated.height !== animation.frameHeight)
+        ) {
+            throw new TeapotWokaValidationError("Animation metadata must match the horizontal frame strip");
+        }
         const owner = await this.resolveOwner(providerSubject);
         await this.authorization.assertCapability(owner.id, "asset.create");
         const existing = (await this.repository.listAssets(owner.id, kind)).find(
@@ -77,6 +90,7 @@ export class TeapotGeneratedAssetService {
                     width: validated.width,
                     height: validated.height,
                     byteLength: validated.bytes.byteLength,
+                    ...(animation === undefined ? {} : { animation }),
                     ...(provenance === undefined ? {} : { provenance }),
                 },
             });
@@ -150,10 +164,17 @@ export class TeapotGeneratedAssetService {
             kind,
             width: readNumber(asset.metadata, "width"),
             height: readNumber(asset.metadata, "height"),
+            ...readAnimation(asset.metadata),
             sha256: readSha256(asset.metadata),
             createdAt: asset.createdAt,
         };
     }
+}
+
+function readAnimation(metadata: TeapotJsonValue): { animation?: VisualAssetAnimationValue } {
+    const value = readMetadata(metadata, "animation");
+    const parsed = VisualAssetAnimation.safeParse(value);
+    return parsed.success ? { animation: parsed.data } : {};
 }
 
 function readSha256(metadata: TeapotJsonValue): string {

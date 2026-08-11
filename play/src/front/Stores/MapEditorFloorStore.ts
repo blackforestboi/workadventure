@@ -1,4 +1,4 @@
-import type { TeapotTilePatch } from "@workadventure/map-editor";
+import type { TeapotTilePatch, VisualAssetAnimation } from "@workadventure/map-editor";
 import { writable } from "svelte/store";
 
 import type { TerrainAutotileTiles } from "../../common/Teapot/TerrainAutotile";
@@ -25,6 +25,7 @@ export interface MapEditorFloorTilesetAsset {
     url: string;
     width: number;
     height: number;
+    animation?: VisualAssetAnimation;
 }
 
 export interface MapEditorFloorState {

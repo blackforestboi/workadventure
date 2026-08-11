@@ -3,9 +3,10 @@
     import { onDestroy, onMount } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
     import { v4 as uuidv4 } from "uuid";
-    import type { EntityPrefab } from "@workadventure/map-editor";
+    import type { EntityPrefab, VisualAssetAnimation } from "@workadventure/map-editor";
     import { Direction, ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
     import AssetGenerationPanel from "../../../AssetGeneration/AssetGenerationPanel.svelte";
+    import AnimatedAssetPreview from "../../../AssetGeneration/AnimatedAssetPreview.svelte";
     import { teapotGeneratedAssetApi } from "../../../../Services/TeapotGeneratedAssetApi";
     import { GeneratedAssetLocalStore } from "../../../../Services/GeneratedAssetLocalStore";
     import {
@@ -35,7 +36,9 @@
     let dropZoneRef: HTMLDivElement | undefined = $state();
     let customEntityToUpload: EntityPrefab | undefined = $state(undefined);
     let errorOnFile: string | undefined = $state();
-    let selectedAsset: { source: Blob; name: string; previewUrl: string } | undefined = $state(undefined);
+    let selectedAsset:
+        | { source: Blob; name: string; previewUrl: string; animation?: VisualAssetAnimation }
+        | undefined = $state(undefined);
     let uploadDraft: MapEditorEntityUploadDraft | undefined = $state(undefined);
     let consumedGeneratedAsset: Blob | File | undefined;
     let savedAssets: GeneratedMapAssetCard[] = $state([]);
@@ -44,6 +47,7 @@
     let savedAssetItemErrors: Record<string, string> = $state({});
     const savedAssetsController = new AbortController();
     let generatedAssetController: GeneratedMapAssetController | undefined;
+    let persistedGeneratedAsset: Blob | undefined;
     const savedAssetPreviewUrls = new SvelteMap<string, { blob: Blob; url: string }>();
 
     const BASIC_TYPE = "Custom";
@@ -98,6 +102,7 @@
             source: draft.source,
             name: draft.sourceName,
             previewUrl: draft.previewUrl,
+            animation: draft.uploadEntityMessage.animation,
         };
         customEntityToUpload ??= mapDraftToEntityPrefab(draft);
 
@@ -139,12 +144,13 @@
                     collisionGrid: customEditedEntity.collisionGrid,
                     depthOffset: customEditedEntity.depthOffset,
                     color: "",
+                    animation: customEditedEntity.animation,
                 },
             });
         }
     }
 
-    function acceptAsset(source: Blob, name: string) {
+    function acceptAsset(source: Blob, name: string, animation?: VisualAssetAnimation) {
         if (!isASupportedFormat(source.type)) {
             console.error("File format not supported");
             errorOnFile = $LL.mapEditor.entityEditor.uploadEntity.errorOnFileFormat();
@@ -158,7 +164,7 @@
             mapEditorEntityUploadDraftStore.clear(uploadDraft.commandId);
         }
         const previewUrl = URL.createObjectURL(source);
-        selectedAsset = { source, name, previewUrl };
+        selectedAsset = { source, name, previewUrl, animation };
         customEntityToUpload = {
             collectionName: "custom entities",
             name,
@@ -168,6 +174,7 @@
             tags: [],
             color: "",
             type: BASIC_TYPE,
+            animation,
         };
         errorOnFile = undefined;
     }
@@ -176,7 +183,7 @@
         savedAssetItemErrors = { ...savedAssetItemErrors, [asset.key]: "" };
         try {
             const blob = await generatedAssetController?.open(asset, savedAssetsController.signal);
-            if (blob !== undefined) acceptAsset(blob, savedAssetFileName(asset));
+            if (blob !== undefined) acceptAsset(blob, savedAssetFileName(asset), asset.animation);
         } catch (reason: unknown) {
             if (reason instanceof DOMException && reason.name === "AbortError") return;
             savedAssetItemErrors = {
@@ -186,10 +193,15 @@
         }
     }
 
-    async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
+    async function persistGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
         if (generatedAssetController === undefined) throw new Error("Generated asset storage is not ready yet.");
         await generatedAssetController.saveGenerated(asset, savedAssetsController.signal);
-        acceptAsset(asset.blob, `generated-${uuidv4()}.png`);
+        persistedGeneratedAsset = asset.blob;
+    }
+
+    async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
+        if (persistedGeneratedAsset !== asset.blob) await persistGeneratedAsset(asset);
+        acceptAsset(asset.blob, `generated-${uuidv4()}.png`, asset.animation);
     }
 
     async function retrySavedAsset(asset: GeneratedMapAssetCard): Promise<void> {
@@ -320,10 +332,11 @@
                                 class="w-full text-left hover:opacity-80"
                                 onclick={() => reuseSavedAsset(asset)}
                             >
-                                <img
-                                    class="h-16 w-full object-contain [image-rendering:pixelated]"
-                                    src={savedAssetPreview(asset)}
-                                    alt=""
+                                <AnimatedAssetPreview
+                                    classNames="h-16 w-full object-contain [image-rendering:pixelated]"
+                                    imageSource={savedAssetPreview(asset)}
+                                    imageAlt={asset.name}
+                                    animation={asset.animation}
                                 />
                                 <span class="mt-1 block truncate text-xs">{asset.name}</span>
                             </button>
@@ -403,6 +416,7 @@
                 promptPlaceholder="A mossy community notice board with small pinned cards, viewed from above…"
                 compact
                 outputSize={{ width: 512, height: 512 }}
+                onGenerated={persistGeneratedAsset}
                 onAccept={acceptGeneratedAsset}
             />
         </div>

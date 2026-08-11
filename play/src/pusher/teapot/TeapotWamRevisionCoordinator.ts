@@ -152,6 +152,7 @@ export class TeapotWamRevisionCoordinator {
                               successfulJoin: true,
                               legacyCanEdit: input.legacyCanEdit,
                               legacyCanAdmin: input.managementUiAccess,
+                              isLogged,
                           },
                       }),
                   )
@@ -208,6 +209,7 @@ export class TeapotWamRevisionCoordinator {
                     successfulJoin: true,
                     legacyCanEdit: input.legacyCanEdit,
                     legacyCanAdmin: input.legacyCanAdmin,
+                    isLogged: input.isLogged,
                 },
             });
         } catch (error: unknown) {

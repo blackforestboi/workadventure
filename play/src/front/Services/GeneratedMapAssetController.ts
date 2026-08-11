@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import type { VisualAssetAnimation } from "@workadventure/map-editor";
 
 import type { AssetGenerationProviderId } from "./AssetGeneration/AssetGenerationTypes";
 import type { GeneratedAssetLocalRecord, GeneratedAssetLocalStore } from "./GeneratedAssetLocalStore";
@@ -10,6 +11,7 @@ export interface GeneratedMapAssetCard {
     key: string;
     name: string;
     sha256: string;
+    animation?: VisualAssetAnimation;
     blob?: Blob;
     local?: GeneratedAssetLocalRecord;
     remote?: TeapotGeneratedAssetView;
@@ -25,6 +27,7 @@ export interface AcceptedGeneratedMapAsset {
     providerId: AssetGenerationProviderId;
     modelId: string;
     prompt: string;
+    animation?: VisualAssetAnimation;
 }
 
 type LocalStore = Pick<GeneratedAssetLocalStore, "list" | "upsert">;
@@ -97,6 +100,7 @@ export class GeneratedMapAssetController {
             png: asset.blob,
             sha256,
             provenance: { providerId: asset.providerId, modelId: asset.modelId },
+            animation: asset.animation,
             syncStatus: this.authenticated ? "pending" : "synced",
         });
         this.replaceLocal(record);
@@ -134,6 +138,7 @@ export class GeneratedMapAssetController {
             provenance: card.local?.provenance ?? { providerId: "server", modelId: "unknown" },
             syncStatus: "synced",
             serverAsset: card.remote,
+            animation: card.remote.animation ?? card.local?.animation,
         });
         this.replaceLocal(record);
         this.emit();
@@ -153,7 +158,7 @@ export class GeneratedMapAssetController {
                 pending.png,
                 pending.name,
                 "map-entity",
-                { source: "generated", ...pending.provenance },
+                { source: "generated", ...pending.provenance, animation: pending.animation },
                 signal,
             );
             const updated = await this.localStore.upsert(this.ownerScope, {
@@ -213,6 +218,7 @@ export function mergeGeneratedMapAssets(
             name: serverAsset.name,
             sha256: fingerprint,
             remote: serverAsset,
+            animation: serverAsset.animation ?? cached?.animation,
             ...(cached === undefined ? {} : { blob: cached.png, local: cached }),
         });
     }
@@ -232,6 +238,7 @@ function toCard(record: GeneratedAssetLocalRecord): GeneratedMapAssetCard {
         name: record.serverAsset?.name ?? record.name,
         sha256: record.serverAsset?.sha256.toLowerCase() ?? record.sha256,
         blob: record.png,
+        animation: record.serverAsset?.animation ?? record.animation,
         local: record,
         ...(record.serverAsset === undefined ? {} : { remote: record.serverAsset }),
     };

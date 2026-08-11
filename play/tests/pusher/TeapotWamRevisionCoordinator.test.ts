@@ -203,7 +203,7 @@ describe("TeapotWamRevisionCoordinator", () => {
         });
         await expect(coordinator.resolveJoinAccess(join)).resolves.toMatchObject({
             canView: true,
-            canEdit: false,
+            canEdit: true,
             canAdmin: false,
         });
         await coordinator.resolveJoinAccess(join);

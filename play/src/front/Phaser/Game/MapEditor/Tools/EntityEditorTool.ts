@@ -105,12 +105,13 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                     return;
                 }
 
-                TexturesHelper.loadEntityImage(this.scene, entityPrefab.imagePath, entityPrefab.imagePath)
+                TexturesHelper.loadEntityTexture(this.scene, entityPrefab, entityPrefab.imagePath)
                     .then(() => {
-                        this.entitiesManager
-                            .getEntities()
-                            .get(createEntityMessage.id)
-                            ?.setTexture(entityPrefab.imagePath);
+                        const entity = this.entitiesManager.getEntities().get(createEntityMessage.id);
+                        if (entity !== undefined) {
+                            entity.setTexture(entityPrefab.imagePath);
+                            TexturesHelper.playEntityAnimation(entity, entityPrefab);
+                        }
                     })
                     .catch((reason) => {
                         console.warn(reason);

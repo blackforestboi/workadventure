@@ -1,5 +1,9 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
+    import {
+        VisualAssetAnimation,
+        type VisualAssetAnimation as VisualAssetAnimationValue,
+    } from "@workadventure/map-editor";
     import type {
         AssetGenerationLifecycleState,
         AssetGenerationProviderId,
@@ -21,12 +25,14 @@
     } from "../../Services/AssetGeneration/RasterOutputNormalizer";
     import { aiGenerationSettingsVisibilityStore } from "../../Stores/AiGenerationSettingsVisibilityStore";
     import Button from "../UI/Button.svelte";
+    import AnimatedAssetPreview from "./AnimatedAssetPreview.svelte";
 
     interface AcceptedGeneratedAsset {
         blob: Blob;
         providerId: AssetGenerationProviderId;
         modelId: string;
         prompt: string;
+        animation?: VisualAssetAnimationValue;
     }
 
     interface Props {
@@ -44,6 +50,7 @@
         authorizeGeneration?: () => Promise<string>;
         onGenerationFailure?: (reason: "provider-error" | "cancelled") => void | Promise<void>;
         onDiscardCandidate?: () => void | Promise<void>;
+        onGenerated?: (asset: AcceptedGeneratedAsset) => void | Promise<void>;
         onAccept: (asset: AcceptedGeneratedAsset) => void | Promise<void>;
     }
 
@@ -62,6 +69,7 @@
         authorizeGeneration,
         onGenerationFailure,
         onDiscardCandidate,
+        onGenerated,
         onAccept,
     }: Props = $props();
 
@@ -79,6 +87,9 @@
     let acceptedIdleFrame: Blob | null = $state(null);
     let acceptedIdleFrameUrl = $state("");
     let reviewSelection: { providerId: AssetGenerationProviderId; modelId: string } | null = $state(null);
+    let animateAsset = $state(false);
+    let animationFrameCount = $state(4);
+    let animationFrameDurationMs = $state(200);
     let controller: AbortController | null = null;
 
     const readySelection = $derived(
@@ -192,7 +203,15 @@
                 providerId: selection.providerId,
                 modelId: selection.modelId,
                 prompt,
+                animation: generation.animation,
             };
+            try {
+                await onGenerated?.({ blob: normalized, ...candidateProvenance });
+            } catch (reason) {
+                lifecycle = "failed";
+                error = reason instanceof Error ? reason.message : "The generated asset could not be saved locally.";
+                return;
+            }
             lifecycle = "succeeded";
             references.clear();
             referencePreviews = [];
@@ -289,19 +308,31 @@
     function createCurrentGeneration(modelId: string): {
         request: AssetGenerationRequest;
         outputSize?: RasterOutputSize;
+        animation?: VisualAssetAnimationValue;
     } {
         if (!stagedWoka || !isWokaTarget(target)) {
+            const animation = createAnimationMetadata(target, outputSize);
+            const generationOutputSize =
+                animation === undefined
+                    ? outputSize
+                    : {
+                          width: animation.frameWidth * animation.frameCount,
+                          height: animation.frameHeight,
+                          pixelated: outputSize?.pixelated,
+                      };
             return {
                 request: {
                     modelId,
                     target,
-                    prompt: buildGuidedPrompt(prompt, target, outputSize),
+                    prompt: buildGuidedPrompt(prompt, target, generationOutputSize, animation),
                     outputCount: 1,
                     references: references.forGeneration(),
                     outputFormat: "webp",
                     background: "transparent",
+                    animation,
                 },
-                outputSize,
+                outputSize: generationOutputSize,
+                animation,
             };
         }
         if (wokaStage === "idle-frame") {
@@ -322,7 +353,29 @@
         return createWokaSpriteSheetStage({ modelId, target, description: prompt, acceptedSeed });
     }
 
-    function buildGuidedPrompt(description: string, generationTarget: AssetGenerationTarget, size?: RasterOutputSize) {
+    function createAnimationMetadata(
+        generationTarget: AssetGenerationTarget,
+        size?: RasterOutputSize,
+    ): VisualAssetAnimationValue | undefined {
+        if (!animateAsset || isWokaTarget(generationTarget)) return undefined;
+        const frameWidth = generationTarget === "tileset" ? 32 : (size?.width ?? 512);
+        const frameHeight = generationTarget === "tileset" ? 32 : (size?.height ?? 512);
+        const frameCount = Math.max(2, Math.min(8, Math.round(animationFrameCount)));
+        const durationMs = Math.max(50, Math.min(2000, Math.round(animationFrameDurationMs)));
+        return VisualAssetAnimation.parse({
+            frameWidth,
+            frameHeight,
+            frameCount,
+            frameDurationMs: durationMs,
+        });
+    }
+
+    function buildGuidedPrompt(
+        description: string,
+        generationTarget: AssetGenerationTarget,
+        size?: RasterOutputSize,
+        animation?: VisualAssetAnimationValue,
+    ) {
         const sizeRule = size === undefined ? "" : ` Output exactly one ${size.width}×${size.height} pixel PNG.`;
         const targetRule =
             generationTarget === "tileset"
@@ -330,7 +383,11 @@
                 : generationTarget.startsWith("woka-") || generationTarget === "complete-woka"
                   ? " Use the WorkAdventure Woka sprite-sheet layout: four rows ordered down, left, right, up; three aligned frames per row; transparent background; no text, border, shadow, or scenery."
                   : " Isolate the object on a transparent background, using a readable top-down 2D game perspective and no text or border.";
-        return `${description.trim()}.${sizeRule}${targetRule}`;
+        const animationRule =
+            animation === undefined
+                ? ""
+                : ` Create one horizontal sprite strip containing exactly ${animation.frameCount} equally sized animation frames, ordered left to right. Keep the subject, scale, camera, palette, lighting, and transparent background consistent. Each frame must be a subtle consecutive motion phase; do not add gutters, labels, borders, or a contact sheet.`;
+        return `${description.trim()}.${sizeRule}${targetRule}${animationRule}`;
     }
 
     function isWokaTarget(value: AssetGenerationTarget): value is WokaGenerationTarget {
@@ -426,6 +483,44 @@
                 aria-label={compact ? "Description" : undefined}
             ></textarea>
         </label>
+        {#if !stagedWoka}
+            <div class="mt-3 rounded-lg border border-white/10 bg-black/20 p-2 text-xs">
+                <label class="flex cursor-pointer items-center justify-between gap-3">
+                    <span>
+                        <strong class="block">Animate this asset</strong>
+                        <span class="text-white/60">Generate one short looping sprite strip.</span>
+                    </span>
+                    <input type="checkbox" bind:checked={animateAsset} aria-label="Animate this asset" />
+                </label>
+                {#if animateAsset}
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <label>
+                            Frames
+                            <input
+                                class="mt-1 w-full rounded bg-black/40 p-2"
+                                type="number"
+                                min="2"
+                                max="8"
+                                bind:value={animationFrameCount}
+                            />
+                        </label>
+                        <label>
+                            Frame duration (ms)
+                            <input
+                                class="mt-1 w-full rounded bg-black/40 p-2"
+                                type="number"
+                                min="50"
+                                max="2000"
+                                step="25"
+                                bind:value={animationFrameDurationMs}
+                            />
+                        </label>
+                    </div>
+                {/if}
+            </div>
+        {:else}
+            <p class="mt-2 text-xs text-white/60">Woka sheets include directional idle and walking animation.</p>
+        {/if}
         {#if (!stagedWoka || wokaStage === "idle-frame") && !compact}
             <label class="mt-2 block text-xs">
                 Reference images (kept only for this generation)
@@ -531,10 +626,11 @@
 
     {#if candidate && candidateUrl}
         <div class="mt-3 rounded-lg border border-emerald-300/30 bg-emerald-950/20 p-3">
-            <img
-                src={candidateUrl}
-                alt="Generated asset preview"
-                class="mx-auto h-[240px] w-[240px] max-w-full object-contain [image-rendering:pixelated]"
+            <AnimatedAssetPreview
+                imageSource={candidateUrl}
+                imageAlt="Generated asset preview"
+                animation={candidateProvenance?.animation}
+                classNames="mx-auto h-[240px] w-[240px] max-w-full object-contain [image-rendering:pixelated]"
             />
             {#if stagedWoka && wokaStage === "idle-frame"}
                 <p class="mt-2 text-center text-xs text-white/70">

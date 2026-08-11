@@ -33,4 +33,20 @@ describe("asset generation panel", () => {
             'class="min-h-full rounded-2xl border border-white/10 bg-black/10 p-3"',
         );
     });
+
+    it("archives a completed map-object generation before the user places it", () => {
+        expect(assetGenerationPanelSource).toContain("onGenerated?:");
+        expect(assetGenerationPanelSource).toContain(
+            "await onGenerated?.({ blob: normalized, ...candidateProvenance });",
+        );
+        expect(entityUploadSource).toContain("onGenerated={persistGeneratedAsset}");
+    });
+
+    it("offers one simple optional animation strip for map assets", () => {
+        expect(assetGenerationPanelSource).toContain("Animate this asset");
+        expect(assetGenerationPanelSource).toContain("frameCount");
+        expect(assetGenerationPanelSource).toContain("frameDurationMs");
+        expect(assetGenerationPanelSource).toContain("one horizontal sprite strip");
+        expect(entityUploadSource).toContain("animation={asset.animation}");
+    });
 });

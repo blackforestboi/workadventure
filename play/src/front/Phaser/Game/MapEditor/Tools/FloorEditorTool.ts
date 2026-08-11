@@ -747,6 +747,7 @@ export class FloorEditorTool extends MapEditorTool {
             image: tileset.url,
             imageWidth: tileset.width,
             imageHeight: tileset.height,
+            animation: tileset.animation,
         });
         const addedTileset = result.map.tilesets.find((candidate) => candidate.firstgid === result.firstGid);
         if (addedTileset === undefined) throw new Error("The terrain tileset could not be embedded");

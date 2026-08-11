@@ -1,15 +1,16 @@
 import * as Sentry from "@sentry/node";
 import { asError } from "catch-unknown";
+import {
+    VisualAssetAnimation,
+    type VisualAssetAnimation as VisualAssetAnimationValue,
+} from "@workadventure/map-editor";
 
 import type { TeapotIdentity } from "../../common/Teapot/TeapotIdentity";
 import type { TeapotDataRepository } from "./TeapotDataRepository";
 import type { TeapotAssetRecord, TeapotJsonValue } from "./TeapotRecords";
 import type { TeapotAuthorizationService } from "./TeapotAuthorizationService";
 import type { TeapotIdentityService } from "./TeapotIdentityService";
-import {
-    resolveTeapotOwnerIdentity,
-    TEAPOT_WORKADVENTURE_IDENTITY_PROVIDER,
-} from "./TeapotOwnerIdentityResolver";
+import { resolveTeapotOwnerIdentity, TEAPOT_WORKADVENTURE_IDENTITY_PROVIDER } from "./TeapotOwnerIdentityResolver";
 import { validateTeapotTilesetPng } from "./TeapotTilesetPngValidator";
 import type { TeapotWokaObjectStore } from "./TeapotWokaObjectStore";
 import { TeapotWokaValidationError } from "./TeapotWokaPngValidator";
@@ -25,6 +26,7 @@ export interface TeapotTilesetView {
     height: number;
     columns: number;
     rows: number;
+    animation?: VisualAssetAnimationValue;
     createdAt: string;
 }
 
@@ -47,12 +49,27 @@ export class TeapotTilesetService {
         this.publicPusherUrl = publicPusherUrl.replace(/\/+$/, "");
     }
 
-    async accept(providerSubject: string, requestedName: string, bytes: Buffer, provenance?: TeapotJsonValue) {
+    async accept(
+        providerSubject: string,
+        requestedName: string,
+        bytes: Buffer,
+        provenance?: TeapotJsonValue,
+        animation?: VisualAssetAnimationValue,
+    ) {
         const name = requestedName.trim();
         if (name.length === 0 || name.length > MAX_NAME_LENGTH) {
             throw new TeapotWokaValidationError(`Tileset name must be between 1 and ${MAX_NAME_LENGTH} characters`);
         }
         const validated = validateTeapotTilesetPng(bytes);
+        if (
+            animation !== undefined &&
+            (animation.frameWidth !== 32 ||
+                animation.frameHeight !== 32 ||
+                animation.frameCount !== validated.columns ||
+                validated.rows !== 1)
+        ) {
+            throw new TeapotWokaValidationError("Terrain animation metadata must match the 32px tileset grid");
+        }
         const owner = await this.resolveOwner(providerSubject);
         await this.authorization.assertCapability(owner.id, "asset.create");
         const objectReference = await this.objectStore.put(validated.bytes);
@@ -73,6 +90,7 @@ export class TeapotTilesetService {
                     rows: validated.rows,
                     tileWidth: 32,
                     tileHeight: 32,
+                    ...(animation === undefined ? {} : { animation }),
                     ...(provenance === undefined ? {} : { provenance }),
                 },
             });
@@ -121,9 +139,15 @@ export class TeapotTilesetService {
             height: readNumber(asset.metadata, "height"),
             columns: readNumber(asset.metadata, "columns"),
             rows: readNumber(asset.metadata, "rows"),
+            ...readAnimation(asset.metadata),
             createdAt: asset.createdAt,
         };
     }
+}
+
+function readAnimation(metadata: TeapotJsonValue): { animation?: VisualAssetAnimationValue } {
+    const parsed = VisualAssetAnimation.safeParse(readMetadata(metadata, "animation"));
+    return parsed.success ? { animation: parsed.data } : {};
 }
 
 function readNumber(metadata: TeapotJsonValue, key: string): number {

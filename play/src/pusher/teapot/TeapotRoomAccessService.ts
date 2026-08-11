@@ -10,6 +10,7 @@ export type TeapotRoomEditContext =
           successfulJoin: boolean;
           legacyCanEdit: boolean;
           legacyCanAdmin?: boolean;
+          isLogged?: boolean;
       }
     | {
           kind: "direct";
@@ -79,12 +80,17 @@ export class TeapotRoomAccessService {
         }
 
         if (input.context.kind === "wam" && input.context.legacyCanAdmin) return;
-        const everyoneEligible = input.context.kind === "direct" || input.context.successfulJoin;
+        const everyoneEligible =
+            input.context.kind === "direct" ||
+            (input.context.successfulJoin && input.context.isLogged !== false);
         if (await this.roleAllows(input.actorId, input.mapId, "admin", everyoneEligible)) return;
 
         const policy = await this.repository.getRoomAccessPolicy(input.mapId, "edit");
         if (policy === null) {
-            if (input.context.kind === "direct" || (input.context.successfulJoin && input.context.legacyCanEdit))
+            if (
+                input.context.kind === "direct" ||
+                (input.context.successfulJoin && input.context.isLogged !== false)
+            )
                 return;
         } else if (await this.policyAllows(input.actorId, input.mapId, "edit", policy.mode, everyoneEligible)) {
             return;

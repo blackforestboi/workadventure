@@ -1,3 +1,5 @@
+import type { VisualAssetAnimation } from "@workadventure/map-editor";
+
 export type AssetGenerationProviderId = "openrouter" | "codex-cli" | "claude-cli" | "fake";
 
 export type AssetGenerationTarget =
@@ -12,7 +14,14 @@ export type AssetGenerationTarget =
     | "tileset";
 
 export type AssetGenerationLifecycleState =
-    "idle" | "connecting" | "ready" | "generating" | "cancelling" | "cancelled" | "succeeded" | "failed";
+    | "idle"
+    | "connecting"
+    | "ready"
+    | "generating"
+    | "cancelling"
+    | "cancelled"
+    | "succeeded"
+    | "failed";
 
 export type AssetGenerationErrorCode =
     | "missing_credential"
@@ -70,6 +79,7 @@ export interface AssetGenerationRequest {
     aspectRatio?: string;
     quality?: "auto" | "low" | "medium" | "high";
     seed?: number;
+    animation?: VisualAssetAnimation;
 }
 
 export type AssetGenerationCost =
@@ -120,6 +130,7 @@ export interface GeneratedAsset {
     blob: Blob;
     mimeType: "image/png" | "image/jpeg" | "image/webp";
     revisedPrompt?: string;
+    animation?: VisualAssetAnimation;
 }
 
 export interface AssetGenerationResult {

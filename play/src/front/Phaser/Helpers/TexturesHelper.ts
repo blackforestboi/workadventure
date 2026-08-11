@@ -1,5 +1,10 @@
 import * as Phaser from "phaser";
 import { asError } from "catch-unknown";
+import {
+    isVisualAssetAnimationStatic,
+    toPhaserVisualAssetAnimationFrames,
+    type EntityPrefab,
+} from "@workadventure/map-editor";
 
 import Sprite = Phaser.GameObjects.Sprite;
 
@@ -82,15 +87,60 @@ export class TexturesHelper {
     }
 
     public static async loadEntityImage(scene: Phaser.Scene, key: string, url: string): Promise<void> {
+        return this.loadEntityTexture(scene, { imagePath: key }, url);
+    }
+
+    public static async loadEntityTexture(
+        scene: Phaser.Scene,
+        prefab: Pick<EntityPrefab, "imagePath" | "animation">,
+        url: string,
+    ): Promise<void> {
+        const key = prefab.imagePath;
         return new Promise<void>((resolve, reject) => {
             if (scene.textures.exists(key)) {
                 resolve();
+                return;
             }
-            scene.load.once(`filecomplete-image-${key}`, () => {
+            const animated = !isVisualAssetAnimationStatic(prefab.animation);
+            const fileType = animated ? "spritesheet" : "image";
+            scene.load.once(`filecomplete-${fileType}-${key}`, () => {
                 resolve();
             });
-            scene.load.image(key, url);
+            scene.load.once(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+                if (file.key === key) reject(new Error(`Could not load entity texture ${url}`));
+            });
+            if (animated && prefab.animation !== undefined) {
+                scene.load.spritesheet(key, url, {
+                    frameWidth: prefab.animation.frameWidth,
+                    frameHeight: prefab.animation.frameHeight,
+                });
+            } else {
+                scene.load.image(key, url);
+            }
             scene.load.start();
         });
+    }
+
+    public static playEntityAnimation(sprite: Sprite, prefab: EntityPrefab): void {
+        const animation = prefab.animation;
+        if (isVisualAssetAnimationStatic(animation) || animation === undefined) {
+            sprite.stop();
+            sprite.setFrame(0);
+            return;
+        }
+        if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+            sprite.stop();
+            sprite.setFrame(0);
+            return;
+        }
+        const animationKey = `entity:${prefab.collectionName}:${prefab.id}`;
+        if (!sprite.scene.anims.exists(animationKey)) {
+            sprite.scene.anims.create({
+                key: animationKey,
+                frames: toPhaserVisualAssetAnimationFrames(animation, prefab.imagePath),
+                repeat: -1,
+            });
+        }
+        sprite.play(animationKey, true);
     }
 }

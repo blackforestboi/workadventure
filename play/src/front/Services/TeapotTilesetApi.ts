@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+    VisualAssetAnimation,
+    type VisualAssetAnimation as VisualAssetAnimationValue,
+} from "@workadventure/map-editor";
 
 import { localUserStore } from "../Connection/LocalUserStore";
 import { ABSOLUTE_PUSHER_URL } from "../Enum/ComputedConst";
@@ -11,6 +15,7 @@ const TeapotTilesetViewSchema = z.object({
     height: z.number().int().positive(),
     columns: z.number().int().positive(),
     rows: z.number().int().positive(),
+    animation: VisualAssetAnimation.optional(),
     createdAt: z.string(),
 });
 const TeapotTilesetListSchema = z.object({ items: z.array(TeapotTilesetViewSchema) });
@@ -33,7 +38,12 @@ export class TeapotTilesetApi {
     async upload(
         blob: Blob,
         name: string,
-        provenance: { source: "generated" | "imported"; providerId?: string; modelId?: string },
+        provenance: {
+            source: "generated" | "imported";
+            providerId?: string;
+            modelId?: string;
+            animation?: VisualAssetAnimationValue;
+        },
         signal?: AbortSignal,
     ): Promise<TeapotTilesetView> {
         const url = new URL("teapot/tilesets", this.baseUrl);
@@ -41,6 +51,7 @@ export class TeapotTilesetApi {
         url.searchParams.set("source", provenance.source);
         if (provenance.providerId !== undefined) url.searchParams.set("providerId", provenance.providerId);
         if (provenance.modelId !== undefined) url.searchParams.set("modelId", provenance.modelId);
+        if (provenance.animation !== undefined) url.searchParams.set("animation", JSON.stringify(provenance.animation));
         return TeapotTilesetViewSchema.parse(
             await this.request(url, {
                 method: "POST",

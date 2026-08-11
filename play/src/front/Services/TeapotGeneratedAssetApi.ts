@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+    VisualAssetAnimation,
+    type VisualAssetAnimation as VisualAssetAnimationValue,
+} from "@workadventure/map-editor";
 
 import { localUserStore } from "../Connection/LocalUserStore";
 import { ABSOLUTE_PUSHER_URL } from "../Enum/ComputedConst";
@@ -11,6 +15,7 @@ const TeapotGeneratedAssetViewSchema = z.object({
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    animation: VisualAssetAnimation.optional(),
     createdAt: z.string(),
 });
 const TeapotGeneratedAssetListSchema = z.object({ items: z.array(TeapotGeneratedAssetViewSchema) });
@@ -31,7 +36,12 @@ export class TeapotGeneratedAssetApi {
         blob: Blob,
         name: string,
         kind: TeapotGeneratedAssetKind,
-        provenance: { source: "generated"; providerId?: string; modelId?: string },
+        provenance: {
+            source: "generated";
+            providerId?: string;
+            modelId?: string;
+            animation?: VisualAssetAnimationValue;
+        },
         signal?: AbortSignal,
     ): Promise<TeapotGeneratedAssetView> {
         const url = new URL("teapot/generated-assets", this.baseUrl);
@@ -40,6 +50,9 @@ export class TeapotGeneratedAssetApi {
         url.searchParams.set("source", provenance.source);
         if (provenance.providerId !== undefined) url.searchParams.set("providerId", provenance.providerId);
         if (provenance.modelId !== undefined) url.searchParams.set("modelId", provenance.modelId);
+        if (provenance.animation !== undefined) {
+            url.searchParams.set("animation", JSON.stringify(provenance.animation));
+        }
         return TeapotGeneratedAssetViewSchema.parse(
             await this.request(url, {
                 method: "POST",

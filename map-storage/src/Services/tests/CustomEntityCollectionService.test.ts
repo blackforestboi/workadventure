@@ -96,6 +96,18 @@ describe("CustomEntityCollectionService", () => {
         );
     });
 
+    it("persists optional animation metadata beside the entity image", async () => {
+        const animation = { frameWidth: 32, frameHeight: 32, frameCount: 4, frameDurationMs: 200 };
+        const service = new CustomEntityCollectionService("maps.example.test");
+
+        await service.uploadEntity({ ...uploadEntityMessage, animation });
+
+        const persistedCollection = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as {
+            collection: { animation?: unknown }[];
+        };
+        expect(persistedCollection.collection[0]?.animation).toEqual(animation);
+    });
+
     it("serializes collection updates across service instances for the same map", async () => {
         let persistedCollection = emptyCollection;
         let finishFirstWrite: (() => void) | undefined;
