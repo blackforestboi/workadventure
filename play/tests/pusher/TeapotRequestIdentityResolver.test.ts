@@ -33,15 +33,17 @@ describe("resolveTeapotRequestIdentity", () => {
     it("keeps resolving existing Teapot UUIDs directly", async () => {
         const identity = { id: "25f0c786-e1d0-4c20-9d81-d2eeb7113bd0" };
         const getIdentity = vi.fn().mockResolvedValue(identity);
+        const addRole = vi.fn();
         const resolveProviderIdentity = vi.fn();
         runtimeMocks.getTeapotDataServices.mockReturnValue({
-            repository: { getIdentity, addRole: vi.fn() },
+            repository: { getIdentity, addRole },
             identity: { resolveProviderIdentity },
         });
 
         await expect(resolveTeapotRequestIdentity(identity.id)).resolves.toBe(identity);
         expect(getIdentity).toHaveBeenCalledWith(identity.id);
         expect(resolveProviderIdentity).not.toHaveBeenCalled();
+        expect(addRole).toHaveBeenCalledWith(identity.id, "creator");
     });
 
     it("does not grant the default creator role to a guest identity", async () => {

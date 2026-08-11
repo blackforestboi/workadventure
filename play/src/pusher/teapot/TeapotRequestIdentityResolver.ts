@@ -10,9 +10,14 @@ export async function resolveTeapotRequestIdentity(
     grantDefaultCreatorRole = true,
 ): Promise<TeapotIdentity> {
     const services = getTeapotDataServices();
+    const shouldGrantDefaultCreatorRole =
+        grantDefaultCreatorRole && (MAP_EDITOR_ALLOW_ALL_USERS || MAP_EDITOR_ALLOWED_USERS.includes(identifier));
     if (isTeapotIdentityId(identifier)) {
         const internalIdentity = await services.repository.getIdentity(identifier);
-        if (internalIdentity !== null) return internalIdentity;
+        if (internalIdentity !== null) {
+            if (shouldGrantDefaultCreatorRole) await services.repository.addRole(internalIdentity.id, "creator");
+            return internalIdentity;
+        }
     }
 
     const identity = await services.identity.resolveProviderIdentity({
@@ -20,7 +25,7 @@ export async function resolveTeapotRequestIdentity(
         providerSubject: identifier,
         ...(displayName === undefined ? {} : { displayName }),
     });
-    if (grantDefaultCreatorRole && (MAP_EDITOR_ALLOW_ALL_USERS || MAP_EDITOR_ALLOWED_USERS.includes(identifier))) {
+    if (shouldGrantDefaultCreatorRole) {
         await services.repository.addRole(identity.id, "creator");
     }
     return identity;
