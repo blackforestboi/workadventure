@@ -76,6 +76,31 @@ export interface TeapotMapWriterLease {
     createdAt: string;
 }
 
+export const TEAPOT_ROOM_EDITOR_MODES = ["everyone", "specific", "nobody"] as const;
+
+export type TeapotRoomEditorMode = (typeof TEAPOT_ROOM_EDITOR_MODES)[number];
+
+export interface TeapotRoomEditorPolicyRecord {
+    mapId: string;
+    mode: TeapotRoomEditorMode;
+    version: number;
+    updatedBy: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface TeapotRoomEditorGrantRecord {
+    mapId: string;
+    userId: string;
+    grantedBy: string | null;
+    createdAt: string;
+}
+
+export interface TeapotRoomEditorAccessRecord {
+    policy: TeapotRoomEditorPolicyRecord;
+    grants: TeapotRoomEditorGrantRecord[];
+}
+
 export interface TeapotMcpSessionRecord {
     id: string;
     ownerId: string;
@@ -201,7 +226,7 @@ export interface TeapotCapabilityGrant {
 }
 
 export interface TeapotDataExport {
-    schemaVersion: 2;
+    schemaVersion: 2 | 3;
     exportedAt: string;
     users: TeapotIdentity[];
     providerLinks: TeapotProviderLink[];
@@ -213,6 +238,8 @@ export interface TeapotDataExport {
     activeWokaSelections: TeapotActiveWokaSelectionRecord[];
     mapRevisions: TeapotMapRevisionRecord[];
     writerLeases: TeapotMapWriterLease[];
+    roomEditorPolicies?: TeapotRoomEditorPolicyRecord[];
+    roomEditorGrants?: TeapotRoomEditorGrantRecord[];
     mcpSessions: TeapotMcpSessionRecord[];
     mcpProposals: TeapotMcpProposalRecord[];
     mcpApprovals: TeapotMcpApprovalRecord[];

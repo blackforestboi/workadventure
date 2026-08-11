@@ -31,6 +31,15 @@ export interface BeginWamMutationInput {
     roomId: string;
     actorIdentifier: string;
     authToken?: string;
+    legacyCanEdit: boolean;
+}
+
+export interface ResolveWamJoinAccessInput {
+    roomId: string;
+    actorIdentifier: string;
+    authToken?: string;
+    legacyCanEdit: boolean;
+    managementUiAccess: boolean;
 }
 
 export interface TeapotMapUrlResolver {
@@ -92,6 +101,31 @@ export class TeapotWamRevisionCoordinator {
         ) => Promise<TeapotIdentity> = resolveTeapotRequestIdentity,
     ) {}
 
+    public async resolveJoinCanEdit(input: ResolveWamJoinAccessInput): Promise<boolean> {
+        try {
+            const mapId = await this.mapUrlResolver.resolve(input.roomId, input.authToken);
+            const dataServices = this.services();
+            if ((await dataServices.repository.getRoomEditorPolicy(mapId)) === null) {
+                return input.legacyCanEdit || input.managementUiAccess;
+            }
+            if (input.managementUiAccess) return true;
+            if (input.actorIdentifier.trim().length === 0) return false;
+            const identity = await this.identityResolver(input.actorIdentifier);
+            await dataServices.roomAccess.assertCanEdit({
+                actorId: identity.id,
+                mapId,
+                context: {
+                    kind: "wam",
+                    successfulJoin: true,
+                    legacyCanEdit: input.legacyCanEdit,
+                },
+            });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     public async begin(input: BeginWamMutationInput): Promise<void> {
         if (input.commandId.trim().length === 0) throw new Error("Map commands require a command ID");
         const duplicate = this.pending.get(input.commandId);
@@ -125,7 +159,11 @@ export class TeapotWamRevisionCoordinator {
                 expectedRevision: current.revision,
                 source: "wam",
                 leaseTtlMs: COMMAND_TIMEOUT_MS + 5_000,
-                requiredCapability: "map.edit",
+                editContext: {
+                    kind: "wam",
+                    successfulJoin: true,
+                    legacyCanEdit: input.legacyCanEdit,
+                },
             });
         } catch (error: unknown) {
             releaseQueue();

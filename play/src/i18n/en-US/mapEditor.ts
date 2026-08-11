@@ -483,6 +483,59 @@ const mapEditor: BaseTranslation = {
                 },
             },
         },
+        editorAccess: {
+            title: "Editor access",
+            description: "Choose who can edit this room. Viewing the room is not affected.",
+            loading: "Loading editor access…",
+            modeLabel: "Who can edit?",
+            legacyNotice:
+                "This room still uses the platform's existing editor rules. Saving here will enable room-specific editor access.",
+            modes: {
+                everyone: {
+                    title: "Everyone",
+                    description: "Everyone who successfully joins this room can edit it.",
+                },
+                specific: {
+                    title: "Specific people",
+                    description: "Only the identifiers listed below can edit this room.",
+                },
+                nobody: {
+                    title: "No one",
+                    description: "No ordinary room member can edit this room.",
+                },
+            },
+            identifier: {
+                label: "Exact user identifier",
+                placeholder: "user@example.com",
+            },
+            displayName: {
+                label: "Display label (optional)",
+                placeholder: "Alex",
+            },
+            editorListLabel: "People allowed to edit this room",
+            emptySpecificList: "No specific editors have been added yet.",
+            adminNotice:
+                "Room admins can manage this setting, but being an admin does not automatically allow editing.",
+            reconnectNotice: "Newly allowed editors may need to reconnect before the editor controls appear.",
+            saved: "Editor access saved.",
+            actions: {
+                add: "Add person",
+                remove: "Remove {identifier}",
+                removeLabel: "Remove",
+                reload: "Reload latest settings",
+                retry: "Try again",
+                save: "Save editor access",
+                saving: "Saving…",
+            },
+            errors: {
+                load: "Editor access could not be loaded.",
+                save: "Editor access could not be saved. Your changes are still here.",
+                conflict:
+                    "Another admin changed editor access while you were editing. Your changes are still here; reload the latest settings before trying again.",
+                identifierRequired: "Enter an exact user identifier.",
+                duplicateIdentifier: "That identifier is already in the list.",
+            },
+        },
         room: {
             title: "Room Settings",
             description: "Configure your room",

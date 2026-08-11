@@ -17,8 +17,12 @@ const mcpMocks = vi.hoisted(() => ({
 vi.mock("../../src/pusher/middlewares/Authenticated", () => authMocks);
 vi.mock("../../src/pusher/middlewares/TeapotAuthoringMiddleware", () => authoringMocks);
 vi.mock("../../src/pusher/enums/EnvironmentVariable", () => ({
+    MAP_EDITOR_ALLOW_ALL_USERS: false,
     TEAPOT_REQUIRE_PERSISTENCE: false,
     TEAPOT_WOKA_STORAGE_DIRECTORY: "/tmp/teapot-authoring-route-test",
+}));
+vi.mock("../../src/pusher/services/AdminService", () => ({
+    adminService: { fetchMemberDataByUuid: vi.fn() },
 }));
 vi.mock("../../src/pusher/teapot/TeapotDataRuntime", () => ({
     getTeapotDataRuntimeStatus: () => ({ initialized: true, durable: false }),
@@ -44,6 +48,7 @@ import {
 import { TeapotGeneratedAssetController } from "../../src/pusher/controllers/TeapotGeneratedAssetController";
 import { TeapotHealthController } from "../../src/pusher/controllers/TeapotHealthController";
 import { TeapotMapController } from "../../src/pusher/controllers/TeapotMapController";
+import { TeapotRoomEditorAccessController } from "../../src/pusher/controllers/TeapotRoomEditorAccessController";
 import { TeapotMcpController } from "../../src/pusher/controllers/TeapotMcpController";
 import { TeapotTilesetController } from "../../src/pusher/controllers/TeapotTilesetController";
 import { TeapotWokaController } from "../../src/pusher/controllers/TeapotWokaController";
@@ -107,6 +112,11 @@ function expectPublicRoute(app: RouteRecordingApp, path: string): void {
     expect(routeMiddleware(app, "GET", path)).toEqual([]);
 }
 
+function expectAuthenticatedRoute(app: RouteRecordingApp, method: HttpMethod, path: string): void {
+    const route = app.routes.get(`${method} ${path}`);
+    expect(route?.[0]).toBe(authenticated);
+}
+
 describe("Teapot authoring route coverage", () => {
     beforeEach(() => vi.clearAllMocks());
 
@@ -114,6 +124,7 @@ describe("Teapot authoring route coverage", () => {
         const app = new RouteRecordingApp();
         const application = app as unknown as Application;
         new TeapotMapController(application);
+        new TeapotRoomEditorAccessController(application);
         new TeapotWokaController(application, {} as TeapotWokaService);
         new TeapotTilesetController(application, {} as TeapotTilesetService);
         new TeapotGeneratedAssetController(application, {} as TeapotGeneratedAssetService);
@@ -149,6 +160,9 @@ describe("Teapot authoring route coverage", () => {
             ["POST", "/teapot/mcp/browser/proposals/:proposalId/complete-paid-generation"],
         ];
         for (const [method, path] of authoringRoutes) expectAuthoringRoute(app, method, path);
+
+        expectAuthenticatedRoute(app, "GET", "/teapot/rooms/editor-access");
+        expectAuthenticatedRoute(app, "PUT", "/teapot/rooms/editor-access");
 
         expectPublicRoute(app, "/teapot/woka-assets/:assetId.png");
         expectPublicRoute(app, "/teapot/tileset-assets/:assetId.png");

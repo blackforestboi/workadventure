@@ -1,6 +1,8 @@
 import type { DeepPartial } from "../DeepPartial";
 import type { Translation } from "../i18n-types";
 
+import enMapEditor from "../en-US/mapEditor";
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
     map: {
         refreshPrompt: "Nowa wersija karty so namakała. Aktualizacija je trěbna",
@@ -427,6 +429,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         },
     },
     settings: {
+        editorAccess: (enMapEditor as Translation["mapEditor"]).settings.editorAccess,
         loading: "Laden...",
         megaphone: {
             title: "Megaphon",

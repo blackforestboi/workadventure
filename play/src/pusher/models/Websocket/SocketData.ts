@@ -44,6 +44,8 @@ export type ConnectingSocketData = {
     activatedInviteUser: boolean | undefined;
     applications?: Array<ApplicationDefinitionInterface> | null;
     canEdit: boolean;
+    /** Original admin-service edit decision, kept separate from join-only settings visibility. */
+    legacyCanEdit: boolean;
     spaceUserId: string;
     backConnection?: BackConnection;
     listenedZones: Set<string>;

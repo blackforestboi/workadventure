@@ -14,6 +14,7 @@
     import Button from "../UI/Button.svelte";
     import Megaphone from "./ConfigureMyRoom/Megaphone.svelte";
     import RecordingSettings from "./ConfigureMyRoom/RecordingSettings.svelte";
+    import RoomEditorAccessSettings from "./ConfigureMyRoom/RoomEditorAccessSettings.svelte";
     import RoomSettings from "./ConfigureMyRoom/RoomSettings.svelte";
 
     import { IconChevronRight } from "@wa-icons";
@@ -45,6 +46,9 @@
             }
             case WAM_SETTINGS_EDITOR_TOOL_MENU_ITEM.RoomSettings: {
                 return RoomSettings;
+            }
+            case WAM_SETTINGS_EDITOR_TOOL_MENU_ITEM.EditorAccess: {
+                return RoomEditorAccessSettings;
             }
             default: {
                 return RoomSettings; // Default appropriate component.
@@ -85,6 +89,19 @@
                                     )}
                             >
                                 <span>{$LL.mapEditor.settings.room.title()}</span>
+                                <IconChevronRight class="-mr-2" />
+                            </li>
+                            <!-- svelte-ignore a11y_click_events_have_key_events -->
+                            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                            <li
+                                class:selected={$mapEditorWamSettingsEditorToolCurrentMenuItemStore ===
+                                    WAM_SETTINGS_EDITOR_TOOL_MENU_ITEM.EditorAccess}
+                                onclick={() =>
+                                    mapEditorWamSettingsEditorToolCurrentMenuItemStore.set(
+                                        WAM_SETTINGS_EDITOR_TOOL_MENU_ITEM.EditorAccess,
+                                    )}
+                            >
+                                <span>{$LL.mapEditor.settings.editorAccess.title()}</span>
                                 <IconChevronRight class="-mr-2" />
                             </li>
                         {/if}

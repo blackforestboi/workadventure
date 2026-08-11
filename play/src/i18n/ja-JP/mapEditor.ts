@@ -1,6 +1,8 @@
 import type { DeepPartial } from "../DeepPartial";
 import type { Translation } from "../i18n-types";
 
+import enMapEditor from "../en-US/mapEditor";
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
     map: {
         refreshPrompt: "新しいバージョンの地図が検出されました。更新してください。",
@@ -427,6 +429,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         },
     },
     settings: {
+        editorAccess: (enMapEditor as Translation["mapEditor"]).settings.editorAccess,
         loading: "読み込み",
         megaphone: {
             title: "メガホン",

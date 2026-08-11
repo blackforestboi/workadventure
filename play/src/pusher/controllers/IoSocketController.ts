@@ -470,6 +470,15 @@ export class IoSocketController {
                         throw new Error("User cannot access this world", { cause: e });
                     }
 
+                    const legacyCanEdit = userData.canEdit ?? false;
+                    userData.canEdit = await teapotWamRevisionCoordinator.resolveJoinCanEdit({
+                        roomId,
+                        actorIdentifier: userData.userUuid,
+                        authToken: tokenData?.accessToken,
+                        legacyCanEdit,
+                        managementUiAccess: memberTags.includes("admin"),
+                    });
+
                     if (isAborted()) {
                         console.info("Ouch! Client disconnected before we could upgrade it!");
                         /* You must not upgrade now */
@@ -496,6 +505,7 @@ export class IoSocketController {
                         activatedInviteUser: userData.activatedInviteUser ?? undefined,
                         applications: userData.applications,
                         canEdit: userData.canEdit ?? false,
+                        legacyCanEdit,
                         spaceUserId: "",
                         backConnection: undefined,
                         listenedZones: new Set<string>(),
@@ -1118,6 +1128,7 @@ export class IoSocketController {
                                         roomId: socketData.roomId,
                                         actorIdentifier: socketData.userUuid,
                                         authToken: socketData.token,
+                                        legacyCanEdit: socketData.legacyCanEdit,
                                     });
                                     socketManager.forwardMessageToBack(socket, message.message);
                                 } catch (error: unknown) {

@@ -74,6 +74,7 @@ export enum WAM_SETTINGS_EDITOR_TOOL_MENU_ITEM {
     Megaphone = "Megaphone",
     Recording = "Recording",
     RoomSettings = "Room Settings",
+    EditorAccess = "Editor Access",
     MatrixRoomList = "Matrix Room List",
 }
 

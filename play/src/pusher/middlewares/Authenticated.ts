@@ -7,6 +7,9 @@ export type ResponseWithUserIdentifier = Response & {
     userIdentifier?: string;
     isLogged?: boolean;
     authProvider?: AuthTokenData["authProvider"];
+    accessToken?: string;
+    username?: string;
+    tags?: string[];
 };
 
 export async function authenticated(req: Request, res: ResponseWithUserIdentifier, next: NextFunction): Promise<void> {
@@ -22,6 +25,9 @@ export async function authenticated(req: Request, res: ResponseWithUserIdentifie
         res.userIdentifier = jwtData.identifier;
         res.isLogged = !!jwtData.accessToken || jwtData.authProvider !== undefined;
         res.authProvider = jwtData.authProvider;
+        res.accessToken = jwtData.accessToken;
+        res.username = jwtData.username;
+        res.tags = jwtData.tags;
     } catch (e) {
         // Authorization tokens are credentials. Record the failure without ever
         // interpolating the bearer value into logs or error telemetry.

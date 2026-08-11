@@ -28,6 +28,10 @@ import type {
     TeapotMcpProposalState,
     TeapotMcpSessionRecord,
     TeapotOAuthStateRecord,
+    TeapotRoomEditorAccessRecord,
+    TeapotRoomEditorGrantRecord,
+    TeapotRoomEditorMode,
+    TeapotRoomEditorPolicyRecord,
 } from "./TeapotRecords";
 
 export interface ResolveTeapotIdentityInput {
@@ -74,6 +78,14 @@ export interface CommitTeapotMapWriterLeaseInput {
     leaseToken: string;
     writerId: string;
     objectReference?: string;
+}
+
+export interface ReplaceTeapotRoomEditorPolicyInput {
+    mapId: string;
+    mode: TeapotRoomEditorMode;
+    expectedVersion: number | null;
+    editorIds: string[];
+    actorId: string;
 }
 
 export interface CreateTeapotMcpSessionInput {
@@ -177,6 +189,7 @@ export interface TeapotDataRepository {
     getIdentity(userId: string): Promise<TeapotIdentity | null>;
     updateAdmissionState(userId: string, admissionState: TeapotIdentity["admissionState"]): Promise<TeapotIdentity>;
     findProviderLink(provider: string, providerSubject: string): Promise<TeapotProviderLink | null>;
+    findProviderLinkForUser(userId: string, provider: string): Promise<TeapotProviderLink | null>;
     hasProviderLink(userId: string, provider: string): Promise<boolean>;
     linkProvider(userId: string, provider: string, providerSubject: string): Promise<TeapotProviderLink>;
 
@@ -202,6 +215,9 @@ export interface TeapotDataRepository {
     acquireMapWriterLease(input: AcquireTeapotMapWriterLeaseInput): Promise<TeapotMapWriterLease>;
     commitMapWriterLease(input: CommitTeapotMapWriterLeaseInput): Promise<TeapotMapRevisionRecord>;
     releaseMapWriterLease(mapId: string, leaseToken: string, writerId: string): Promise<void>;
+    getRoomEditorPolicy(mapId: string): Promise<TeapotRoomEditorPolicyRecord | null>;
+    listRoomEditorGrants(mapId: string): Promise<TeapotRoomEditorGrantRecord[]>;
+    replaceRoomEditorPolicy(input: ReplaceTeapotRoomEditorPolicyInput): Promise<TeapotRoomEditorAccessRecord>;
 
     createMcpSession(input: CreateTeapotMcpSessionInput): Promise<TeapotMcpSessionRecord>;
     getMcpSession(sessionId: string): Promise<TeapotMcpSessionRecord | null>;

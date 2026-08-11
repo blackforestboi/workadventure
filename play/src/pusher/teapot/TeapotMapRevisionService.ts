@@ -1,7 +1,7 @@
 import type { TeapotCapability } from "../../common/Teapot/TeapotIdentity";
 import type { TeapotDataRepository } from "./TeapotDataRepository";
 import type { TeapotMapMutationSource, TeapotMapRevisionRecord, TeapotMapWriterLease } from "./TeapotRecords";
-import type { TeapotAuthorizationService } from "./TeapotAuthorizationService";
+import type { TeapotRoomAccessService, TeapotRoomEditContext } from "./TeapotRoomAccessService";
 
 export interface TeapotMapMutationInput {
     actorId: string;
@@ -10,6 +10,7 @@ export interface TeapotMapMutationInput {
     source: TeapotMapMutationSource;
     leaseTtlMs?: number;
     requiredCapability?: TeapotCapability;
+    editContext?: TeapotRoomEditContext;
 }
 
 export interface TeapotMapMutationResult<T> {
@@ -26,11 +27,18 @@ export interface TeapotCommittedMapMutation<T> {
 export class TeapotMapRevisionService {
     constructor(
         private readonly repository: TeapotDataRepository,
-        private readonly authorization: TeapotAuthorizationService,
+        private readonly roomAccess: TeapotRoomAccessService,
     ) {}
 
     async acquire(input: TeapotMapMutationInput): Promise<TeapotMapWriterLease> {
-        await this.authorization.assertCapability(input.actorId, input.requiredCapability ?? "map.edit");
+        await this.roomAccess.assertCanEdit({
+            actorId: input.actorId,
+            mapId: input.mapId,
+            context: input.editContext ?? {
+                kind: "direct",
+                requiredCapability: input.requiredCapability ?? "map.edit",
+            },
+        });
         return this.repository.acquireMapWriterLease({
             mapId: input.mapId,
             writerId: input.actorId,

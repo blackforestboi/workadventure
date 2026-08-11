@@ -34,6 +34,7 @@ import type {
     CreateTeapotMcpProposalInput,
     CreateTeapotOAuthStateInput,
     ResolveTeapotIdentityInput,
+    ReplaceTeapotRoomEditorPolicyInput,
     TransitionTeapotMcpProposalInput,
     TeapotDataRepository,
 } from "./TeapotDataRepository";
@@ -57,6 +58,9 @@ import type {
     TeapotMcpProposalRecord,
     TeapotMcpSessionRecord,
     TeapotOAuthStateRecord,
+    TeapotRoomEditorAccessRecord,
+    TeapotRoomEditorGrantRecord,
+    TeapotRoomEditorPolicyRecord,
     TeapotRoleAssignment,
 } from "./TeapotRecords";
 
@@ -77,6 +81,8 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
     private readonly activeWokaSelections = new Map<string, TeapotActiveWokaSelectionRecord>();
     private readonly mapRevisions = new Map<string, TeapotMapRevisionRecord>();
     private readonly writerLeases = new Map<string, TeapotMapWriterLease>();
+    private readonly roomEditorPolicies = new Map<string, TeapotRoomEditorPolicyRecord>();
+    private readonly roomEditorGrants = new Map<string, TeapotRoomEditorGrantRecord>();
     private readonly mcpSessions = new Map<string, TeapotMcpSessionRecord>();
     private readonly mcpSessionIdsByTokenHash = new Map<string, string>();
     private readonly mcpProposals = new Map<string, TeapotMcpProposalRecord>();
@@ -144,6 +150,13 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
 
     async findProviderLink(provider: string, providerSubject: string): Promise<TeapotProviderLink | null> {
         return this.providerLinks.get(this.providerKey(provider, providerSubject)) ?? null;
+    }
+
+    async findProviderLinkForUser(userId: string, provider: string): Promise<TeapotProviderLink | null> {
+        return (
+            [...this.providerLinks.values()].find((link) => link.userId === userId && link.provider === provider) ??
+            null
+        );
     }
 
     async hasProviderLink(userId: string, provider: string): Promise<boolean> {
@@ -517,6 +530,59 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
         if (lease?.leaseToken === leaseToken && lease.writerId === writerId) {
             this.writerLeases.delete(mapId);
         }
+    }
+
+    async getRoomEditorPolicy(mapId: string): Promise<TeapotRoomEditorPolicyRecord | null> {
+        const policy = this.roomEditorPolicies.get(mapId);
+        return policy === undefined ? null : structuredClone(policy);
+    }
+
+    async listRoomEditorGrants(mapId: string): Promise<TeapotRoomEditorGrantRecord[]> {
+        return structuredClone(
+            this.sorted(
+                [...this.roomEditorGrants.values()].filter((grant) => grant.mapId === mapId),
+                (grant) => grant.userId,
+            ),
+        );
+    }
+
+    async replaceRoomEditorPolicy(input: ReplaceTeapotRoomEditorPolicyInput): Promise<TeapotRoomEditorAccessRecord> {
+        this.requireIdentity(input.actorId);
+        const editorIds = [...new Set(input.editorIds)].sort();
+        for (const editorId of editorIds) this.requireIdentity(editorId);
+
+        const existing = this.roomEditorPolicies.get(input.mapId);
+        if (
+            (existing === undefined && input.expectedVersion !== null) ||
+            (existing !== undefined && existing.version !== input.expectedVersion)
+        ) {
+            throw new TeapotDataConflictError(`Room editor policy ${input.mapId} changed before it could be saved`);
+        }
+
+        const timestamp = this.nowIso();
+        const policy: TeapotRoomEditorPolicyRecord = {
+            mapId: input.mapId,
+            mode: input.mode,
+            version: (existing?.version ?? 0) + 1,
+            updatedBy: input.actorId,
+            createdAt: existing?.createdAt ?? timestamp,
+            updatedAt: timestamp,
+        };
+
+        for (const key of this.roomEditorGrants.keys()) {
+            if (key.startsWith(`${input.mapId}\u0000`)) this.roomEditorGrants.delete(key);
+        }
+        const grants = editorIds.map<TeapotRoomEditorGrantRecord>((userId) => ({
+            mapId: input.mapId,
+            userId,
+            grantedBy: input.actorId,
+            createdAt: timestamp,
+        }));
+        this.roomEditorPolicies.set(input.mapId, policy);
+        for (const grant of grants) {
+            this.roomEditorGrants.set(`${grant.mapId}\u0000${grant.userId}`, grant);
+        }
+        return structuredClone({ policy, grants });
     }
 
     async createMcpSession(input: CreateTeapotMcpSessionInput): Promise<TeapotMcpSessionRecord> {
@@ -912,7 +978,7 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
 
     async exportData(): Promise<TeapotDataExport> {
         return structuredClone({
-            schemaVersion: 2,
+            schemaVersion: 3,
             exportedAt: this.nowIso(),
             users: this.sorted(this.users.values(), (record) => record.id),
             providerLinks: this.sorted(this.providerLinks.values(), (record) =>
@@ -932,6 +998,11 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             activeWokaSelections: this.sorted(this.activeWokaSelections.values(), (record) => record.ownerId),
             mapRevisions: this.sorted(this.mapRevisions.values(), (record) => record.mapId),
             writerLeases: this.sorted(this.writerLeases.values(), (record) => record.mapId),
+            roomEditorPolicies: this.sorted(this.roomEditorPolicies.values(), (record) => record.mapId),
+            roomEditorGrants: this.sorted(
+                this.roomEditorGrants.values(),
+                (record) => `${record.mapId}:${record.userId}`,
+            ),
             mcpSessions: this.sorted(this.mcpSessions.values(), (record) => record.id),
             mcpProposals: this.sorted(this.mcpProposals.values(), (record) => record.id),
             mcpApprovals: this.sorted(this.mcpApprovals.values(), (record) => record.id),
@@ -944,7 +1015,7 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
     }
 
     async restoreData(data: TeapotDataExport): Promise<void> {
-        if (data.schemaVersion !== 2) {
+        if (data.schemaVersion !== 2 && data.schemaVersion !== 3) {
             throw new TeapotRestoreConflictError(`Unsupported Teapot export schema ${String(data.schemaVersion)}`);
         }
         if (!this.isEmpty()) {
@@ -982,6 +1053,26 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
         }
         for (const revision of data.mapRevisions) this.mapRevisions.set(revision.mapId, structuredClone(revision));
         for (const lease of data.writerLeases) this.writerLeases.set(lease.mapId, structuredClone(lease));
+        for (const policy of data.roomEditorPolicies ?? []) {
+            if (policy.updatedBy !== null && !this.users.has(policy.updatedBy)) {
+                throw new TeapotRestoreConflictError(
+                    `Room editor policy ${policy.mapId} references an invalid updater`,
+                );
+            }
+            this.roomEditorPolicies.set(policy.mapId, structuredClone(policy));
+        }
+        for (const grant of data.roomEditorGrants ?? []) {
+            if (
+                !this.roomEditorPolicies.has(grant.mapId) ||
+                !this.users.has(grant.userId) ||
+                (grant.grantedBy !== null && !this.users.has(grant.grantedBy))
+            ) {
+                throw new TeapotRestoreConflictError(
+                    `Room editor grant ${grant.mapId}:${grant.userId} references invalid data`,
+                );
+            }
+            this.roomEditorGrants.set(`${grant.mapId}\u0000${grant.userId}`, structuredClone(grant));
+        }
         for (const session of data.mcpSessions) {
             this.mcpSessions.set(session.id, structuredClone(session));
             this.mcpSessionIdsByTokenHash.set(session.tokenHash, session.id);
@@ -1039,6 +1130,8 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             this.activeWokaSelections.size === 0 &&
             this.mapRevisions.size === 0 &&
             this.writerLeases.size === 0 &&
+            this.roomEditorPolicies.size === 0 &&
+            this.roomEditorGrants.size === 0 &&
             this.mcpSessions.size === 0 &&
             this.mcpProposals.size === 0 &&
             this.mcpApprovals.size === 0 &&

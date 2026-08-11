@@ -126,7 +126,7 @@ export class TeapotMcpAuthoringService {
     }
 
     async mapSummary(session: TeapotMcpSessionContext, mapUrl: string) {
-        await getTeapotDataServices().authorization.assertCapability(session.ownerId, "map.edit");
+        await this.assertMapEditAccess(session.ownerId, mapUrl, "map.edit");
         const [revision, map] = await Promise.all([
             teapotMapPublicationService.currentRevision(mapUrl),
             teapotMapPublicationService.readMap(mapUrl),
@@ -135,9 +135,9 @@ export class TeapotMcpAuthoringService {
     }
 
     async validateMapPatch(session: TeapotMcpSessionContext, uncheckedPatch: unknown): Promise<TeapotPatchValidation> {
-        await getTeapotDataServices().authorization.assertCapability(session.ownerId, "map.edit");
         const parsed = TeapotMapPatch.safeParse(uncheckedPatch);
         if (!parsed.success) throw new TeapotMcpAuthoringError("The structured map patch is invalid", 400);
+        await this.assertMapEditAccess(session.ownerId, parsed.data.mapUrl, "map.edit");
         const [revision, map] = await Promise.all([
             teapotMapPublicationService.currentRevision(parsed.data.mapUrl),
             teapotMapPublicationService.readMap(parsed.data.mapUrl),
@@ -204,7 +204,7 @@ export class TeapotMcpAuthoringService {
             rationale: string;
         },
     ): Promise<PublicTeapotMcpProposal> {
-        await getTeapotDataServices().authorization.assertCapability(session.ownerId, "map.publish");
+        await this.assertMapEditAccess(session.ownerId, input.mapUrl, "map.publish");
         const current = await teapotMapPublicationService.currentRevision(input.mapUrl);
         if (current.revision !== input.expectedRevision) {
             throw new TeapotMcpAuthoringError(`The map is now at revision ${current.revision}`, 409);
@@ -258,6 +258,7 @@ export class TeapotMcpAuthoringService {
             throw new TeapotMcpAuthoringError(`Only a pending proposal can be approved; it is ${live.state}`, 409);
         }
         if (live.mapUrl !== null && live.expectedRevision !== null) {
+            await this.assertMapEditAccess(ownerId, live.mapUrl, "map.publish");
             const current = await teapotMapPublicationService.currentRevision(live.mapUrl);
             if (current.revision !== live.expectedRevision) {
                 const stale = await this.transition(live, "stale", `Map revision advanced to ${current.revision}`);
@@ -323,6 +324,11 @@ export class TeapotMcpAuthoringService {
                 409,
             );
         }
+        await this.assertMapEditAccess(
+            session.ownerId,
+            parsedPayload.kind === "map-patch" ? parsedPayload.patch.mapUrl : parsedPayload.mapUrl,
+            "map.publish",
+        );
         await this.consumeApproval(live, payload, approvalToken);
         try {
             let result: TeapotJsonValue;
@@ -459,6 +465,18 @@ export class TeapotMcpAuthoringService {
         if (!isCanonicalAssetUrl(result.assetUrl, result.assetId, expectedKind)) {
             throw new TeapotMcpAuthoringError("The saved asset URL is not the canonical Teapot asset URL", 409);
         }
+    }
+
+    private assertMapEditAccess(
+        actorId: string,
+        mapId: string,
+        requiredCapability: "map.edit" | "map.publish",
+    ): Promise<void> {
+        return getTeapotDataServices().roomAccess.assertCanEdit({
+            actorId,
+            mapId,
+            context: { kind: "direct", requiredCapability },
+        });
     }
 
     private async createProposal(

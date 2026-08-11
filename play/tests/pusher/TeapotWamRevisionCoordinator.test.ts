@@ -7,7 +7,7 @@ vi.mock("../../src/pusher/enums/EnvironmentVariable", () => import("./mocks/push
 
 import { createTeapotDataServices } from "../../src/pusher/teapot/createTeapotDataServices";
 import { InMemoryTeapotDataRepository } from "../../src/pusher/teapot/InMemoryTeapotDataRepository";
-import { TeapotMapWriterLeaseConflictError } from "../../src/pusher/teapot/TeapotDataErrors";
+import { TeapotAuthorizationError, TeapotMapWriterLeaseConflictError } from "../../src/pusher/teapot/TeapotDataErrors";
 import { TeapotWamRevisionCoordinator } from "../../src/pusher/teapot/TeapotWamRevisionCoordinator";
 
 async function setup() {
@@ -34,6 +34,7 @@ describe("TeapotWamRevisionCoordinator", () => {
             commandId: "command-1",
             roomId: "https://play.test/~/world.wam",
             actorIdentifier: identity.id,
+            legacyCanEdit: true,
         });
         await expect(
             services.mapRevisions.acquire({
@@ -59,6 +60,7 @@ describe("TeapotWamRevisionCoordinator", () => {
             commandId: "command-rejected",
             roomId: "https://play.test/~/world.wam",
             actorIdentifier: identity.id,
+            legacyCanEdit: true,
         });
         await coordinator.acknowledgeFailure("command-rejected");
 
@@ -77,8 +79,13 @@ describe("TeapotWamRevisionCoordinator", () => {
         const { coordinator, identity, repository } = await setup();
         const roomId = "https://play.test/~/world.wam";
 
-        await coordinator.begin({ commandId: "command-1", roomId, actorIdentifier: identity.id });
-        const secondBegin = coordinator.begin({ commandId: "command-2", roomId, actorIdentifier: identity.id });
+        await coordinator.begin({ commandId: "command-1", roomId, actorIdentifier: identity.id, legacyCanEdit: true });
+        const secondBegin = coordinator.begin({
+            commandId: "command-2",
+            roomId,
+            actorIdentifier: identity.id,
+            legacyCanEdit: true,
+        });
         let secondStarted = false;
         secondBegin
             .then(() => {
@@ -93,5 +100,51 @@ describe("TeapotWamRevisionCoordinator", () => {
         await coordinator.acknowledgeSuccess("command-2");
 
         expect((await repository.getMapRevision("https://maps.test/world.tmj")).revision).toBe(2);
+    });
+
+    it("fails closed for editor controls when join canonicalization fails", async () => {
+        const { identity, services } = await setup();
+        const coordinator = new TeapotWamRevisionCoordinator(
+            { resolve: async () => Promise.reject(new Error("map unavailable")) },
+            () => services,
+            async () => identity,
+        );
+
+        await expect(
+            coordinator.resolveJoinCanEdit({
+                roomId: "https://play.test/~/missing.wam",
+                actorIdentifier: identity.id,
+                legacyCanEdit: true,
+                managementUiAccess: true,
+            }),
+        ).resolves.toBe(false);
+    });
+
+    it("exposes settings to current admins without granting map mutations", async () => {
+        const { coordinator, identity, repository } = await setup();
+        await repository.replaceRoomEditorPolicy({
+            mapId: "https://maps.test/world.tmj",
+            mode: "nobody",
+            expectedVersion: null,
+            editorIds: [],
+            actorId: identity.id,
+        });
+
+        await expect(
+            coordinator.resolveJoinCanEdit({
+                roomId: "https://play.test/~/world.wam",
+                actorIdentifier: identity.id,
+                legacyCanEdit: false,
+                managementUiAccess: true,
+            }),
+        ).resolves.toBe(true);
+        await expect(
+            coordinator.begin({
+                commandId: "admin-content-edit",
+                roomId: "https://play.test/~/world.wam",
+                actorIdentifier: identity.id,
+                legacyCanEdit: false,
+            }),
+        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
     });
 });

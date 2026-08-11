@@ -52,6 +52,7 @@ import { TeapotSecretBox } from "./teapot/TeapotTokenSecurity";
 import { TeapotXOAuthService } from "./teapot/TeapotXOAuthService";
 import { XOAuthClient } from "./teapot/XOAuthClient";
 import { TeapotMapController } from "./controllers/TeapotMapController";
+import { TeapotRoomEditorAccessController } from "./controllers/TeapotRoomEditorAccessController";
 import { TeapotWokaController } from "./controllers/TeapotWokaController";
 import { TeapotHealthController } from "./controllers/TeapotHealthController";
 import { TeapotMcpController } from "./controllers/TeapotMcpController";
@@ -146,6 +147,7 @@ class App {
         new FrontController(this.app);
         new UserController(this.app);
         new TeapotMapController(this.app);
+        new TeapotRoomEditorAccessController(this.app);
         new TeapotMcpController(this.app);
         new MatrixRoomAreaController(this.app);
 

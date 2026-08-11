@@ -35,6 +35,7 @@ import type {
     CreateTeapotMcpProposalInput,
     CreateTeapotOAuthStateInput,
     ResolveTeapotIdentityInput,
+    ReplaceTeapotRoomEditorPolicyInput,
     TransitionTeapotMcpProposalInput,
     TeapotDataRepository,
 } from "./TeapotDataRepository";
@@ -65,6 +66,10 @@ import type {
     TeapotMcpProposalState,
     TeapotMcpSessionRecord,
     TeapotOAuthStateRecord,
+    TeapotRoomEditorAccessRecord,
+    TeapotRoomEditorGrantRecord,
+    TeapotRoomEditorMode,
+    TeapotRoomEditorPolicyRecord,
     TeapotRoleAssignment,
 } from "./TeapotRecords";
 
@@ -148,6 +153,22 @@ interface WriterLeaseRow {
     expected_revision: number | string;
     source: TeapotMapMutationSource;
     expires_at: Date | string;
+    created_at: Date | string;
+}
+
+interface RoomEditorPolicyRow {
+    map_id: string;
+    mode: TeapotRoomEditorMode;
+    version: number | string;
+    updated_by: string | null;
+    created_at: Date | string;
+    updated_at: Date | string;
+}
+
+interface RoomEditorGrantRow {
+    map_id: string;
+    user_id: string;
+    granted_by: string | null;
     created_at: Date | string;
 }
 
@@ -326,6 +347,14 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
 
     async findProviderLink(provider: string, providerSubject: string): Promise<TeapotProviderLink | null> {
         return this.findProviderLinkWith(this.pool, provider, providerSubject);
+    }
+
+    async findProviderLinkForUser(userId: string, provider: string): Promise<TeapotProviderLink | null> {
+        const result = await this.pool.query<ProviderLinkRow>(
+            "SELECT * FROM teapot_provider_links WHERE user_id = $1 AND provider = $2",
+            [userId, provider],
+        );
+        return result.rows[0] === undefined ? null : mapProviderLink(result.rows[0]);
     }
 
     async hasProviderLink(userId: string, provider: string): Promise<boolean> {
@@ -829,6 +858,87 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
             "DELETE FROM teapot_map_writer_leases WHERE map_id = $1 AND lease_token = $2 AND writer_id = $3",
             [mapId, leaseToken, writerId],
         );
+    }
+
+    async getRoomEditorPolicy(mapId: string): Promise<TeapotRoomEditorPolicyRecord | null> {
+        const result = await this.pool.query<RoomEditorPolicyRow>(
+            "SELECT * FROM teapot_room_editor_policies WHERE map_id = $1",
+            [mapId],
+        );
+        return result.rows[0] === undefined ? null : mapRoomEditorPolicy(result.rows[0]);
+    }
+
+    async listRoomEditorGrants(mapId: string): Promise<TeapotRoomEditorGrantRecord[]> {
+        const result = await this.pool.query<RoomEditorGrantRow>(
+            "SELECT * FROM teapot_room_editor_grants WHERE map_id = $1 ORDER BY user_id",
+            [mapId],
+        );
+        return result.rows.map(mapRoomEditorGrant);
+    }
+
+    async replaceRoomEditorPolicy(input: ReplaceTeapotRoomEditorPolicyInput): Promise<TeapotRoomEditorAccessRecord> {
+        return withPostgresTransaction(this.pool, async (client) => {
+            await this.lockMap(client, input.mapId);
+            await this.requireIdentityWith(client, input.actorId);
+            const editorIds = [...new Set(input.editorIds)].sort();
+            for (const editorId of editorIds) await this.requireIdentityWith(client, editorId);
+
+            const currentResult = await client.query<RoomEditorPolicyRow>(
+                "SELECT * FROM teapot_room_editor_policies WHERE map_id = $1 FOR UPDATE",
+                [input.mapId],
+            );
+            const current = currentResult.rows[0];
+            const currentVersion = current === undefined ? null : toNumber(current.version);
+            if (currentVersion !== input.expectedVersion) {
+                throw new TeapotDataConflictError(`Room editor policy ${input.mapId} changed before it could be saved`);
+            }
+
+            const timestamp = this.now().toISOString();
+            let policyRow: RoomEditorPolicyRow | undefined;
+            if (current === undefined) {
+                const result = await client.query<RoomEditorPolicyRow>(
+                    `INSERT INTO teapot_room_editor_policies
+                        (map_id, mode, version, updated_by, created_at, updated_at)
+                     VALUES ($1, $2, 1, $3, $4, $4)
+                    RETURNING *`,
+                    [input.mapId, input.mode, input.actorId, timestamp],
+                );
+                policyRow = result.rows[0];
+            } else {
+                const result = await client.query<RoomEditorPolicyRow>(
+                    `UPDATE teapot_room_editor_policies
+                     SET mode = $2, version = version + 1, updated_by = $3, updated_at = $4
+                     WHERE map_id = $1 AND version = $5
+                     RETURNING *`,
+                    [input.mapId, input.mode, input.actorId, timestamp, input.expectedVersion],
+                );
+                policyRow = result.rows[0];
+            }
+            if (policyRow === undefined) {
+                throw new TeapotDataConflictError(`Room editor policy ${input.mapId} changed before it could be saved`);
+            }
+
+            await client.query("DELETE FROM teapot_room_editor_grants WHERE map_id = $1", [input.mapId]);
+            const grants: TeapotRoomEditorGrantRecord[] = [];
+            for (const userId of editorIds) {
+                const grantResult = await client.query<RoomEditorGrantRow>(
+                    `INSERT INTO teapot_room_editor_grants (map_id, user_id, granted_by, created_at)
+                     VALUES ($1, $2, $3, $4)
+                     RETURNING *`,
+                    [input.mapId, userId, input.actorId, timestamp],
+                );
+                grants.push(
+                    mapRoomEditorGrant(
+                        this.requireFirst(
+                            grantResult.rows,
+                            `Room editor grant ${input.mapId}:${userId} was not returned`,
+                        ),
+                    ),
+                );
+            }
+
+            return { policy: mapRoomEditorPolicy(policyRow), grants };
+        });
     }
 
     async createMcpSession(input: CreateTeapotMcpSessionInput): Promise<TeapotMcpSessionRecord> {
@@ -1386,6 +1496,8 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
             activeWokaSelections,
             mapRevisions,
             writerLeases,
+            roomEditorPolicies,
+            roomEditorGrants,
             mcpSessions,
             mcpProposals,
             mcpApprovals,
@@ -1405,6 +1517,8 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
             this.pool.query<ActiveWokaSelectionRow>("SELECT * FROM teapot_active_woka_selections ORDER BY owner_id"),
             this.pool.query<MapRevisionRow>("SELECT * FROM teapot_map_revisions ORDER BY map_id"),
             this.pool.query<WriterLeaseRow>("SELECT * FROM teapot_map_writer_leases ORDER BY map_id"),
+            this.pool.query<RoomEditorPolicyRow>("SELECT * FROM teapot_room_editor_policies ORDER BY map_id"),
+            this.pool.query<RoomEditorGrantRow>("SELECT * FROM teapot_room_editor_grants ORDER BY map_id, user_id"),
             this.pool.query<McpSessionRow>("SELECT * FROM teapot_mcp_sessions ORDER BY id"),
             this.pool.query<McpProposalRow>("SELECT * FROM teapot_mcp_proposals ORDER BY id"),
             this.pool.query<McpApprovalRow>("SELECT * FROM teapot_mcp_approvals ORDER BY id"),
@@ -1415,7 +1529,7 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
             this.pool.query<AuditEventRow>("SELECT * FROM teapot_audit_events ORDER BY id"),
         ]);
         return {
-            schemaVersion: 2,
+            schemaVersion: 3,
             exportedAt: this.now().toISOString(),
             users: users.rows.map(mapIdentity),
             providerLinks: providerLinks.rows.map(mapProviderLink),
@@ -1427,6 +1541,8 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
             activeWokaSelections: activeWokaSelections.rows.map(mapActiveWokaSelection),
             mapRevisions: mapRevisions.rows.map(mapMapRevision),
             writerLeases: writerLeases.rows.map(mapWriterLease),
+            roomEditorPolicies: roomEditorPolicies.rows.map(mapRoomEditorPolicy),
+            roomEditorGrants: roomEditorGrants.rows.map(mapRoomEditorGrant),
             mcpSessions: mcpSessions.rows.map(mapMcpSession),
             mcpProposals: mcpProposals.rows.map(mapMcpProposal),
             mcpApprovals: mcpApprovals.rows.map(mapMcpApproval),
@@ -1439,7 +1555,7 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
     }
 
     async restoreData(data: TeapotDataExport): Promise<void> {
-        if (data.schemaVersion !== 2) {
+        if (data.schemaVersion !== 2 && data.schemaVersion !== 3) {
             throw new TeapotRestoreConflictError(`Unsupported Teapot export schema ${String(data.schemaVersion)}`);
         }
         await withPostgresTransaction(this.pool, async (client) => {
@@ -1449,6 +1565,8 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
                     UNION ALL SELECT 1 FROM teapot_asset_catalogs
                     UNION ALL SELECT 1 FROM teapot_assets
                     UNION ALL SELECT 1 FROM teapot_map_revisions
+                    UNION ALL SELECT 1 FROM teapot_room_editor_policies
+                    UNION ALL SELECT 1 FROM teapot_room_editor_grants
                     UNION ALL SELECT 1 FROM teapot_mcp_sessions
                     UNION ALL SELECT 1 FROM teapot_mcp_proposals
                     UNION ALL SELECT 1 FROM teapot_mcp_approvals
@@ -1570,6 +1688,21 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
                     lease.expiresAt,
                     lease.createdAt,
                 ],
+            );
+        }
+        for (const policy of data.roomEditorPolicies ?? []) {
+            await client.query(
+                `INSERT INTO teapot_room_editor_policies
+                    (map_id, mode, version, updated_by, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [policy.mapId, policy.mode, policy.version, policy.updatedBy, policy.createdAt, policy.updatedAt],
+            );
+        }
+        for (const grant of data.roomEditorGrants ?? []) {
+            await client.query(
+                `INSERT INTO teapot_room_editor_grants (map_id, user_id, granted_by, created_at)
+                 VALUES ($1, $2, $3, $4)`,
+                [grant.mapId, grant.userId, grant.grantedBy, grant.createdAt],
             );
         }
     }
@@ -1886,6 +2019,26 @@ function mapWriterLease(row: WriterLeaseRow): TeapotMapWriterLease {
         expectedRevision: toNumber(row.expected_revision),
         source: row.source,
         expiresAt: iso(row.expires_at),
+        createdAt: iso(row.created_at),
+    };
+}
+
+function mapRoomEditorPolicy(row: RoomEditorPolicyRow): TeapotRoomEditorPolicyRecord {
+    return {
+        mapId: row.map_id,
+        mode: row.mode,
+        version: toNumber(row.version),
+        updatedBy: row.updated_by,
+        createdAt: iso(row.created_at),
+        updatedAt: iso(row.updated_at),
+    };
+}
+
+function mapRoomEditorGrant(row: RoomEditorGrantRow): TeapotRoomEditorGrantRecord {
+    return {
+        mapId: row.map_id,
+        userId: row.user_id,
+        grantedBy: row.granted_by,
         createdAt: iso(row.created_at),
     };
 }
