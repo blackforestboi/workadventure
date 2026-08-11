@@ -1,6 +1,7 @@
 <script lang="ts">
     import { CustomEntityDirection } from "@workadventure/messages";
     import { onDestroy, onMount } from "svelte";
+    import { SvelteMap } from "svelte/reactivity";
     import { v4 as uuidv4 } from "uuid";
     import type { EntityPrefab } from "@workadventure/map-editor";
     import { Direction, ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
@@ -43,7 +44,7 @@
     let savedAssetItemErrors: Record<string, string> = $state({});
     const savedAssetsController = new AbortController();
     let generatedAssetController: GeneratedMapAssetController | undefined;
-    const savedAssetPreviewUrls = new Map<string, { blob: Blob; url: string }>();
+    const savedAssetPreviewUrls = new SvelteMap<string, { blob: Blob; url: string }>();
 
     const BASIC_TYPE = "Custom";
 
@@ -61,11 +62,16 @@
                 savedAssetsError = warning;
             },
         );
-        generatedAssetController
-            .hydrate(savedAssetsController.signal)
-            .finally(() => {
+        generatedAssetController.hydrate(savedAssetsController.signal).then(
+            () => {
                 savedAssetsLoading = false;
-            });
+            },
+            (reason: unknown) => {
+                savedAssetsLoading = false;
+                if (reason instanceof DOMException && reason.name === "AbortError") return;
+                savedAssetsError = reason instanceof Error ? reason.message : "Saved assets could not be loaded.";
+            },
+        );
     });
 
     $effect(() => {
@@ -311,7 +317,11 @@
                 <div class="mt-2 grid max-h-40 grid-cols-3 gap-2 overflow-y-auto">
                     {#each savedAssets as asset (asset.key)}
                         <div class="rounded border border-white/10 bg-black/20 p-2">
-                            <button type="button" class="w-full text-left hover:opacity-80" onclick={() => reuseSavedAsset(asset)}>
+                            <button
+                                type="button"
+                                class="w-full text-left hover:opacity-80"
+                                onclick={() => reuseSavedAsset(asset)}
+                            >
                                 <img
                                     class="h-16 w-full object-contain [image-rendering:pixelated]"
                                     src={savedAssetPreview(asset)}
@@ -322,12 +332,20 @@
                             {#if asset.local?.syncStatus === "pending"}
                                 <span class="text-[10px] opacity-60">Saving online…</span>
                             {:else if asset.local?.syncStatus === "failed"}
-                                <button type="button" class="text-[10px] text-cyan-300 underline" onclick={() => retrySavedAsset(asset)}>Retry upload</button>
+                                <button
+                                    type="button"
+                                    class="text-[10px] text-cyan-300 underline"
+                                    onclick={() => retrySavedAsset(asset)}>Retry upload</button
+                                >
                                 <span class="block text-[10px] text-red-400">{asset.local.syncError}</span>
                             {/if}
                             {#if savedAssetItemErrors[asset.key]}
                                 <span class="block text-[10px] text-red-400">{savedAssetItemErrors[asset.key]}</span>
-                                <button type="button" class="text-[10px] text-cyan-300 underline" onclick={() => reuseSavedAsset(asset)}>Retry open</button>
+                                <button
+                                    type="button"
+                                    class="text-[10px] text-cyan-300 underline"
+                                    onclick={() => reuseSavedAsset(asset)}>Retry open</button
+                                >
                             {/if}
                         </div>
                     {/each}

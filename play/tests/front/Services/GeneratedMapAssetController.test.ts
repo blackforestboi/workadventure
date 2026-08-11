@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
 
 import {
     GeneratedMapAssetController,
@@ -10,7 +10,10 @@ import type {
     GeneratedAssetLocalRecord,
     GeneratedAssetLocalUpsert,
 } from "../../../src/front/Services/GeneratedAssetLocalStore";
-import type { TeapotGeneratedAssetView } from "../../../src/front/Services/TeapotGeneratedAssetApi";
+import type {
+    TeapotGeneratedAssetApi,
+    TeapotGeneratedAssetView,
+} from "../../../src/front/Services/TeapotGeneratedAssetApi";
 
 const SHA_A = "a".repeat(64);
 const SHA_B = "b".repeat(64);
@@ -56,12 +59,12 @@ class MemoryLocalStore {
         this.records = records;
     }
 
-    public async list(ownerScope: string): Promise<GeneratedAssetLocalRecord[]> {
-        return this.records.filter((record) => record.ownerScope === ownerScope);
+    public list(ownerScope: string): Promise<GeneratedAssetLocalRecord[]> {
+        return Promise.resolve(this.records.filter((record) => record.ownerScope === ownerScope));
     }
 
-    public async upsert(ownerScope: string, patch: GeneratedAssetLocalUpsert): Promise<GeneratedAssetLocalRecord> {
-        if (this.failWrites) throw new Error("IndexedDB write failed");
+    public upsert(ownerScope: string, patch: GeneratedAssetLocalUpsert): Promise<GeneratedAssetLocalRecord> {
+        if (this.failWrites) return Promise.reject(new Error("IndexedDB write failed"));
         const existing = this.records.find(
             (record) => record.ownerScope === ownerScope && record.clientId === patch.clientId,
         );
@@ -75,17 +78,18 @@ class MemoryLocalStore {
             updatedAt: now,
         } as GeneratedAssetLocalRecord;
         this.records = [record, ...this.records.filter((item) => item !== existing)];
-        return record;
+        return Promise.resolve(record);
     }
 }
 
-type ApiMethodMock = ReturnType<typeof vi.fn>;
+type RemoteApi = Pick<TeapotGeneratedAssetApi, "list" | "upload" | "download">;
+type RemoteApiMocks = { [Method in keyof RemoteApi]: Mock<RemoteApi[Method]> };
 
-function remoteApi(overrides: Partial<Record<"list" | "upload" | "download", ApiMethodMock>> = {}) {
+function remoteApi(overrides: Partial<RemoteApiMocks> = {}): RemoteApiMocks {
     return {
-        list: overrides.list ?? vi.fn().mockResolvedValue([]),
-        upload: overrides.upload ?? vi.fn().mockResolvedValue(remoteAsset()),
-        download: overrides.download ?? vi.fn().mockResolvedValue(png()),
+        list: overrides.list ?? vi.fn<RemoteApi["list"]>().mockResolvedValue([]),
+        upload: overrides.upload ?? vi.fn<RemoteApi["upload"]>().mockResolvedValue(remoteAsset()),
+        download: overrides.download ?? vi.fn<RemoteApi["download"]>().mockResolvedValue(png()),
     };
 }
 
@@ -100,16 +104,15 @@ describe("GeneratedMapAssetController", () => {
         const store = new MemoryLocalStore();
         let resolveUpload!: (asset: TeapotGeneratedAssetView) => void;
         const upload = vi.fn().mockImplementation(
-            () => new Promise<TeapotGeneratedAssetView>((resolve) => (resolveUpload = resolve)),
+            () =>
+                new Promise<TeapotGeneratedAssetView>((resolve) => {
+                    resolveUpload = resolve;
+                }),
         );
         const api = remoteApi({ upload });
         const snapshots: ReturnType<typeof mergeGeneratedMapAssets>[] = [];
-        const controller = new GeneratedMapAssetController(
-            "user:user-1",
-            true,
-            store,
-            api,
-            ({ items }) => snapshots.push(items),
+        const controller = new GeneratedMapAssetController("user:user-1", true, store, api, ({ items }) =>
+            snapshots.push(items),
         );
 
         const saved = await controller.saveGenerated({
@@ -162,16 +165,15 @@ describe("GeneratedMapAssetController", () => {
         const store = new MemoryLocalStore([failed]);
         let resolveList!: (assets: TeapotGeneratedAssetView[]) => void;
         const list = vi.fn().mockImplementation(
-            () => new Promise<TeapotGeneratedAssetView[]>((resolve) => (resolveList = resolve)),
+            () =>
+                new Promise<TeapotGeneratedAssetView[]>((resolve) => {
+                    resolveList = resolve;
+                }),
         );
         const api = remoteApi({ list });
         const snapshots: string[][] = [];
-        const controller = new GeneratedMapAssetController(
-            "user:user-1",
-            true,
-            store,
-            api,
-            ({ items }) => snapshots.push(items.map((item) => item.name)),
+        const controller = new GeneratedMapAssetController("user:user-1", true, store, api, ({ items }) =>
+            snapshots.push(items.map((item) => item.name)),
         );
 
         const hydration = controller.hydrate();
@@ -199,12 +201,8 @@ describe("GeneratedMapAssetController", () => {
         const store = new MemoryLocalStore([localRecord()]);
         const api = remoteApi({ list: vi.fn().mockRejectedValue(new Error("service unavailable")) });
         const snapshots: { names: string[]; warning?: string }[] = [];
-        const controller = new GeneratedMapAssetController(
-            "user:user-1",
-            true,
-            store,
-            api,
-            ({ items, warning }) => snapshots.push({ names: items.map((item) => item.name), warning }),
+        const controller = new GeneratedMapAssetController("user:user-1", true, store, api, ({ items, warning }) =>
+            snapshots.push({ names: items.map((item) => item.name), warning }),
         );
 
         await controller.hydrate();
@@ -216,14 +214,12 @@ describe("GeneratedMapAssetController", () => {
         const store = new MemoryLocalStore();
         const api = remoteApi({ download: vi.fn().mockRejectedValue(new Error("network unavailable")) });
         const snapshots: string[][] = [];
-        const controller = new GeneratedMapAssetController(
-            "user:user-1",
-            true,
-            store,
-            api,
-            ({ items }) => snapshots.push(items.map((item) => item.key)),
+        const controller = new GeneratedMapAssetController("user:user-1", true, store, api, ({ items }) =>
+            snapshots.push(items.map((item) => item.key)),
         );
-        const card = mergeGeneratedMapAssets([], [remoteAsset()])[0]!;
+        const [card] = mergeGeneratedMapAssets([], [remoteAsset()]);
+        expect(card).toBeDefined();
+        if (card === undefined) throw new Error("Expected a merged card.");
 
         await expect(controller.open(card)).rejects.toThrow("network unavailable");
         expect(card.remote?.id).toBe("server-1");

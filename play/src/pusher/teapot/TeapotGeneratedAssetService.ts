@@ -7,10 +7,7 @@ import type { TeapotDataRepository } from "./TeapotDataRepository";
 import { validateTeapotGeneratedPng } from "./TeapotGeneratedRasterValidator";
 import type { TeapotAssetRecord, TeapotJsonValue } from "./TeapotRecords";
 import type { TeapotIdentityService } from "./TeapotIdentityService";
-import {
-    resolveTeapotOwnerIdentity,
-    TEAPOT_WORKADVENTURE_IDENTITY_PROVIDER,
-} from "./TeapotOwnerIdentityResolver";
+import { resolveTeapotOwnerIdentity, TEAPOT_WORKADVENTURE_IDENTITY_PROVIDER } from "./TeapotOwnerIdentityResolver";
 import type { TeapotWokaObjectStore } from "./TeapotWokaObjectStore";
 import { TeapotWokaValidationError } from "./TeapotWokaPngValidator";
 

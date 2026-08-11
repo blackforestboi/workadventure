@@ -1,10 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 
 import type { AssetGenerationProviderId } from "./AssetGeneration/AssetGenerationTypes";
-import {
-    type GeneratedAssetLocalRecord,
-    type GeneratedAssetLocalStore,
-} from "./GeneratedAssetLocalStore";
+import type { GeneratedAssetLocalRecord, GeneratedAssetLocalStore } from "./GeneratedAssetLocalStore";
 import type { TeapotGeneratedAssetApi, TeapotGeneratedAssetView } from "./TeapotGeneratedAssetApi";
 
 const MAX_DISPLAY_NAME_LENGTH = 80;
@@ -83,7 +80,10 @@ export class GeneratedMapAssetController {
             this.emit();
         } catch (reason: unknown) {
             if (isAbort(reason)) return;
-            this.warning = errorMessage(reason, "Your online generated assets could not be loaded; local copies remain available.");
+            this.warning = errorMessage(
+                reason,
+                "Your online generated assets could not be loaded; local copies remain available.",
+            );
             this.emit();
         }
         await retryPromise;
@@ -103,7 +103,7 @@ export class GeneratedMapAssetController {
         this.emit();
 
         if (this.authenticated) {
-            void this.sync(record, signal).catch((reason: unknown) => {
+            this.sync(record, signal).catch((reason: unknown) => {
                 this.warning = errorMessage(reason, "Online sync status could not be saved.");
                 this.emit();
             });
@@ -124,7 +124,8 @@ export class GeneratedMapAssetController {
 
         const blob = await this.remoteApi.download(card.remote, signal);
         const sha256 = await sha256ForPng(blob);
-        if (sha256 !== card.remote.sha256.toLowerCase()) throw new Error("Saved asset download did not match its fingerprint.");
+        if (sha256 !== card.remote.sha256.toLowerCase())
+            throw new Error("Saved asset download did not match its fingerprint.");
         const record = await this.localStore.upsert(this.ownerScope, {
             clientId: card.local?.clientId ?? `server:${card.remote.id}`,
             name: card.remote.name,
