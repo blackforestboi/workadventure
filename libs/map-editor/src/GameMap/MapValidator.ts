@@ -97,26 +97,6 @@ export class MapValidator {
      * link : A link on the documentation that indicate the rules to follow to have a valid parameter
      */
     public async validateMap(data: unknown): Promise<MapValidation> {
-        // Let's start by a check on "infinite maps" because the Zod validator does not validate infinite maps.
-        const isInfiniteMap = z.object({
-            infinite: z.literal(true),
-        });
-
-        if (isInfiniteMap.safeParse(data).success) {
-            return {
-                ok: false,
-                error: {
-                    map: [
-                        {
-                            type: "error",
-                            message: "Infinite map size is not supported. Please use a fixed map size.",
-                            details: "",
-                        },
-                    ],
-                },
-            };
-        }
-
         const parsedMap = ITiledMap.safeParse(data);
 
         if (!parsedMap.success) {

@@ -27,6 +27,7 @@ import { isAdminMessageInterface } from "../models/Websocket/Admin/AdminMessages
 import { adminService } from "../services/AdminService";
 import type { ConnectingSocketData, SpaceName } from "../models/Websocket/SocketData";
 import { ClientAbortError } from "../models/ClientAbortError";
+import { copyEditMapCommandBinaryPayload } from "../services/EditMapCommandBinaryPayload";
 import {
     ClientNotPartOfSpaceError,
     SpaceDestroyedError,
@@ -1146,6 +1147,7 @@ export class IoSocketController {
                             }
                             case "editMapCommandMessage": {
                                 const command = message.message.editMapCommandMessage;
+                                copyEditMapCommandBinaryPayload(command);
                                 const socketData = socket.getUserData();
                                 try {
                                     await teapotWamRevisionCoordinator.begin({

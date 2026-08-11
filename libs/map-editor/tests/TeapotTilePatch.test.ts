@@ -2,8 +2,14 @@ import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
 import { addTeapotEmbeddedTileset, applyTeapotTilePatch, TeapotTilePatchError } from "../src/Authoring/TeapotTilePatch";
+import {
+    createCenteredMap,
+    getMapWorldBounds,
+    getTileLayerGid,
+    isCenteredMap,
+} from "../src/GameMap/CenteredMapCoordinates";
 
-function createMap(): ITiledMap {
+function createFiniteMap(): ITiledMap {
     return {
         compressionlevel: -1,
         height: 2,
@@ -50,27 +56,79 @@ function createMap(): ITiledMap {
     };
 }
 
+function createMap(): ITiledMap {
+    return createCenteredMap(createFiniteMap());
+}
+
+function getGround(map: ITiledMap) {
+    const layer = map.layers[0];
+    if (layer?.type !== "tilelayer") throw new Error("Expected ground tile layer");
+    return layer;
+}
+
+describe("createCenteredMap", () => {
+    it("creates an immutable world origin with signed tile coordinates", () => {
+        const map = createMap();
+
+        expect(isCenteredMap(map)).toBe(true);
+        expect(map.infinite).toBe(true);
+        expect(getGround(map)).toMatchObject({ startx: -1, starty: -1, width: 2, height: 2, data: [] });
+        expect(getMapWorldBounds(map)).toEqual({ x: -32, y: -32, width: 64, height: 64 });
+    });
+});
+
 describe("applyTeapotTilePatch", () => {
-    it("updates a bounded region without mutating or dropping unknown source fields", () => {
+    it("updates signed coordinates without mutating or dropping unknown source fields", () => {
         const source = Object.assign(createMap(), { teapotUnknown: { keep: true } });
+        const sourceLayer = getGround(source);
+        Object.assign(sourceLayer.chunks?.[0] ?? {}, { chunkUnknown: "keep" });
+
         const result = applyTeapotTilePatch(source, {
             mapId: "world",
             expectedRevision: 0,
-            regions: [{ layer: "ground", x: 0, y: 0, width: 2, height: 1, gids: [1, 2] }],
+            regions: [{ layer: "ground", x: -1, y: -1, width: 2, height: 1, gids: [1, 2] }],
         });
 
-        expect((source.layers[0] as { data: number[] }).data).toEqual([0, 0, 0, 0]);
-        expect((result.map.layers[0] as { data: number[] }).data).toEqual([1, 2, 0, 0]);
+        expect(getTileLayerGid(sourceLayer, -1, -1)).toBe(0);
+        expect(getTileLayerGid(getGround(result.map), -1, -1)).toBe(1);
+        expect(getTileLayerGid(getGround(result.map), 0, -1)).toBe(2);
         expect((result.map as unknown as { teapotUnknown: unknown }).teapotUnknown).toEqual({ keep: true });
+        expect((getGround(result.map).chunks?.[0] as unknown as { chunkUnknown: string }).chunkUnknown).toBe("keep");
         expect(result.changedTiles).toBe(2);
+        expect(result.affectedBounds).toEqual({ x: -1, y: -1, width: 2, height: 1 });
     });
 
-    it("rejects a region that exceeds the layer bounds", () => {
+    it("expands in every direction while existing tile coordinates stay fixed", () => {
+        const source = createMap();
+        const seeded = applyTeapotTilePatch(source, {
+            mapId: "world",
+            expectedRevision: 0,
+            regions: [{ layer: "ground", x: -1, y: -1, width: 1, height: 1, gids: [1] }],
+        }).map;
+
+        const result = applyTeapotTilePatch(seeded, {
+            mapId: "world",
+            expectedRevision: 0,
+            regions: [
+                { layer: "ground", x: -3, y: -2, width: 1, height: 1, gids: [2] },
+                { layer: "ground", x: 20, y: 3, width: 1, height: 1, gids: [2] },
+            ],
+        });
+
+        const ground = getGround(result.map);
+        expect(getTileLayerGid(ground, -1, -1)).toBe(1);
+        expect(getTileLayerGid(ground, -3, -2)).toBe(2);
+        expect(getTileLayerGid(ground, 20, 3)).toBe(2);
+        expect(ground.chunks?.some((chunk) => chunk.x < -1)).toBe(true);
+        expect(ground.chunks?.some((chunk) => chunk.x > 0)).toBe(true);
+    });
+
+    it("rejects finite maps instead of rebasing them during an edit", () => {
         expect(() =>
-            applyTeapotTilePatch(createMap(), {
+            applyTeapotTilePatch(createFiniteMap(), {
                 mapId: "world",
                 expectedRevision: 0,
-                regions: [{ layer: "ground", x: 1, y: 1, width: 2, height: 1, gids: [1, 1] }],
+                regions: [{ layer: "ground", x: 0, y: 0, width: 1, height: 1, gids: [1] }],
             }),
         ).toThrowError(TeapotTilePatchError);
     });

@@ -181,6 +181,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                         this.entitiesManager,
                         this.scene.getEntitiesCollectionsManager(),
                         commandId,
+                        true,
                     ),
                 );
                 break;

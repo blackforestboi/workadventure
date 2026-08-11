@@ -4,7 +4,7 @@ import { getCursorZoomAnchor, getCursorZoomFocus } from "../../../../src/front/P
 import cameraManagerSource from "../../../../src/front/Phaser/Game/CameraManager.ts?raw";
 import gameSceneSource from "../../../../src/front/Phaser/Game/GameScene.ts?raw";
 
-describe("map editor cursor-centered zoom", () => {
+describe("exploration cursor-centered zoom", () => {
     it("keeps the world position under an off-center cursor fixed while zooming", () => {
         const anchor = getCursorZoomAnchor({ x: 100, y: 80 }, { x: 400, y: 260 }, { x: 320, y: 240 }, 1);
 
@@ -31,9 +31,18 @@ describe("map editor cursor-centered zoom", () => {
         expect(getCursorZoomFocus(secondAnchor, 4)).toEqual({ x: 160, y: 95 });
     });
 
-    it("only supplies a cursor anchor while the map editor is active", () => {
+    it("supplies a cursor anchor whenever the camera is in exploration mode", () => {
         expect(gameSceneSource).toMatch(
-            /const cursorPosition = this\.mapEditorModeManager\?\.isActive\(\)[\s\S]*?\? \{ x: pointer\.x, y: pointer\.y \}[\s\S]*?this\.zoomByFactor\(zoomFactor, cursorPosition === undefined, cursorPosition\);/,
+            /const cursorPosition = this\.cameraManager\.isInExplorationMode\(\)[\s\S]*?\? \{ x: pointer\.x, y: pointer\.y \}[\s\S]*?this\.zoomByFactor\(zoomFactor, cursorPosition === undefined, cursorPosition\);/,
+        );
+        expect(cameraManagerSource).toMatch(
+            /public isInExplorationMode\(\): boolean \{\s*return this\.explorationModeActive;\s*\}/,
+        );
+        expect(cameraManagerSource).toMatch(
+            /private animateToFocus\([\s\S]*?this\.explorationModeActive = false;[\s\S]*?this\.cameraAnimation\?\.onInterrupt\(\);/,
+        );
+        expect(cameraManagerSource).toMatch(
+            /public setExplorationMode\(\): void \{\s*this\.explorationModeActive = true;/,
         );
         expect(cameraManagerSource).toMatch(
             /if \(duration === 0\) \{\s*this\.applyZoomModifier\(targetZoomModifier, false, cursorZoomAnchor\);[\s\S]*return;\s*\}/,

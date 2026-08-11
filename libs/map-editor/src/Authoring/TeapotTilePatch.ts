@@ -1,14 +1,22 @@
 import type { ITiledMap, ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 import { z } from "zod";
+import {
+    isCenteredMap,
+    setCenteredTileLayerGid,
+    synchronizeCenteredMapBounds,
+} from "../GameMap/CenteredMapCoordinates";
+
+const MIN_SIGNED_TILE_COORDINATE = -2_147_483_648;
+const MAX_SIGNED_TILE_COORDINATE = 2_147_483_647;
 
 export const TeapotTileRegion = z
     .object({
         layer: z.string().trim().min(1).max(200),
-        x: z.number().int().nonnegative(),
-        y: z.number().int().nonnegative(),
+        x: z.number().int().min(MIN_SIGNED_TILE_COORDINATE).max(MAX_SIGNED_TILE_COORDINATE),
+        y: z.number().int().min(MIN_SIGNED_TILE_COORDINATE).max(MAX_SIGNED_TILE_COORDINATE),
         width: z.number().int().positive().max(256),
         height: z.number().int().positive().max(256),
-        gids: z.array(z.number().int().nonnegative()).max(256 * 256),
+        gids: z.array(z.number().int().nonnegative().max(0xffff_ffff)).max(256 * 256),
     })
     .superRefine((region, context) => {
         if (region.gids.length !== region.width * region.height) {
@@ -17,6 +25,12 @@ export const TeapotTileRegion = z
                 path: ["gids"],
                 message: `Expected ${region.width * region.height} tile GIDs, received ${region.gids.length}`,
             });
+        }
+        if (region.x + region.width - 1 > MAX_SIGNED_TILE_COORDINATE) {
+            context.addIssue({ code: z.ZodIssueCode.custom, path: ["width"], message: "Tile region exceeds int32 X" });
+        }
+        if (region.y + region.height - 1 > MAX_SIGNED_TILE_COORDINATE) {
+            context.addIssue({ code: z.ZodIssueCode.custom, path: ["height"], message: "Tile region exceeds int32 Y" });
         }
     });
 
@@ -77,24 +91,19 @@ export function applyTeapotTilePatch(source: ITiledMap, input: TeapotTilePatch):
         if (layer === undefined) {
             throw new TeapotTilePatchError(`Tile layer ${region.layer} does not exist`, "unknown-layer");
         }
-        if (layer.type !== "tilelayer" || !Array.isArray(layer.data)) {
-            throw new TeapotTilePatchError(`Layer ${region.layer} is not a finite tile layer`, "invalid-layer");
+        if (layer.type !== "tilelayer" || layer.chunks === undefined) {
+            throw new TeapotTilePatchError(
+                `Layer ${region.layer} is not a centered infinite tile layer`,
+                "invalid-layer",
+            );
         }
-        if (region.x + region.width > layer.width || region.y + region.height > layer.height) {
-            throw new TeapotTilePatchError(`Region exceeds the bounds of layer ${region.layer}`, "out-of-bounds");
-        }
-
         for (let localY = 0; localY < region.height; localY += 1) {
             for (let localX = 0; localX < region.width; localX += 1) {
                 const gid = region.gids[localY * region.width + localX];
                 if (gid === undefined || !isKnownGid(map, gid)) {
                     throw new TeapotTilePatchError(`Tile GID ${String(gid)} is not defined by this map`, "invalid-gid");
                 }
-                const offset = (region.y + localY) * layer.width + region.x + localX;
-                if (layer.data[offset] !== gid) {
-                    layer.data[offset] = gid;
-                    changedTiles += 1;
-                }
+                if (setCenteredTileLayerGid(map, layer, region.x + localX, region.y + localY, gid)) changedTiles += 1;
             }
         }
 
@@ -103,6 +112,8 @@ export function applyTeapotTilePatch(source: ITiledMap, input: TeapotTilePatch):
         maxX = Math.max(maxX, region.x + region.width);
         maxY = Math.max(maxY, region.y + region.height);
     }
+
+    synchronizeCenteredMapBounds(map);
 
     return {
         map,
@@ -160,8 +171,32 @@ export function addTeapotEmbeddedTileset(
 }
 
 function assertSupportedMap(map: ITiledMap): void {
-    if (map.orientation !== "orthogonal" || map.infinite === true) {
-        throw new TeapotTilePatchError("Only finite orthogonal TMJ maps can be edited", "unsupported-map");
+    if (map.orientation !== "orthogonal" || map.infinite !== true || !isCenteredMap(map)) {
+        throw new TeapotTilePatchError("Only centered infinite orthogonal TMJ maps can be edited", "unsupported-map");
+    }
+    const invalidChunks = flattenLayers(map.layers).some((layer) => {
+        if (layer.type !== "tilelayer" || layer.chunks === undefined) return layer.type === "tilelayer";
+        const origins = new Set<string>();
+        return layer.chunks.some((chunk) => {
+            const origin = `${chunk.x},${chunk.y}`;
+            const invalid =
+                !Number.isInteger(chunk.x) ||
+                !Number.isInteger(chunk.y) ||
+                !Number.isInteger(chunk.width) ||
+                !Number.isInteger(chunk.height) ||
+                chunk.width <= 0 ||
+                chunk.height <= 0 ||
+                chunk.width > 16 ||
+                chunk.height > 16 ||
+                !Array.isArray(chunk.data) ||
+                chunk.data.length !== chunk.width * chunk.height ||
+                origins.has(origin);
+            origins.add(origin);
+            return invalid;
+        });
+    });
+    if (invalidChunks) {
+        throw new TeapotTilePatchError("Centered terrain chunks must use JSON tile arrays", "unsupported-map");
     }
     if (
         map.tilesets.some(

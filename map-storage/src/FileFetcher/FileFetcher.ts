@@ -33,6 +33,13 @@ export function proxyFiles(fileSystem: FileSystemInterface) {
             }
         }
 
-        fileSystem.serveStaticFile(virtualPath, res, next);
+        fileSystem.serveStaticFile(virtualPath, res, (error?: unknown) => {
+            // UUID assets are immutable only once they exist. A request can arrive just before an upload is
+            // durable; never let that transient miss become a year-long browser/CDN cache entry.
+            if (!res.headersSent) {
+                res.set("Cache-Control", "no-store");
+            }
+            next(error);
+        });
     };
 }

@@ -1,5 +1,6 @@
 import { type ITiledMap, type ITiledMapLayer, ITiledMapTileset } from "@workadventure/tiled-map-type-guard";
 
+import { forEachTileInLayer } from "../GameMap/CenteredMapCoordinates";
 import { applyTeapotTilePatch, TeapotTilePatch, type TeapotTileRegion } from "./TeapotTilePatch";
 
 const MAX_TILESET_JSON_BYTES = 64 * 1024;
@@ -9,6 +10,48 @@ export interface TeapotTerrainMutation {
     regions: readonly TeapotTileRegion[];
     tilesetJson?: string;
     removeTileset?: boolean;
+}
+
+export interface TerrainTileCoordinate {
+    x: number;
+    y: number;
+}
+
+const NON_VISUAL_TERRAIN_LAYER_NAMES = new Set([
+    "collision",
+    "collisions",
+    "collision1",
+    "collisions1",
+    "collision2",
+    "collisions2",
+    "exit",
+    "start",
+    "start1",
+]);
+
+/** Returns whether a persisted tile layer can provide visible floor support for an avatar. */
+export function isAvatarSupportingTileLayerName(layerName: string): boolean {
+    return !layerName.startsWith("__") && !NON_VISUAL_TERRAIN_LAYER_NAMES.has(normalizeLayerName(layerName));
+}
+
+/** Detects a zero-GID write to a visual tile layer at any occupied tile coordinate. */
+export function containsOccupiedVisualTileDeletion(
+    regions: readonly TeapotTileRegion[],
+    occupiedCells: readonly TerrainTileCoordinate[],
+): boolean {
+    const occupied = new Set(occupiedCells.map(({ x, y }) => `${x},${y}`));
+    if (occupied.size === 0) return false;
+
+    return regions.some((region) => {
+        if (!isAvatarSupportingTileLayerName(region.layer)) return false;
+        for (let y = 0; y < region.height; y += 1) {
+            for (let x = 0; x < region.width; x += 1) {
+                if ((region.gids[y * region.width + x] ?? 0) !== 0) continue;
+                if (occupied.has(`${region.x + x},${region.y + y}`)) return true;
+            }
+        }
+        return false;
+    });
 }
 
 export function applyTeapotTerrainMutation(source: ITiledMap, mutation: TeapotTerrainMutation): ITiledMap {
@@ -50,17 +93,21 @@ function terrainUsesTileset(map: ITiledMap, tilesetIndex: number): boolean {
     const firstGid = map.tilesets[tilesetIndex]?.firstgid;
     if (firstGid === undefined) return false;
     const nextFirstGid = map.tilesets[tilesetIndex + 1]?.firstgid ?? Number.POSITIVE_INFINITY;
-    return flattenLayers(map.layers).some(
-        (layer) =>
-            layer.type === "tilelayer" &&
-            Array.isArray(layer.data) &&
-            layer.data.some((gid) => {
-                const unflippedGid = gid & 0x1fffffff;
-                return unflippedGid >= firstGid && unflippedGid < nextFirstGid;
-            }),
-    );
+    return flattenLayers(map.layers).some((layer) => {
+        if (layer.type !== "tilelayer") return false;
+        let usesTileset = false;
+        forEachTileInLayer(layer, (gid) => {
+            const unflippedGid = gid & 0x1fffffff;
+            if (unflippedGid >= firstGid && unflippedGid < nextFirstGid) usesTileset = true;
+        });
+        return usesTileset;
+    });
 }
 
 function flattenLayers(layers: ITiledMapLayer[]): ITiledMapLayer[] {
     return layers.flatMap((layer) => [layer, ...(layer.type === "group" ? flattenLayers(layer.layers) : [])]);
+}
+
+function normalizeLayerName(name: string): string {
+    return name.toLowerCase().replace(/[\s/_-]+/g, "");
 }

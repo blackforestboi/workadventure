@@ -15,10 +15,15 @@ export class PathfindingManager {
     private easyStar: EasyStar;
     private grid: number[][];
     private tileDimensions: { width: number; height: number };
+    private gridOrigin: { x: number; y: number };
     private currentPathfindingInstanceId: number | null = null;
     private pathfindingTimeout: number | null = null;
 
-    constructor(collisionsGrid: number[][], tileDimensions: { width: number; height: number }) {
+    constructor(
+        collisionsGrid: number[][],
+        tileDimensions: { width: number; height: number },
+        gridOrigin: { x: number; y: number } = { x: 0, y: 0 },
+    ) {
         this.easyStar = new EasyStar();
         this.easyStar.enableDiagonals();
         this.easyStar.disableCornerCutting();
@@ -29,11 +34,14 @@ export class PathfindingManager {
 
         this.grid = collisionsGrid;
         this.tileDimensions = tileDimensions;
+        this.gridOrigin = gridOrigin;
         this.setEasyStarGrid(collisionsGrid);
         //this.logGridToTheConsole(collisionsGrid);
     }
 
-    public setCollisionGrid(collisionGrid: number[][]): void {
+    public setMapData(collisionGrid: number[][], gridOrigin: { x: number; y: number }): void {
+        this.grid = collisionGrid;
+        this.gridOrigin = gridOrigin;
         this.setEasyStarGrid(collisionGrid);
     }
 
@@ -74,8 +82,8 @@ export class PathfindingManager {
     }
 
     private fitBodyWithinTile(x: number, y: number, tileWidth: number, tileHeight: number): { x: number; y: number } {
-        const xMod = x % tileWidth;
-        const yMod = y % tileHeight;
+        const xMod = (((x - this.gridOrigin.x) % tileWidth) + tileWidth) % tileWidth;
+        const yMod = (((y - this.gridOrigin.y) % tileHeight) + tileHeight) % tileHeight;
 
         if (yMod < CHARACTER_BODY_HEIGHT / 2 + CHARACTER_BODY_OFFSET_Y) {
             y -= yMod;
@@ -143,15 +151,15 @@ export class PathfindingManager {
 
     public mapTileUnitToPixels(tilePosition: { x: number; y: number }): { x: number; y: number } {
         return {
-            x: tilePosition.x * this.tileDimensions.width + this.tileDimensions.width * 0.5,
-            y: tilePosition.y * this.tileDimensions.height + this.tileDimensions.height * 0.5,
+            x: this.gridOrigin.x + tilePosition.x * this.tileDimensions.width + this.tileDimensions.width * 0.5,
+            y: this.gridOrigin.y + tilePosition.y * this.tileDimensions.height + this.tileDimensions.height * 0.5,
         };
     }
 
     private mapPixelsToTileUnits(position: { x: number; y: number }): { x: number; y: number } {
         return {
-            x: Math.floor(position.x / this.tileDimensions.width),
-            y: Math.floor(position.y / this.tileDimensions.height),
+            x: Math.floor((position.x - this.gridOrigin.x) / this.tileDimensions.width),
+            y: Math.floor((position.y - this.gridOrigin.y) / this.tileDimensions.height),
         };
     }
 
@@ -186,17 +194,17 @@ export class PathfindingManager {
         const mapHeight = this.grid.length;
         const mapWidth = this.grid[0].length;
 
-        if (x < 0) {
-            x = 0;
+        if (x < this.gridOrigin.x) {
+            x = this.gridOrigin.x;
         }
-        if (y < 0) {
-            y = 0;
+        if (y < this.gridOrigin.y) {
+            y = this.gridOrigin.y;
         }
-        if (x > mapWidth * this.tileDimensions.width) {
-            x = mapWidth * this.tileDimensions.width - 1;
+        if (x > this.gridOrigin.x + mapWidth * this.tileDimensions.width) {
+            x = this.gridOrigin.x + mapWidth * this.tileDimensions.width - 1;
         }
-        if (y > mapHeight * this.tileDimensions.height) {
-            y = mapHeight * this.tileDimensions.height - 1;
+        if (y > this.gridOrigin.y + mapHeight * this.tileDimensions.height) {
+            y = this.gridOrigin.y + mapHeight * this.tileDimensions.height - 1;
         }
 
         return { x, y };

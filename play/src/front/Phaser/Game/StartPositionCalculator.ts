@@ -1,4 +1,4 @@
-import type { AreaData } from "@workadventure/map-editor";
+import { layerIndexToTileCoordinates, tileToWorldCenter, type AreaData } from "@workadventure/map-editor";
 import { MathUtils } from "@workadventure/math-utils";
 import type { ITiledMap, ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 
@@ -89,10 +89,7 @@ export function computeStartPosition(
     if (startPosition === undefined) {
         console.warn('This map is missing a layer named "start" that contains the available default start positions.');
         // Let's start in the middle of the map
-        startPosition = {
-            x: (mapFile.width ?? 0) * 16,
-            y: (mapFile.height ?? 0) * 16,
-        };
+        startPosition = MathUtils.getRectangleCenter(gameMapFrontWrapper.getMapBounds());
     }
 
     return startPosition;
@@ -191,10 +188,7 @@ function getStartPositionFromLayerName(
             ) {
                 try {
                     const startPosition = gameMapFrontWrapper.getRandomPositionFromLayer(layer.name);
-                    return {
-                        x: startPosition.x * (mapFile.tilewidth ?? 0) + (mapFile.tilewidth ?? 0) / 2,
-                        y: startPosition.y * (mapFile.tileheight ?? 0) + (mapFile.tileheight ?? 0) / 2,
-                    };
+                    return getTileWorldCenter(mapFile, layer, startPosition.x, startPosition.y);
                 } catch (e: unknown) {
                     console.error("Error while finding start position: ", e);
                 }
@@ -216,10 +210,7 @@ function getStartPositionFromLayerName(
     if (foundLayer) {
         try {
             const startPosition = gameMapFrontWrapper.getRandomPositionFromLayer(foundLayer.name);
-            return {
-                x: startPosition.x * (mapFile.tilewidth ?? 0) + (mapFile.tilewidth ?? 0) / 2,
-                y: startPosition.y * (mapFile.tileheight ?? 0) + (mapFile.tileheight ?? 0) / 2,
-            };
+            return getTileWorldCenter(mapFile, foundLayer, startPosition.x, startPosition.y);
         } catch (e: unknown) {
             console.error("Error while finding start position: ", e);
         }
@@ -261,10 +252,7 @@ function getStartPositionFromTile(
         ) {
             return;
         }
-        possibleStartPositions.push({
-            x: x * (mapFile.tilewidth ?? 0) + (mapFile.tilewidth ?? 0) / 2,
-            y: y * (mapFile.tileheight ?? 0) + (mapFile.tileheight ?? 0) / 2,
-        });
+        possibleStartPositions.push(getTileWorldCenter(mapFile, layer, x, y));
     });
     // Get a value at random amongst allowed values
     if (possibleStartPositions.length === 0) {
@@ -272,4 +260,14 @@ function getStartPositionFromTile(
     }
     // Choose one of the available start positions at random amongst the list of available start positions.
     return possibleStartPositions[Math.floor(Math.random() * possibleStartPositions.length)];
+}
+
+function getTileWorldCenter(
+    mapFile: ITiledMap,
+    layer: Extract<ITiledMapLayer, { type: "tilelayer" }>,
+    x: number,
+    y: number,
+): PositionInterface {
+    const tile = layerIndexToTileCoordinates(layer, x, y);
+    return tileToWorldCenter(mapFile, tile.x, tile.y);
 }

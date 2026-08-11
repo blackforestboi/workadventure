@@ -15,11 +15,14 @@ describe("map editor movement routing", () => {
         expect(gameSceneSource).toMatch(/else \{\s*this\.CurrentPlayer\.moveUser\(delta, movementEvents\);/);
     });
 
-    it("switches the camera between exploration and player-follow modes with the editor", () => {
+    it("enters exploration mode and keeps follow-on-close disabled", () => {
         expect(gameSceneSource).toMatch(
             /if \(isOn\) \{\s*this\.CurrentPlayer\.finishFollowingPath\(true\);\s*this\.CurrentPlayer\.stop\(\);\s*this\.cameraManager\.setExplorationMode\(\);/,
         );
-        expect(gameSceneSource).toMatch(/else \{\s*this\.cameraManager\.startFollowPlayer\(this\.CurrentPlayer\);/);
+        expect(gameSceneSource).toContain("const FOLLOW_PLAYER_WHEN_CLOSING_MAP_EDITOR = false;");
+        expect(gameSceneSource).toMatch(
+            /else \{\s*if \(FOLLOW_PLAYER_WHEN_CLOSING_MAP_EDITOR\) \{\s*this\.cameraManager\.startFollowPlayer\(this\.CurrentPlayer\);\s*\}/,
+        );
     });
 
     it("keeps the editor camera in exploration mode when leaving the explore tool", () => {
@@ -41,15 +44,24 @@ describe("map editor movement routing", () => {
     });
 
     it("lets normal gameplay center every map edge with half a viewport of surrounding space", () => {
+        expect(cameraManagerSource).toContain("originX - halfViewportWidth");
+        expect(cameraManagerSource).toContain("originY - halfViewportHeight");
         expect(cameraManagerSource).toMatch(
-            /private updateNormalCameraBounds\(\): void \{\s*const halfViewportWidth = this\.camera\.width \/ this\.camera\.zoom \/ 2;\s*const halfViewportHeight = this\.camera\.height \/ this\.camera\.zoom \/ 2;\s*this\.camera\.setBounds\(\s*-halfViewportWidth,\s*-halfViewportHeight,\s*this\.mapSize\.width \+ halfViewportWidth \* 2,\s*this\.mapSize\.height \+ halfViewportHeight \* 2,\s*\);\s*\}/,
-        );
-        expect(cameraManagerSource).toMatch(
-            /if \(isOpened\) \{[\s\S]*this\.mapSize\.height \* 3,[\s\S]*\} else \{\s*this\.updateNormalCameraBounds\(\);\s*\}/,
+            /if \(isOpened\) \{\s*this\.camera\.removeBounds\(\);\s*\} else \{\s*this\.updateNormalCameraBounds\(\);\s*\}/,
         );
         expect(cameraManagerSource).toMatch(
             /private readonly onZoomChanged = \(\): void => \{\s*if \(this\.mapEditorModeActive\) \{\s*return;\s*\}\s*this\.updateNormalCameraBounds\(\);/,
         );
+    });
+
+    it("updates the normal camera frame after terrain expands the map", () => {
+        expect(cameraManagerSource).toContain("this.updateZoomOutLimit();");
+        expect(cameraManagerSource).toContain("const workspaceScale = this.mapEditorModeActive ? 2 : 1;");
+        expect(cameraManagerSource).toContain("this.mapSize.width * workspaceScale");
+        expect(cameraManagerSource).toContain("this.mapSize.height * workspaceScale");
+        expect(cameraManagerSource).toContain("const marginX = this.mapEditorModeActive ? this.mapSize.width / 2 : 0;");
+        expect(cameraManagerSource).toContain("originX - marginX");
+        expect(cameraManagerSource).toContain("originX + this.mapSize.width + marginX");
     });
 
     it("converts pointer deltas and inertia from screen pixels to world distance", () => {
@@ -87,7 +99,7 @@ describe("map editor movement routing", () => {
             /if \(this\.selectedLayer === ""\) \{\s*pointer\.motionFactor = 0\.35;\s*this\.panCandidate = true;\s*return;/,
         );
         expect(floorEditorToolSource).toMatch(
-            /if \(this\.selectedLayer === layer && this\.selectedGid === gid\) \{\s*this\.clearBrush\(\);/,
+            /if \(this\.selectedLayer === layer && this\.selectedGid === selectedGid && state\.toolMode === "tile"\) \{[\s\S]*this\.clearBrush\(\);/,
         );
         expect(floorEditorToolSource).toMatch(
             /if \(this\.panning \|\| \(this\.panCandidate && pointer\.leftButtonDown\(\)\)\) \{[\s\S]*\.scrollCameraByScreenDelta\(pointer\.prevPosition\.x - pointer\.x, pointer\.prevPosition\.y - pointer\.y\);/,
@@ -96,7 +108,7 @@ describe("map editor movement routing", () => {
 
     it("keeps a selected floor brush on the paint path", () => {
         expect(floorEditorToolSource).toMatch(
-            /if \(this\.saving\) return;\s*const tile = this\.getTileAtPointer\(pointer\);\s*if \(tile === undefined\) return;\s*this\.painting = true;/,
+            /if \(this\.saving\) return;\s*const tile = this\.getTileAtPointer\(pointer\);\s*if \(tile === undefined\) return;[\s\S]*this\.painting = true;/,
         );
     });
 

@@ -1,5 +1,6 @@
-import { WamFile, type WAMFileFormat } from "@workadventure/map-editor";
+import { createCenteredMap, getTileLayerGid, WamFile, type WAMFileFormat } from "@workadventure/map-editor";
 import type { ModifyTerrainMessage } from "@workadventure/messages";
+import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fileSystemMock = vi.hoisted(() => ({
@@ -14,50 +15,76 @@ vi.mock("../PathMapper", () => ({
 
 import { persistTerrainMutation } from "../TerrainPersistenceService";
 
-const sourceMap = JSON.stringify({
-    compressionlevel: -1,
-    orientation: "orthogonal",
-    infinite: false,
-    width: 1,
-    height: 1,
-    tilewidth: 32,
-    tileheight: 32,
-    layers: [
-        {
-            id: 1,
-            name: "floor",
-            type: "tilelayer",
-            width: 1,
-            height: 1,
-            data: [1],
-            opacity: 1,
-            visible: true,
-            x: 0,
-            y: 0,
-        },
-    ],
-    tilesets: [
-        {
-            firstgid: 1,
-            name: "terrain",
-            image: "terrain.png",
-            imagewidth: 320,
-            imageheight: 32,
-            tilewidth: 32,
-            tileheight: 32,
-            tilecount: 10,
-            columns: 10,
-            margin: 0,
-            spacing: 0,
-        },
-    ],
-    nextlayerid: 2,
-    nextobjectid: 1,
-    renderorder: "right-down",
-    tiledversion: "1.10.2",
-    type: "map",
-    version: "1.10",
-});
+function createFiniteSource(): ITiledMap {
+    return {
+        compressionlevel: -1,
+        orientation: "orthogonal",
+        infinite: false,
+        width: 1,
+        height: 1,
+        tilewidth: 32,
+        tileheight: 32,
+        layers: [
+            {
+                id: 1,
+                name: "floor",
+                type: "tilelayer",
+                width: 1,
+                height: 1,
+                data: [1],
+                opacity: 1,
+                visible: true,
+                x: 0,
+                y: 0,
+            },
+        ],
+        tilesets: [
+            {
+                firstgid: 1,
+                name: "terrain",
+                image: "terrain.png",
+                imagewidth: 320,
+                imageheight: 32,
+                tilewidth: 32,
+                tileheight: 32,
+                tilecount: 10,
+                columns: 10,
+                margin: 0,
+                spacing: 0,
+            },
+        ],
+        nextlayerid: 2,
+        nextobjectid: 1,
+        renderorder: "right-down",
+        tiledversion: "1.10.2",
+        type: "map",
+        version: "1.10",
+    };
+}
+
+const sourceMap = JSON.stringify(createCenteredMap(createFiniteSource()));
+const wam: WAMFileFormat = {
+    version: "1.0.0",
+    mapUrl: "map.tmj",
+    entities: {},
+    areas: [],
+    entityCollections: [],
+};
+
+function message(regions: ModifyTerrainMessage["regions"]): ModifyTerrainMessage {
+    return {
+        mapUrl: "http://maps.example.test/maps/map.tmj",
+        regions,
+        tilesetJson: "",
+        removeTileset: false,
+    };
+}
+
+function floorLayer(map: ITiledMap) {
+    const layer = map.layers[0];
+    if (layer?.type !== "tilelayer") throw new Error("Expected floor tile layer");
+    return layer;
+}
 
 describe("persistTerrainMutation", () => {
     beforeEach(() => {
@@ -66,47 +93,51 @@ describe("persistTerrainMutation", () => {
         fileSystemMock.writeStringAsFile.mockResolvedValue(undefined);
     });
 
-    it("writes the tile change before resolving", async () => {
-        const wam: WAMFileFormat = {
-            version: "1.0.0",
-            mapUrl: "map.tmj",
-            entities: {},
-            areas: [],
-            entityCollections: [],
-        };
-        const message: ModifyTerrainMessage = {
-            mapUrl: "http://maps.example.test/maps/map.tmj",
-            regions: [{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }],
-            tilesetJson: "",
-            removeTileset: false,
-        };
+    it("persists signed edits without moving previously stored coordinates", async () => {
+        await persistTerrainMutation(
+            new WamFile(wam),
+            new URL("http://maps.example.test/maps/map.wam"),
+            message([{ layer: "floor", x: -3, y: -2, width: 1, height: 1, gids: [8] }]),
+        );
 
-        await persistTerrainMutation(new WamFile(wam), new URL("http://maps.example.test/maps/map.wam"), message);
+        const firstPersisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;
+        expect(getTileLayerGid(floorLayer(firstPersisted), -3, -2)).toBe(8);
+        expect(getTileLayerGid(floorLayer(firstPersisted), 0, 0)).toBe(1);
 
-        expect(fileSystemMock.writeStringAsFile).toHaveBeenCalledOnce();
-        const persisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as {
-            layers: { data: number[] }[];
-        };
-        expect(persisted.layers[0].data).toEqual([8]);
+        fileSystemMock.readFileAsString.mockResolvedValue(JSON.stringify(firstPersisted));
+        await persistTerrainMutation(
+            new WamFile(wam),
+            new URL("http://maps.example.test/maps/map.wam"),
+            message([{ layer: "floor", x: 4, y: 3, width: 1, height: 1, gids: [7] }]),
+        );
+
+        const secondPersisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[1][1] as string) as ITiledMap;
+        expect(getTileLayerGid(floorLayer(secondPersisted), -3, -2)).toBe(8);
+        expect(getTileLayerGid(floorLayer(secondPersisted), 0, 0)).toBe(1);
+        expect(getTileLayerGid(floorLayer(secondPersisted), 4, 3)).toBe(7);
+        expect(secondPersisted.properties).toEqual(firstPersisted.properties);
     });
 
     it("rejects edits targeting a different TMJ", async () => {
-        const wam: WAMFileFormat = {
-            version: "1.0.0",
-            mapUrl: "map.tmj",
-            entities: {},
-            areas: [],
-            entityCollections: [],
-        };
-
         await expect(
             persistTerrainMutation(new WamFile(wam), new URL("http://maps.example.test/maps/map.wam"), {
+                ...message([{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }]),
                 mapUrl: "http://maps.example.test/maps/other.tmj",
-                regions: [{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }],
-                tilesetJson: "",
-                removeTileset: false,
             }),
         ).rejects.toThrow("different map");
+        expect(fileSystemMock.writeStringAsFile).not.toHaveBeenCalled();
+    });
+
+    it("rejects a finite source instead of rebasing it during persistence", async () => {
+        fileSystemMock.readFileAsString.mockResolvedValue(JSON.stringify(createFiniteSource()));
+
+        await expect(
+            persistTerrainMutation(
+                new WamFile(wam),
+                new URL("http://maps.example.test/maps/map.wam"),
+                message([{ layer: "floor", x: -1, y: 0, width: 1, height: 1, gids: [8] }]),
+            ),
+        ).rejects.toThrow("centered infinite");
         expect(fileSystemMock.writeStringAsFile).not.toHaveBeenCalled();
     });
 });

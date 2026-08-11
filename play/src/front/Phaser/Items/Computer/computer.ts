@@ -67,6 +67,7 @@ export default {
 
         const computer = new Sprite(scene, object.x, object.y, "computer");
         scene.add.existing(computer);
+        scene.getGameRenderLayers().addBackgroundObject(computer);
         if (state.status === "on") {
             computer.anims.play("computer_run");
         }

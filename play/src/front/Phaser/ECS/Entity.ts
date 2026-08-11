@@ -100,6 +100,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
         });
 
         this.scene.add.existing(this);
+        scene.getGameRenderLayers().addWorldObject(this);
         scene.getOutlineManager().add(this, () => {
             return this.getCurrentOutline();
         });
@@ -649,6 +650,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
         this.destroyDebugActivationZone();
 
         this.debugActivationZoneCircle = this.scene.add.graphics();
+        (this.scene as GameScene).getGameRenderLayers().addWorldObject(this.debugActivationZoneCircle);
 
         // Get rectangles
         const collisionRect = this.getCollisionRectangle();

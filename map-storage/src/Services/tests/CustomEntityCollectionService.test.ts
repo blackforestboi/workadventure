@@ -39,6 +39,19 @@ describe("CustomEntityCollectionService", () => {
         fileSystemMock.writeStringAsFile.mockResolvedValue(undefined);
     });
 
+    it("rejects an empty image before creating a catalog entry", async () => {
+        const service = new CustomEntityCollectionService("maps.example.test");
+
+        await expect(
+            service.uploadEntity({
+                ...uploadEntityMessage,
+                file: new Uint8Array(),
+            }),
+        ).rejects.toThrow("Cannot upload an empty custom entity image");
+        expect(fileSystemMock.writeByteArrayAsFile).not.toHaveBeenCalled();
+        expect(fileSystemMock.writeStringAsFile).not.toHaveBeenCalled();
+    });
+
     it("does not resolve an upload before the custom entity collection write is durable", async () => {
         let finishCollectionWrite: (() => void) | undefined;
         fileSystemMock.writeStringAsFile.mockImplementation(

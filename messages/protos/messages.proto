@@ -262,12 +262,14 @@ message ModifyTerrainMessage {
   repeated TerrainRegionMessage regions = 2;
   string tilesetJson = 3;
   bool removeTileset = 4;
+  reserved 5, 6;
+  reserved "prependLeft", "prependTop";
 }
 
 message TerrainRegionMessage {
   string layer = 1;
-  uint32 x = 2;
-  uint32 y = 3;
+  sint32 x = 2;
+  sint32 y = 3;
   uint32 width = 4;
   uint32 height = 5;
   repeated uint32 gids = 6;

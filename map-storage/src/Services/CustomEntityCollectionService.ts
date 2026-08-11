@@ -40,6 +40,9 @@ export class CustomEntityCollectionService {
 
     public async uploadEntity(uploadEntityMessage: UploadEntityMessage) {
         const { imagePath, file } = uploadEntityMessage;
+        if (file.byteLength === 0) {
+            throw new Error("Cannot upload an empty custom entity image");
+        }
         const entity = this.mapEntityFromUploadEntityMessageToEntityRawPrefab(uploadEntityMessage);
         await this.withEntityCollectionLock(async () => {
             // Keep the binary and its catalog entry ordered against modify/delete/retry

@@ -207,6 +207,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         this.setClickable(isClickable);
 
         scene.add.existing(this);
+        scene.getGameRenderLayers().addWorldObject(this);
 
         this.scene.physics.world.enableBody(this);
         const body = this.getBody();
@@ -337,6 +338,7 @@ export abstract class Character extends Container implements OutlineableInterfac
 
     public addCompanion(texturePromise: CancelablePromise<string>): void {
         this.companion = new Companion(this.scene, this.x, this.y, texturePromise);
+        this.scene.getGameRenderLayers().addWorldObject(this.companion);
     }
 
     private addTextures(textures: string[], frame?: string | number): void {

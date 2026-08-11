@@ -21,10 +21,10 @@ export type CursorZoomAnchor = {
 };
 
 /**
- * Captures the world position under the cursor from the live editor focus.
+ * Captures the world position under the cursor from the live exploration focus.
  *
  * This deliberately avoids the Camera transform matrix. Several wheel events can arrive before Phaser renders
- * another frame, while the editor focus has already moved. Using that live focus keeps every event on the same
+ * another frame, while the exploration focus has already moved. Using that live focus keeps every event on the same
  * world-space anchor instead of alternating between the previous and next rendered camera transforms.
  */
 export function getCursorZoomAnchor(

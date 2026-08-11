@@ -7,7 +7,20 @@ import type {
     AreaDataProperties,
     AreaUpdateCallback,
 } from "@workadventure/map-editor";
-import { AreaCoordinates, GameMapProperties } from "@workadventure/map-editor";
+import {
+    AreaCoordinates,
+    containsOccupiedVisualTileDeletion,
+    forEachTileInLayer,
+    GameMapProperties,
+    getMapTileBounds,
+    getMapWorldBounds,
+    getTileGridOffset,
+    getTileLayerWorldOrigin,
+    isAvatarSupportingTileLayerName,
+    tileToLayerIndex,
+    type TeapotTileRegion,
+    worldToTileCoordinates,
+} from "@workadventure/map-editor";
 import { MathUtils } from "@workadventure/math-utils";
 import type {
     ITiledMap,
@@ -22,15 +35,26 @@ import { Subject } from "rxjs";
 import { Deferred } from "@workadventure/shared-utils";
 import { PathTileType } from "../../../Utils/PathfindingManager";
 import type { Entity } from "../../ECS/Entity";
-import { DEPTH_OVERLAY_INDEX } from "../DepthIndexes";
 import type { ITiledPlace } from "../GameMapPropertiesListener";
+import type { DepthGameObject, GameRenderLayers, MapRenderBand } from "../GameRenderLayers";
 import type { GameScene } from "../GameScene";
 import { EntitiesManager } from "./EntitiesManager";
 import { AreasManager } from "./AreasManager";
+import { replacePhaserTileProperties } from "./TilePropertySync";
+import {
+    composeCollisionGrid,
+    getAuthoringCollisionGrid,
+    getTileSupportGrid,
+    isAuthoringCollisionLayer,
+    isCollisionStorageLayer,
+    type CollisionGridLayer,
+} from "./AuthoringCollision";
+import { canUseGpuTilemapRenderer } from "./TilemapRendererSelection";
 
 import TilemapLayer = Phaser.Tilemaps.TilemapLayer;
 import TilemapGPULayer = Phaser.Tilemaps.TilemapGPULayer;
 import Tilemap = Phaser.Tilemaps.Tilemap;
+import Tile = Phaser.Tilemaps.Tile;
 import Tileset = Phaser.Tilemaps.Tileset;
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer;
 
@@ -111,6 +135,8 @@ export class GameMapFrontWrapper {
      * A layer containing collide tiles mapping the collision zones of restricted areas put with the map editor
      */
     private areasCollisionLayer: TilemapLayer;
+    /** A hidden layer that blocks cells without a visible visual tile. */
+    private voidCollisionLayer: TilemapLayer;
 
     private collisionGridDirty = true;
     private areasCollisionLayerDirty = true;
@@ -152,7 +178,14 @@ export class GameMapFrontWrapper {
 
     public readonly initializedPromise = new Deferred<void>();
 
-    constructor(scene: GameScene, gameMap: GameMap, phaserMap: Tilemap, terrains: Array<Tileset>) {
+    constructor(
+        scene: GameScene,
+        gameMap: GameMap,
+        phaserMap: Tilemap,
+        terrains: Array<Tileset>,
+        private readonly gameRenderLayers: GameRenderLayers,
+        private readonly mapCanExpand = false,
+    ) {
         this.scene = scene;
         this.gameMap = gameMap;
         this.phaserMap = phaserMap;
@@ -161,22 +194,22 @@ export class GameMapFrontWrapper {
 
         this.entitiesManager = new EntitiesManager(this.scene, this);
 
-        let depth = -2;
+        let renderBand: MapRenderBand = "background";
+        const localDepth: Record<MapRenderBand, number> = { background: 0, foreground: 0 };
         for (const layer of this.gameMap.flatLayers) {
             if (layer.type === "tilelayer") {
                 const phaserLayer = this.createRenderableLayer(layer, terrains);
                 if (phaserLayer) {
-                    this.phaserLayers.push(
-                        phaserLayer
-                            .setDepth(depth)
-                            .setScrollFactor(layer.parallaxx ?? 1, layer.parallaxy ?? 1)
-                            .setAlpha(layer.opacity)
-                            .setVisible(layer.visible),
-                    );
+                    phaserLayer
+                        .setScrollFactor(layer.parallaxx ?? 1, layer.parallaxy ?? 1)
+                        .setAlpha(layer.opacity)
+                        .setVisible(isCollisionStorageLayer(layer.name) ? false : layer.visible);
+                    this.gameRenderLayers.addMapLayer(phaserLayer, renderBand, localDepth[renderBand]++);
+                    this.phaserLayers.push(phaserLayer);
                 }
             }
             if (layer.type === "objectgroup" && layer.name === "floorLayer") {
-                depth = DEPTH_OVERLAY_INDEX;
+                renderBand = "foreground";
             }
         }
 
@@ -218,7 +251,10 @@ export class GameMapFrontWrapper {
             throw new Error("Could not create entities collision layer");
         }
         this.entitiesCollisionLayer = phaserBlankCollisionsLayer;
-        this.entitiesCollisionLayer.setDepth(-2).setCollisionByProperty({ collides: true }).setVisible(false);
+        const mapBounds = getMapWorldBounds(this.gameMap.getMap());
+        this.entitiesCollisionLayer.setPosition(mapBounds.x, mapBounds.y);
+        this.entitiesCollisionLayer.setCollisionByProperty({ collides: true }).setVisible(false);
+        this.gameRenderLayers.addMapLayer(this.entitiesCollisionLayer, "background", localDepth.background++);
 
         this.phaserLayers.push(this.entitiesCollisionLayer);
 
@@ -227,19 +263,33 @@ export class GameMapFrontWrapper {
             throw new Error("Could not create areas collision layer");
         }
         this.areasCollisionLayer = phaserBlankCollisionsLayer2;
-        this.areasCollisionLayer.setDepth(-2).setCollisionByProperty({ collides: true }).setVisible(false);
+        this.areasCollisionLayer.setPosition(mapBounds.x, mapBounds.y);
+        this.areasCollisionLayer.setCollisionByProperty({ collides: true }).setVisible(false);
+        this.gameRenderLayers.addMapLayer(this.areasCollisionLayer, "background", localDepth.background++);
 
         this.phaserLayers.push(this.areasCollisionLayer);
+
+        const phaserVoidCollisionLayer = phaserMap.createBlankLayer("__voidCollisionLayer", terrains);
+        if (!phaserVoidCollisionLayer) {
+            throw new Error("Could not create void collision layer");
+        }
+        this.voidCollisionLayer = phaserVoidCollisionLayer;
+        this.voidCollisionLayer.setPosition(mapBounds.x, mapBounds.y);
+        this.voidCollisionLayer.setCollisionByProperty({ collides: true }).setVisible(false);
+        this.gameRenderLayers.addMapLayer(this.voidCollisionLayer, "background", localDepth.background++);
+        this.phaserLayers.push(this.voidCollisionLayer);
+        this.rebuildVoidCollisionLayer();
     }
 
     private createRenderableLayer(layer: ITiledMapTileLayer, terrains: Array<Tileset>): RenderableTilemapLayer | null {
         const gpuTileset = this.getGpuTilesetForLayer(layer, terrains);
+        const origin = getTileLayerWorldOrigin(this.gameMap.getMap(), layer);
 
         return this.phaserMap.createLayer(
             layer.name,
             gpuTileset ?? terrains,
-            (layer.x || 0) * 32,
-            (layer.y || 0) * 32,
+            origin.x,
+            origin.y,
             gpuTileset !== undefined,
         );
     }
@@ -248,7 +298,8 @@ export class GameMapFrontWrapper {
         if (
             terrains.length === 0 ||
             !(this.scene.game.renderer instanceof WebGLRenderer) ||
-            this.getMap().orientation !== "orthogonal"
+            this.getMap().orientation !== "orthogonal" ||
+            !canUseGpuTilemapRenderer(layer, this.phaserMap.tileWidth, this.phaserMap.tileHeight, this.mapCanExpand)
         ) {
             return undefined;
         }
@@ -277,21 +328,19 @@ export class GameMapFrontWrapper {
     }
 
     private getLayerTileIndices(layer: ITiledMapTileLayer): Set<number> | undefined {
-        if (!Array.isArray(layer.data)) {
-            return undefined;
-        }
-
         const tileIndices = new Set<number>();
-        for (const tileId of layer.data) {
+        let valid = true;
+        forEachTileInLayer(layer, (tileId) => {
             if (typeof tileId !== "number") {
-                return undefined;
+                valid = false;
+                return;
             }
             const tileIndex = tileId & ~TILED_TILE_FLIP_FLAGS;
             if (tileIndex > 0) {
                 tileIndices.add(tileIndex);
             }
-        }
-        return tileIndices;
+        });
+        return valid ? tileIndices : undefined;
     }
 
     public getTileAnimationRefreshDelay(): number | undefined {
@@ -476,9 +525,10 @@ export class GameMapFrontWrapper {
     public setLayerVisibility(layerName: string, visible: boolean): void {
         const phaserLayer = this.findPhaserLayer(layerName);
         if (phaserLayer != undefined) {
-            phaserLayer.setVisible(visible);
-            phaserLayer.setCollisionByProperty({ collides: true }, visible);
-            this.invalidateCollisionGrid();
+            const renderedVisible = visible && !isCollisionStorageLayer(phaserLayer.layer.name);
+            phaserLayer.setVisible(renderedVisible);
+            phaserLayer.setCollisionByProperty({ collides: true }, renderedVisible);
+            this.rebuildVoidCollisionLayer();
         } else {
             const phaserLayers = this.findPhaserLayers(layerName + "/");
             if (phaserLayers.length === 0) {
@@ -490,11 +540,56 @@ export class GameMapFrontWrapper {
                 return;
             }
             for (let i = 0; i < phaserLayers.length; i++) {
-                phaserLayers[i].setVisible(visible);
-                phaserLayers[i].setCollisionByProperty({ collides: true }, visible);
+                const renderedVisible = visible && !isCollisionStorageLayer(phaserLayers[i].layer.name);
+                phaserLayers[i].setVisible(renderedVisible);
+                phaserLayers[i].setCollisionByProperty({ collides: true }, renderedVisible);
             }
-            this.invalidateCollisionGrid();
+            this.rebuildVoidCollisionLayer();
         }
+    }
+
+    private rebuildVoidCollisionLayer(): void {
+        const supportGrid = this.getCurrentTileSupportGrid();
+        for (let y = 0; y < supportGrid.length; y += 1) {
+            for (let x = 0; x < supportGrid[y].length; x += 1) {
+                this.setVoidCollisionCell(x, y, supportGrid[y][x]);
+            }
+        }
+        this.voidCollisionLayer.setCollisionByProperty({ collides: true });
+        this.invalidateCollisionGrid({ modifiedLayer: this.voidCollisionLayer });
+    }
+
+    private refreshVoidCollisionCell(tileX: number, tileY: number): void {
+        const bounds = getMapTileBounds(this.gameMap.getMap());
+        const x = tileX - bounds.minX;
+        const y = tileY - bounds.minY;
+        const supportGrid = this.getCurrentTileSupportGrid();
+        if (x < 0 || y < 0 || x >= bounds.width || y >= bounds.height) return;
+        this.setVoidCollisionCell(x, y, supportGrid[y][x]);
+        this.voidCollisionLayer.setCollisionByProperty({ collides: true });
+        this.invalidateCollisionGrid({ modifiedLayer: this.voidCollisionLayer });
+    }
+
+    private setVoidCollisionCell(x: number, y: number, supported: boolean): void {
+        if (supported) {
+            this.voidCollisionLayer.removeTileAt(x, y, false);
+            return;
+        }
+        const tile = this.voidCollisionLayer.putTileAt(this.existingTileIndex, x, y);
+        if (tile !== null) tile.properties[GameMapProperties.COLLIDES] = true;
+    }
+
+    private getCurrentTileSupportGrid(): boolean[][] {
+        const map = this.gameMap.getMap();
+        const applyRuntimeVisibility = (layers: readonly ITiledMapLayer[], prefix: string): ITiledMapLayer[] =>
+            layers.map((layer): ITiledMapLayer => {
+                const fullName = prefix + layer.name;
+                if (layer.type === "group") {
+                    return { ...layer, layers: applyRuntimeVisibility(layer.layers, fullName + "/") };
+                }
+                return { ...layer, visible: this.findPhaserLayer(fullName)?.visible ?? layer.visible };
+            });
+        return getTileSupportGrid({ ...map, layers: applyRuntimeVisibility(map.layers, "") });
     }
 
     /**
@@ -540,14 +635,12 @@ export class GameMapFrontWrapper {
     }
 
     private registerCollisionArea(area: AreaData): void {
-        const tileWidth = this.getMap().tilewidth ?? 32;
-        const tileHeight = this.getMap().tileheight ?? 32;
-
-        const xStart = Math.floor(area.x / tileWidth);
-        const yStart = Math.floor(area.y / tileHeight);
-
-        const xEnd = Math.ceil((area.x + area.width) / tileWidth);
-        const yEnd = Math.ceil((area.y + area.height) / tileHeight);
+        const start = this.areasCollisionLayer.worldToTileXY(area.x, area.y, true);
+        const end = this.areasCollisionLayer.worldToTileXY(area.x + area.width, area.y + area.height, false);
+        const xStart = Math.floor(start.x);
+        const yStart = Math.floor(start.y);
+        const xEnd = Math.ceil(end.x);
+        const yEnd = Math.ceil(end.y);
 
         for (let y = yStart; y < yEnd; y += 1) {
             for (let x = xStart; x < xEnd; x += 1) {
@@ -615,42 +708,39 @@ export class GameMapFrontWrapper {
             this.collisionGridDirty = false;
             return;
         }
-        const grid: number[][] = Array.from(Array(map.height), (_) => Array(map.width).fill(PathTileType.Walkable));
-        // go through all tilemap layers on map. Maintain order
+        const collisionLayers: CollisionGridLayer[] = [];
         for (const layer of this.phaserLayers) {
-            if (!layer.visible && layer !== this.entitiesCollisionLayer && layer !== this.areasCollisionLayer) {
-                continue;
-            }
+            const isAuthoringCollision = isAuthoringCollisionLayer(layer.layer.name);
+            if (isCollisionStorageLayer(layer.layer.name) && !isAuthoringCollision) continue;
             const cachedLayer = this.perLayerCollisionGridCache.get(layer.layerIndex);
             const shouldRecomputeLayer =
                 this.dirtyLayerIndices.has(layer.layerIndex) ||
                 !cachedLayer ||
                 cachedLayer.length !== map.height ||
                 cachedLayer[0]?.length !== map.width;
-            const layerCollisionGrid = shouldRecomputeLayer ? this.getLayerCollisionGrid(layer) : cachedLayer;
+            const layerCollisionGrid = shouldRecomputeLayer
+                ? isAuthoringCollision
+                    ? getAuthoringCollisionGrid(map)
+                    : this.getLayerCollisionGrid(layer)
+                : cachedLayer;
             if (shouldRecomputeLayer) {
                 this.perLayerCollisionGridCache.set(layer.layerIndex, layerCollisionGrid);
                 this.dirtyLayerIndices.delete(layer.layerIndex);
             }
-
-            for (let y = 0; y < map.height; y += 1) {
-                for (let x = 0; x < map.width; x += 1) {
-                    // currently no case where we can make tile non-collidable with collidable object beneath, skip position
-                    if (grid[y][x] === PathTileType.Exit && layerCollisionGrid[y][x] === PathTileType.Collider) {
-                        grid[y][x] = layerCollisionGrid[y][x];
-                        continue;
-                    }
-                    if (grid[y][x] === PathTileType.Start && layerCollisionGrid[y][x] === PathTileType.Collider) {
-                        grid[y][x] = layerCollisionGrid[y][x];
-                        continue;
-                    }
-                    if (grid[y][x] !== PathTileType.Walkable) {
-                        continue;
-                    }
-                    grid[y][x] = layerCollisionGrid[y][x];
-                }
-            }
+            collisionLayers.push({
+                kind:
+                    layer === this.entitiesCollisionLayer ||
+                    layer === this.areasCollisionLayer ||
+                    layer === this.voidCollisionLayer
+                        ? "dynamic-collision"
+                        : isAuthoringCollision
+                          ? "authoring-collision"
+                          : "regular",
+                visible: layer.visible,
+                grid: layerCollisionGrid,
+            });
         }
+        const grid = composeCollisionGrid(map.width, map.height, collisionLayers);
         this.applyPathfindingAreaWeights(grid, map.width, map.height);
         this.collisionGrid = grid;
         this.collisionGridDirty = false;
@@ -671,6 +761,7 @@ export class GameMapFrontWrapper {
 
         const tileWidth = this.getMap().tilewidth ?? 32;
         const tileHeight = this.getMap().tileheight ?? 32;
+        const mapBounds = getMapWorldBounds(this.getMap());
 
         const personalAreas: AreaData[] = [];
         const meetingAreas: AreaData[] = [];
@@ -688,10 +779,10 @@ export class GameMapFrontWrapper {
         }
 
         const paintArea = (area: AreaData, tileType: PathTileType): void => {
-            const xStart = Math.floor(area.x / tileWidth);
-            const yStart = Math.floor(area.y / tileHeight);
-            const xEnd = Math.ceil((area.x + area.width) / tileWidth);
-            const yEnd = Math.ceil((area.y + area.height) / tileHeight);
+            const xStart = Math.floor((area.x - mapBounds.x) / tileWidth);
+            const yStart = Math.floor((area.y - mapBounds.y) / tileHeight);
+            const xEnd = Math.ceil((area.x + area.width - mapBounds.x) / tileWidth);
+            const yEnd = Math.ceil((area.y + area.height - mapBounds.y) / tileHeight);
 
             for (let y = yStart; y < yEnd; y += 1) {
                 if (y < 0 || y >= mapHeight) {
@@ -767,8 +858,7 @@ export class GameMapFrontWrapper {
 
         this.oldKey = this.key;
 
-        const xMap = Math.floor(x / (map.tilewidth ?? this.gameMap.getDefaultTileSize()));
-        const yMap = Math.floor(y / (map.tileheight ?? this.gameMap.getDefaultTileSize()));
+        const { x: xMap, y: yMap } = this.gameMap.getTileIndexAt(x, y);
         const key = xMap + yMap * map.width;
 
         if (key === this.key) {
@@ -880,6 +970,14 @@ export class GameMapFrontWrapper {
         return this.phaserLayers.find((layer) => layer.layer.name === layerName);
     }
 
+    public addToTileLayerRenderBand<T extends DepthGameObject>(
+        sourceLayer: RenderableTilemapLayer,
+        gameObject: T,
+        localDepth = sourceLayer.depth,
+    ): boolean {
+        return this.gameRenderLayers.addToSameMapBand(sourceLayer, gameObject, localDepth);
+    }
+
     public findPhaserLayers(groupName: string): RenderableTilemapLayer[] {
         return this.phaserLayers.filter((l) => l.layer.name.includes(groupName));
     }
@@ -893,41 +991,158 @@ export class GameMapFrontWrapper {
         }
     }
 
-    public putTile(tile: string | number | null, x: number, y: number, layer: string): void {
+    public synchronizeMapGeometry(source: ITiledMap): void {
+        const previousMap = this.gameMap.getMap();
+        const previousOffset = getTileGridOffset(previousMap);
+        const nextBounds = getMapTileBounds(source);
+        const nextWorldBounds = getMapWorldBounds(source);
+        this.gameMap.synchronizeTileLayers(source);
+
+        this.phaserMap.width = nextBounds.width;
+        this.phaserMap.height = nextBounds.height;
+        this.phaserMap.widthInPixels = nextWorldBounds.width;
+        this.phaserMap.heightInPixels = nextWorldBounds.height;
+
+        for (const phaserLayer of this.phaserLayers) {
+            const layer = phaserLayer.layer;
+            const previousData = layer.data;
+            const previousStartX = Math.round((phaserLayer.x - previousOffset.x) / this.phaserMap.tileWidth);
+            const previousStartY = Math.round((phaserLayer.y - previousOffset.y) / this.phaserMap.tileHeight);
+            const sourceLayer = this.gameMap.findLayer(layer.name);
+            const nextStartX =
+                sourceLayer?.type === "tilelayer" ? (sourceLayer.startx ?? nextBounds.minX) : nextBounds.minX;
+            const nextStartY =
+                sourceLayer?.type === "tilelayer" ? (sourceLayer.starty ?? nextBounds.minY) : nextBounds.minY;
+            const data: Tile[][] = [];
+            for (let y = 0; y < nextBounds.height; y += 1) {
+                const row: Tile[] = [];
+                const previousY = nextStartY + y - previousStartY;
+                for (let x = 0; x < nextBounds.width; x += 1) {
+                    const previousX = nextStartX + x - previousStartX;
+                    const existing = previousData[previousY]?.[previousX];
+                    if (existing !== undefined && existing !== null) {
+                        existing.x = x;
+                        existing.y = y;
+                        existing.updatePixelXY();
+                        row.push(existing);
+                    } else {
+                        row.push(
+                            new Tile(
+                                layer,
+                                -1,
+                                x,
+                                y,
+                                layer.tileWidth,
+                                layer.tileHeight,
+                                this.phaserMap.tileWidth,
+                                this.phaserMap.tileHeight,
+                            ),
+                        );
+                    }
+                }
+                data[y] = row;
+            }
+            layer.data = data;
+            layer.width = nextBounds.width;
+            layer.height = nextBounds.height;
+            layer.widthInPixels = nextBounds.width * layer.tileWidth;
+            layer.heightInPixels = nextBounds.height * layer.tileHeight;
+            const layerOrigin =
+                sourceLayer?.type === "tilelayer"
+                    ? getTileLayerWorldOrigin(source, sourceLayer)
+                    : { x: nextWorldBounds.x, y: nextWorldBounds.y };
+            phaserLayer.setPosition(layerOrigin.x, layerOrigin.y);
+            phaserLayer.setSize(layer.widthInPixels, layer.heightInPixels);
+            if (this.isGpuTilemapLayer(phaserLayer)) phaserLayer.generateLayerDataTexture();
+        }
+
+        this.scene.physics.world.setBounds(
+            nextWorldBounds.x,
+            nextWorldBounds.y,
+            nextWorldBounds.width,
+            nextWorldBounds.height,
+        );
+        this.scene
+            .getCameraManager()
+            .setMapSize(nextWorldBounds.width, nextWorldBounds.height, nextWorldBounds.x, nextWorldBounds.y);
+        this.collisionGridDirty = true;
+        this.dirtyLayerIndices = new Set(this.phaserLayers.map((layer) => layer.layerIndex));
+        this.rebuildVoidCollisionLayer();
+    }
+
+    public putTile(
+        tile: string | number | null,
+        x: number,
+        y: number,
+        layer: string,
+        options: { render?: boolean } = {},
+    ): void {
+        if (tile === null && isAvatarSupportingTileLayerName(layer) && this.isTileOccupiedByAvatar(x, y)) {
+            console.warn(`Cannot delete the tile at (${x}, ${y}) while an avatar is standing on it.`);
+            return;
+        }
         const phaserLayer = this.findPhaserLayer(layer);
         if (phaserLayer) {
+            const render = options.render !== false;
+            const sourceLayer = this.gameMap.findLayer(layer);
+            if (sourceLayer?.type !== "tilelayer") return;
+            const local = tileToLayerIndex(sourceLayer, x, y);
+            let phaserTile: Phaser.Tilemaps.Tile | null;
+            let tileProperties: readonly ITiledMapProperty[] = [];
             if (tile === null) {
-                this.gameMap.putTileInFlatLayer(0, x, y, layer);
-                phaserLayer.putTileAt(-1, x, y);
+                this.gameMap.putTileInFlatLayer(0, local.x, local.y, layer);
+                phaserTile = phaserLayer.putTileAt(-1, local.x, local.y);
             } else {
                 const tileIndex = this.gameMap.getIndexForTileType(tile);
                 if (tileIndex === undefined) {
                     console.error("The tile '" + tile + "' that you want to place doesn't exist.");
                     return;
                 }
-                if (this.isGpuTilemapLayer(phaserLayer) && !phaserLayer.tileset.containsTileIndex(tileIndex)) {
+                if (
+                    render &&
+                    this.isGpuTilemapLayer(phaserLayer) &&
+                    !phaserLayer.tileset.containsTileIndex(tileIndex)
+                ) {
                     console.warn(
                         `Cannot place tile ${tileIndex} on GPU tile layer "${layer}" because it belongs to another tileset.`,
                     );
                     return;
                 }
-                this.gameMap.putTileInFlatLayer(tileIndex, x, y, layer);
-                const phaserTile = phaserLayer.putTileAt(tileIndex, x, y);
-                if (phaserTile !== null) {
-                    for (const property of this.gameMap.getTileProperty(tileIndex)) {
-                        if (property.name === GameMapProperties.COLLIDES && property.value) {
-                            phaserTile.setCollision(true);
-                        }
-                    }
-                }
+                this.gameMap.putTileInFlatLayer(tileIndex, local.x, local.y, layer);
+                phaserTile = phaserLayer.putTileAt(render ? tileIndex : -1, local.x, local.y);
+                tileProperties = this.gameMap.getTileProperty(tileIndex);
+            }
+            if (phaserTile !== null) {
+                replacePhaserTileProperties(phaserTile, tileProperties);
             }
             if (this.isGpuTilemapLayer(phaserLayer)) {
                 phaserLayer.generateLayerDataTexture();
             }
             this.invalidateCollisionGrid({ modifiedLayer: phaserLayer });
+            this.refreshVoidCollisionCell(x, y);
         } else {
             console.error("The layer '" + layer + "' does not exist (or is not a tilelaye).");
         }
+    }
+
+    public containsOccupiedVisualTileDeletion(regions: readonly TeapotTileRegion[]): boolean {
+        return containsOccupiedVisualTileDeletion(regions, this.getOccupiedAvatarTileCoordinates());
+    }
+
+    public isTileOccupiedByAvatar(x: number, y: number): boolean {
+        return this.getOccupiedAvatarTileCoordinates().some((position) => position.x === x && position.y === y);
+    }
+
+    private getOccupiedAvatarTileCoordinates(): { x: number; y: number }[] {
+        const map = this.gameMap.getMap();
+        const positions: { x: number; y: number }[] = [];
+        if (this.scene.CurrentPlayer !== undefined) {
+            positions.push(worldToTileCoordinates(map, this.scene.CurrentPlayer.x, this.scene.CurrentPlayer.y));
+        }
+        for (const player of this.scene.MapPlayersByKey.values()) {
+            positions.push(worldToTileCoordinates(map, player.x, player.y));
+        }
+        return positions;
     }
 
     public canEntityBePlacedOnMap(
@@ -985,8 +1200,10 @@ export class GameMapFrontWrapper {
             for (let y = 0; y < collisionGrid.length; y += 1) {
                 for (let x = 0; x < collisionGrid[y].length; x += 1) {
                     if (collisionGrid[y][x] === 1) {
-                        const xIndex = Math.floor((oldTopLeftPos.x + x * tileDim.width) / tileDim.width);
-                        const yIndex = Math.floor((oldTopLeftPos.y + y * tileDim.height) / tileDim.height);
+                        const { x: xIndex, y: yIndex } = this.gameMap.getTileIndexAt(
+                            oldTopLeftPos.x + x * tileDim.width,
+                            oldTopLeftPos.y + y * tileDim.height,
+                        );
                         positionsToIgnore.set(`x:${xIndex}y:${yIndex}`, 1);
                     }
                 }
@@ -998,8 +1215,10 @@ export class GameMapFrontWrapper {
                 if (collisionGrid[y][x] === 0) {
                     continue;
                 }
-                const xIndex = Math.floor((topLeftPos.x + x * tileDim.width) / tileDim.width);
-                const yIndex = Math.floor((topLeftPos.y + y * tileDim.height) / tileDim.height);
+                const { x: xIndex, y: yIndex } = this.gameMap.getTileIndexAt(
+                    topLeftPos.x + x * tileDim.width,
+                    topLeftPos.y + y * tileDim.height,
+                );
                 // current position is being blocked by entity's old position. We can ignore that
                 // NOTE: Is it possible for position to be blocked by 2 different things?
                 if (positionsToIgnore.has(`x:${xIndex}y:${yIndex}`)) {
@@ -1060,8 +1279,7 @@ export class GameMapFrontWrapper {
         // Check if position is not colliding
         const height = this.collisionGrid.length;
         const width = this.collisionGrid[0].length;
-        const xIndex = Math.floor(topLeftX / this.getTileDimensions().width);
-        const yIndex = Math.floor(topLeftY / this.getTileDimensions().height);
+        const { x: xIndex, y: yIndex } = this.gameMap.getTileIndexAt(topLeftX, topLeftY);
         if (yIndex >= height || yIndex < 0 || xIndex >= width || xIndex < 0) {
             return false;
         }
@@ -1078,10 +1296,20 @@ export class GameMapFrontWrapper {
         }
         const mapWidth = this.collisionGrid[0].length * this.getTileDimensions().width;
         const mapHeight = this.collisionGrid.length * this.getTileDimensions().height;
-        if (topLeftX < 0 || topLeftX + width > mapWidth || topLeftY < 0 || topLeftY + height > mapHeight) {
+        const origin = this.gameMap.getMapBounds();
+        if (
+            topLeftX < origin.x ||
+            topLeftX + width > origin.x + mapWidth ||
+            topLeftY < origin.y ||
+            topLeftY + height > origin.y + mapHeight
+        ) {
             return true;
         }
         return false;
+    }
+
+    public getMapBounds(): { x: number; y: number; width: number; height: number } {
+        return this.gameMap.getMapBounds();
     }
 
     public setLayerProperty(
@@ -1532,8 +1760,12 @@ export class GameMapFrontWrapper {
         }
 
         return layer.layer.data.map((row) =>
-            row.map((tile) =>
-                tile.properties?.[GameMapProperties.COLLIDES]
+            row.map((tile) => {
+                if (tile === null) {
+                    return 0;
+                }
+
+                return tile.properties?.[GameMapProperties.COLLIDES]
                     ? 1
                     : (isExitLayer && tile.index !== -1) ||
                         tile.properties?.[GameMapProperties.EXIT_URL] ||
@@ -1543,8 +1775,8 @@ export class GameMapFrontWrapper {
                           tile.properties?.[GameMapProperties.START] ||
                           tile.properties?.[GameMapProperties.START_LAYER]
                         ? 3
-                        : 0,
-            ),
+                        : 0;
+            }),
         );
     }
 

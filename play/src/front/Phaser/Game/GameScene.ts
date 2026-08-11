@@ -204,6 +204,7 @@ import { audioPlaybackStore } from "../../Stores/AudioPlaybackStore";
 import { requestedScreenSharingState } from "../../Stores/ScreenSharingStore";
 import { EnterLeaveScriptingService } from "../Helpers/EnterLeaveScriptingService";
 import { GameMapFrontWrapper } from "./GameMap/GameMapFrontWrapper";
+import { GameRenderLayers } from "./GameRenderLayers";
 import { resolveTilesetImageUrl } from "./GameMap/TilesetImageUrl";
 import { gameManager } from "./GameManager";
 import { EmoteManager } from "./EmoteManager";
@@ -255,6 +256,8 @@ import Clamp = Phaser.Math.Clamp;
 
 const MOUSE_WHEEL_ZOOM_RATE = 0.5;
 const CONVERSATION_BUBBLE_SPATIAL_GRID_SIZE = 64;
+// Set to true to restore automatic player recentering when the map editor closes.
+const FOLLOW_PLAYER_WHEN_CLOSING_MAP_EDITOR = false;
 
 export interface GameSceneInitInterface {
     reconnecting: boolean;
@@ -349,6 +352,7 @@ export class GameScene extends DirtyScene {
     private entityPermissions: EntityPermissions | undefined;
     private entityPermissionsDeferred: Deferred<EntityPermissions> = new Deferred();
     private gameMapFrontWrapper!: GameMapFrontWrapper;
+    private gameRenderLayers!: GameRenderLayers;
     private actionableItems: Map<number, ActionableItem> = new Map<number, ActionableItem>();
     private isReconnecting: boolean | undefined = undefined;
     private playerName!: string;
@@ -713,12 +717,11 @@ export class GameScene extends DirtyScene {
             this._sendViewportToServer();
         });
 
-        //permit to set bound collision
-        this.physics.world.setBounds(0, 0, this.Map.widthInPixels, this.Map.heightInPixels);
-
         this.usernameDomLayer = new UsernameDomLayer(this);
 
         this.embeddedWebsiteManager = new EmbeddedWebsiteManager(this);
+
+        this.gameRenderLayers = new GameRenderLayers(this);
 
         //add layer on map
         this.gameMapFrontWrapper = new GameMapFrontWrapper(
@@ -726,7 +729,11 @@ export class GameScene extends DirtyScene {
             new GameMap(this.mapFile, this.wamFile),
             this.Map,
             this.Terrains,
+            this.gameRenderLayers,
+            get(mapEditorActivated),
         );
+        const mapBounds = this.gameMapFrontWrapper.getMapBounds();
+        this.physics.world.setBounds(mapBounds.x, mapBounds.y, mapBounds.width, mapBounds.height);
         this.gameMapFrontWrapper.initialize().catch((e) => console.error(e));
         for (const layer of this.gameMapFrontWrapper.getFlatLayers()) {
             if (layer.type === "tilelayer") {
@@ -801,6 +808,7 @@ export class GameScene extends DirtyScene {
         this.pathfindingManager = new PathfindingManager(
             this.gameMapFrontWrapper.getCollisionGrid(),
             this.gameMapFrontWrapper.getTileDimensions(),
+            { x: mapBounds.x, y: mapBounds.y },
         );
 
         this.subscribeToGameMapChanged();
@@ -810,11 +818,7 @@ export class GameScene extends DirtyScene {
 
         this.tryMovePlayerWithMoveToParameter();
 
-        this.cameraManager = new CameraManager(
-            this,
-            { width: this.Map.widthInPixels, height: this.Map.heightInPixels },
-            waScaleManager,
-        );
+        this.cameraManager = new CameraManager(this, mapBounds, waScaleManager);
 
         biggestAvailableAreaStore.recompute();
         if (ENABLE_MAP_EDITOR) {
@@ -1638,35 +1642,34 @@ export class GameScene extends DirtyScene {
         const worldView = camera.worldView;
 
         // Base viewport from camera
-        const baseLeft = Math.max(0, worldView.x - margin);
-        const baseTop = Math.max(0, worldView.y - margin);
+        const baseLeft = worldView.x - margin;
+        const baseTop = worldView.y - margin;
         const baseRight = worldView.right + margin;
         const baseBottom = worldView.bottom + margin;
+        const mapBounds = this.gameMapFrontWrapper.getMapBounds();
 
         const viewport = this.intersectViewportWithMapBounds(
             { left: baseLeft, top: baseTop, right: baseRight, bottom: baseBottom },
-            this.Map.widthInPixels,
-            this.Map.heightInPixels,
+            mapBounds,
         );
 
         return viewport;
     }
 
     /**
-     * Intersects the viewport with the map rectangle [0, mapWidth] × [0, mapHeight] in world pixels.
+     * Intersects the viewport with the map's signed world rectangle.
      */
     private intersectViewportWithMapBounds(
         viewport: ViewportInterface,
-        mapWidth: number,
-        mapHeight: number,
+        mapBounds: { x: number; y: number; width: number; height: number },
     ): ViewportInterface | null {
-        if (mapWidth <= 0 || mapHeight <= 0) {
+        if (mapBounds.width <= 0 || mapBounds.height <= 0) {
             return null;
         }
-        const left = Math.max(0, viewport.left);
-        const top = Math.max(0, viewport.top);
-        const right = Math.min(mapWidth, viewport.right);
-        const bottom = Math.min(mapHeight, viewport.bottom);
+        const left = Math.max(mapBounds.x, viewport.left);
+        const top = Math.max(mapBounds.y, viewport.top);
+        const right = Math.min(mapBounds.x + mapBounds.width, viewport.right);
+        const bottom = Math.min(mapBounds.y + mapBounds.height, viewport.bottom);
         if (right <= left || bottom <= top) {
             return null;
         }
@@ -1750,6 +1753,10 @@ export class GameScene extends DirtyScene {
 
     public getGameMapFrontWrapper(): GameMapFrontWrapper {
         return this.gameMapFrontWrapper;
+    }
+
+    public getGameRenderLayers(): GameRenderLayers {
+        return this.gameRenderLayers;
     }
 
     public getCameraManager(): CameraManager {
@@ -2668,7 +2675,9 @@ export class GameScene extends DirtyScene {
                 this.activatablesManager.handlePointerOutActivatableObject();
                 this.activatablesManager.disableSelectingByDistance();
             } else {
-                this.cameraManager.startFollowPlayer(this.CurrentPlayer);
+                if (FOLLOW_PLAYER_WHEN_CLOSING_MAP_EDITOR) {
+                    this.cameraManager.startFollowPlayer(this.CurrentPlayer);
+                }
                 this.activatablesManager.handlePointerOutActivatableObject();
                 this.activatablesManager.enableSelectingByDistance();
                 // make sure all entities are non-interactive
@@ -3460,6 +3469,8 @@ ${escapedMessage}
                                 new GameMap(this.mapFile, this.wamFile),
                                 this.Map,
                                 this.Terrains,
+                                this.gameRenderLayers,
+                                get(mapEditorActivated),
                             );
                             // Unsubscribe if needed and subscribe to GameMapChanged event again
                             this.subscribeToGameMapChanged();
@@ -3894,7 +3905,10 @@ ${escapedMessage}
         speed: number | undefined = undefined,
     ): Promise<{ x: number; y: number; cancelled: boolean }> {
         const pathfindingManager = this.getPathfindingManager();
-        pathfindingManager.setCollisionGrid(this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false }));
+        pathfindingManager.setMapData(
+            this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false }),
+            this.gameMapFrontWrapper.getMapBounds(),
+        );
 
         const path = await pathfindingManager.findPathFromGameCoordinates(
             {
@@ -4232,7 +4246,7 @@ ${escapedMessage}
         this.gameMapChangedSubscription = this.gameMapFrontWrapper
             .getMapChangedObservable()
             .subscribe((collisionGrid) => {
-                this.pathfindingManager.setCollisionGrid(collisionGrid);
+                this.pathfindingManager.setMapData(collisionGrid, this.gameMapFrontWrapper.getMapBounds());
                 this.markDirty();
             });
     }
@@ -4428,12 +4442,10 @@ ${escapedMessage}
 
         debugZoom("DeltaY: ", deltaY, "Zoom factor", zoomFactor);
 
-        const cursorPosition = this.mapEditorModeManager?.isActive()
-            ? { x: pointer.x, y: pointer.y }
-            : undefined;
+        const cursorPosition = this.cameraManager.isInExplorationMode() ? { x: pointer.x, y: pointer.y } : undefined;
 
-        // Wheel and trackpad input is already a stream of small updates. Applying it directly in the editor avoids
-        // overlapping tweens fighting over the camera focus while retaining smooth zoom outside edit mode.
+        // Wheel and trackpad input is already a stream of small updates. Applying it directly in exploration mode
+        // avoids overlapping tweens fighting over the camera focus while retaining smooth zoom while following.
         this.zoomByFactor(zoomFactor, cursorPosition === undefined, cursorPosition);
     }
 

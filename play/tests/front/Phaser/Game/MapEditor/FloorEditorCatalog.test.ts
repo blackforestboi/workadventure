@@ -1,15 +1,23 @@
-import type { ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
+import type { ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
 import {
     chooseDefaultPaintLayer,
     collectTerrainGids,
+    findTopmostErasableLayer,
     getTerrainTilesetGids,
     resolveBrushLayer,
 } from "../../../../../src/front/Phaser/Game/MapEditor/Tools/FloorEditorCatalog";
 
-function tileLayer(name: string, data: number[]): ITiledMapLayer {
-    return { id: 1, name, type: "tilelayer", data, height: 1, width: data.length } as unknown as ITiledMapLayer;
+function tileLayer(name: string, data: number[]): ITiledMapTileLayer {
+    return {
+        id: 1,
+        name,
+        type: "tilelayer",
+        data,
+        height: 1,
+        width: data.length,
+    } as unknown as ITiledMapTileLayer;
 }
 
 describe("terrain editor catalog", () => {
@@ -41,5 +49,28 @@ describe("terrain editor catalog", () => {
         expect(resolveBrushLayer("", ["collisions", "floor", "walls"])).toBe("floor");
         expect(resolveBrushLayer("walls", ["collisions", "floor", "walls"])).toBe("walls");
         expect(resolveBrushLayer("", [])).toBe("");
+    });
+
+    it("targets the topmost visible non-system tile when erasing stacked layers", () => {
+        const floor = tileLayer("floor", [11, 12]);
+        const walls = tileLayer("walls", [0, 101]);
+        const collision = tileLayer("collision 1", [201, 202]);
+
+        expect(findTopmostErasableLayer([floor, walls, collision], 0, 0)).toBe("floor");
+        expect(findTopmostErasableLayer([floor, walls, collision], 1, 0)).toBe("walls");
+        expect(findTopmostErasableLayer([floor, { ...walls, visible: false }, collision], 1, 0)).toBe("floor");
+        expect(findTopmostErasableLayer([collision], 1, 0)).toBeUndefined();
+    });
+
+    it("reveals the next tile layer after each erase", () => {
+        const floor = tileLayer("floor", [11]);
+        const walls = tileLayer("walls", [101]);
+        const layers = [floor, walls];
+
+        expect(findTopmostErasableLayer(layers, 0, 0)).toBe("walls");
+        walls.data = [0];
+        expect(findTopmostErasableLayer(layers, 0, 0)).toBe("floor");
+        floor.data = [0];
+        expect(findTopmostErasableLayer(layers, 0, 0)).toBeUndefined();
     });
 });
