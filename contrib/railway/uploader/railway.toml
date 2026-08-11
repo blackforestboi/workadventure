@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "uploader/Dockerfile"
+watchPatterns = ["/uploader/**", "/package.json", "/package-lock.json", "/contrib/railway/**"]
+
+[deploy]
+healthcheckPath = "/ping"
+healthcheckTimeout = 180
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+overlapSeconds = 20
+drainingSeconds = 30

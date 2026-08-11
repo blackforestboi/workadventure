@@ -1,6 +1,7 @@
 .env
 .env.teapot
 contrib/docker/.env.teapot
+contrib/railway/.env.provisioning
 backups/teapot/
 play/storage/teapot-wokas/
 .idea

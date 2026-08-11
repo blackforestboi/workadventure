@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "contrib/railway/gateway/Dockerfile"
+watchPatterns = ["/contrib/railway/gateway/**"]
+
+[deploy]
+healthcheckPath = "/teapot/health/ready"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+overlapSeconds = 20
+drainingSeconds = 30

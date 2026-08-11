@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "play/Dockerfile"
+watchPatterns = ["/play/**", "/libs/**", "/messages/**", "/teapot-mcp/**", "/package.json", "/package-lock.json", "/patches/**", "/contrib/railway/**"]
+
+[deploy]
+healthcheckPath = "/teapot/health/ready"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+overlapSeconds = 20
+drainingSeconds = 30

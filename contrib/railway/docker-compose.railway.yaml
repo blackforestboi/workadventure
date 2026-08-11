@@ -1,0 +1,74 @@
+# Railway import topology for the dedicated "tpot-world" project.
+#
+# Import this file from Railway's project canvas, then connect each buildable
+# service to this repository and set the service-specific config-file path from
+# the runbook. PostgreSQL and Redis are Railway database services and are added
+# separately, so their managed credentials are never represented here.
+services:
+  gateway:
+    build:
+      context: ../..
+      dockerfile: contrib/railway/gateway/Dockerfile
+    environment:
+      PORT: "8080"
+
+  play:
+    build:
+      context: ../..
+      dockerfile: play/Dockerfile
+    expose:
+      - "3000"
+      - "3001"
+    volumes:
+      - teapot-woka-assets:/data/teapot-wokas
+
+  back:
+    build:
+      context: ../..
+      dockerfile: back/Dockerfile
+    expose:
+      - "8080"
+      - "50051"
+
+  map-storage:
+    build:
+      context: ../..
+      dockerfile: map-storage/Dockerfile
+    expose:
+      - "3000"
+      - "50053"
+    volumes:
+      - map-storage-data:/maps
+
+  uploader:
+    build:
+      context: ../..
+      dockerfile: uploader/Dockerfile
+    expose:
+      - "8080"
+
+  icon:
+    image: matthiasluedtke/iconserver:v3.21.0
+    expose:
+      - "8080"
+
+  teapot-mcp:
+    build:
+      context: ../..
+      dockerfile: teapot-mcp/Dockerfile
+    expose:
+      - "17374"
+
+  teapot-agent-bridge:
+    build:
+      context: ../..
+      dockerfile: teapot-cli-companion/Dockerfile
+    expose:
+      - "17375"
+    volumes:
+      - teapot-agent-auth:/var/lib/teapot-agent-auth
+
+volumes:
+  teapot-woka-assets:
+  map-storage-data:
+  teapot-agent-auth:

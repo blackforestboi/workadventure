@@ -1,0 +1,49 @@
+{
+	# Railway terminates the public TLS connection. Caddy only proxies inside the
+	# Teapot Railway private network.
+	auto_https off
+}
+
+:{$PORT:8080} {
+	encode zstd gzip
+
+	route {
+		@websocket path /ws /ws/*
+		handle @websocket {
+			reverse_proxy http://play.railway.internal:3001
+		}
+
+		@api path /api /api/*
+		handle @api {
+			uri strip_prefix /api
+			reverse_proxy http://back.railway.internal:8080
+		}
+
+		@mapStorage path /map-storage /map-storage/*
+		handle @mapStorage {
+			uri strip_prefix /map-storage
+			reverse_proxy http://map-storage.railway.internal:3000
+		}
+
+		@uploader path /uploader /uploader/*
+		handle @uploader {
+			uri strip_prefix /uploader
+			reverse_proxy http://uploader.railway.internal:8080
+		}
+
+		@icon path /icon /icon/* /lettericons /lettericons/*
+		handle @icon {
+			uri strip_prefix /icon
+			reverse_proxy http://icon.railway.internal:8080
+		}
+
+		@mcp path /mcp /mcp/*
+		handle @mcp {
+			reverse_proxy http://teapot-mcp.railway.internal:17374
+		}
+
+		handle {
+			reverse_proxy http://play.railway.internal:3000
+		}
+	}
+}
