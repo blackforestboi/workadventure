@@ -162,6 +162,7 @@ const menu: BaseTranslation = {
     sub: {
         profile: "Perfil",
         settings: "Configurações",
+        aiModels: "Modelos de IA",
         credit: "Crédito",
         globalMessages: "Mensagens globais",
         contact: "Contato",

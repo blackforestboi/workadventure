@@ -33,6 +33,20 @@ Environment variables for the Play service (frontend and pusher).
 | `REDIS_PASSWORD` | No | Redis authentication password |
 | `PUBLIC_MAP_STORAGE_URL` | No | The public URL to the map-storage server (for instance: "https://map-storage.example.com") |
 | `INTERNAL_MAP_STORAGE_URL` | No | The internal URL to the map-storage server (for instance: "https://map-storage:3000") |
+| `TEAPOT_DATABASE_URL` | No | PostgreSQL connection URL for Teapot identities, catalogs, revisions, invitations, and audit data |
+| `TEAPOT_MIGRATIONS_DIRECTORY` | No | Optional absolute or working-directory-relative path to Teapot SQL migrations |
+| `TEAPOT_REQUIRE_PERSISTENCE` | No | Fail startup instead of using volatile storage when TEAPOT_DATABASE_URL is absent |
+| `TEAPOT_MAP_STORAGE_WRITE_TOKEN` | No | Bearer token used only by the pusher to publish validated Teapot map revisions |
+| `TEAPOT_MCP_PUBLIC_URL` | No | Public Streamable HTTP endpoint for the Teapot authoring MCP server |
+| `TEAPOT_MCP_APPROVAL_SECRET` | No | Dedicated HMAC secret for one-time Teapot MCP approval tokens; defaults to SECRET_KEY |
+| `TEAPOT_AGENT_BRIDGE_URL` | No | Internal URL for the owner-isolated hosted Codex and Claude bridge |
+| `TEAPOT_AGENT_BRIDGE_SECRET` | No | Dedicated bearer secret for pusher-to-agent-bridge requests |
+| `TEAPOT_WOKA_STORAGE_DIRECTORY` | No | Durable filesystem directory for immutable generated Woka PNG sprite sheets |
+| `TEAPOT_WOKA_PUBLIC_BASE_URL` | No | Public base URL used in generated Woka texture URLs; defaults to PUSHER_URL |
+| `TEAPOT_X_CLIENT_ID` | No | X OAuth 2.0 client ID |
+| `TEAPOT_X_CLIENT_SECRET` | No | X OAuth 2.0 confidential-client secret |
+| `TEAPOT_X_REDIRECT_URI` | No | Exact X OAuth callback URL; defaults to PUSHER_URL/teapot/auth/x/callback |
+| `TEAPOT_X_BOOTSTRAP_USER_IDS` | No | Comma-separated X user IDs admitted with the operator role during bootstrap |
 | `OPENID_CLIENT_ID` | No | OAuth2 client ID for OpenID Connect authentication |
 | `OPENID_CLIENT_SECRET` | No | OAuth2 client secret for OpenID Connect authentication |
 | `OPENID_CLIENT_ISSUER` | No | OpenID Connect issuer URL (identity provider) |

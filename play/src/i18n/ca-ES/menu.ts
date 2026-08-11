@@ -163,6 +163,7 @@ const menu: DeepPartial<Translation["menu"]> = {
     sub: {
         profile: "Perfil",
         settings: "Configuració",
+        aiModels: "Models d'IA",
         credit: "Crèdits",
         globalMessages: "Missatges Globals",
         contact: "Contacte",
