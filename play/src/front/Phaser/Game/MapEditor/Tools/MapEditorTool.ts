@@ -9,6 +9,7 @@ export abstract class MapEditorTool {
     public abstract destroy(): void;
     public abstract subscribeToGameMapFrontWrapperEvents(gameMapFrontWrapper: GameMapFrontWrapper): void;
     public abstract handleKeyDownEvent(event: KeyboardEvent): void;
+    public cancelCurrentAction?(): boolean;
     public handleHistoryAction?(action: MapEditorHistoryAction): boolean;
     /**
      * React on commands coming from the outside

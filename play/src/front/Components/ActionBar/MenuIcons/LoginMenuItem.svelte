@@ -2,6 +2,7 @@
     import ActionBarButton from "../ActionBarButton.svelte";
     import LL from "../../../../i18n/i18n-svelte";
     import { analyticsClient } from "../../../Administration/AnalyticsClient";
+    import { openLoginOverlay } from "../../../Stores/LoginOverlayStore";
     import { IconUserCircle } from "@wa-icons";
 
     interface Props {
@@ -14,7 +15,7 @@
 
     function goToLogin() {
         analyticsClient.login();
-        window.location.href = "/login";
+        openLoginOverlay();
     }
 </script>
 

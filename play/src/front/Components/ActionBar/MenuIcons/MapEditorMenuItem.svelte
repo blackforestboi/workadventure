@@ -22,7 +22,7 @@
     function toggleMapEditorMode() {
         if (!localUserStore.isLogged()) {
             analyticsClient.login();
-            window.location.href = "/login";
+            window.dispatchEvent(new CustomEvent("workadventure:open-login-overlay"));
             return;
         }
 

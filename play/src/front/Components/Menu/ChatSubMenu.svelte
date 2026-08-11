@@ -3,6 +3,7 @@
     import { localUserStore } from "../../Connection/LocalUserStore";
     import { LL } from "../../../i18n/i18n-svelte";
     import { analyticsClient } from "../../Administration/AnalyticsClient";
+    import { openLoginOverlay } from "../../Stores/LoginOverlayStore";
     import { gameManager } from "../../Phaser/Game/GameManager";
     import InputCheckbox from "../Input/InputCheckbox.svelte";
     import Button from "../UI/Button.svelte";
@@ -18,6 +19,11 @@
 
     function openResetKeyStorage() {
         modals.open(resetKeyStorageConfirmationModal);
+    }
+
+    function login(): void {
+        analyticsClient.login();
+        openLoginOverlay();
     }
 </script>
 
@@ -50,7 +56,7 @@
                     <p class="text-gray-400 w-full text-center pt-2">
                         {$LL.chat.requiresLoginForChat()}
                     </p>
-                    <Button class="light flex items-center w-1/2" href="/login" onclick={() => analyticsClient.login()}>
+                    <Button class="light flex items-center w-1/2" onclick={login}>
                         {$LL.menu.profile.login()}</Button
                     >
                 </div>

@@ -113,7 +113,7 @@ export const DEFAULT_WOKA_NAME: string = env.DEFAULT_WOKA_NAME || "";
 export const DEFAULT_WOKA_TEXTURE: string = env.DEFAULT_WOKA_TEXTURE || "";
 export const SKIP_CAMERA_PAGE: boolean = env.SKIP_CAMERA_PAGE ?? false;
 /** When true, map details include bypassPwa so the play client never shows the Web App install screen. */
-export const BYPASS_PWA: boolean = env.BYPASS_PWA ?? false;
+export const BYPASS_PWA: boolean = env.BYPASS_PWA ?? true;
 export const PROVIDE_DEFAULT_WOKA_NAME: "no" | "random" | "fix" | "fix-plus-random-numbers" | undefined =
     env.PROVIDE_DEFAULT_WOKA_NAME;
 export const PROVIDE_DEFAULT_WOKA_TEXTURE: "no" | "random" | "fix" | undefined = env.PROVIDE_DEFAULT_WOKA_TEXTURE;

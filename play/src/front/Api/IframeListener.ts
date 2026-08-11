@@ -18,6 +18,7 @@ import { analyticsClient } from "../Administration/AnalyticsClient";
 import { bannerStore, requestVisitCardsStore } from "../Stores/GameStore";
 import { modalIframeStore, modalVisibilityStore } from "../Stores/ModalStore";
 import { connectionManager } from "../Connection/ConnectionManager";
+import { openLoginOverlay } from "../Stores/LoginOverlayStore";
 
 import { gameManager } from "../Phaser/Game/GameManager";
 import type { OpenPopupEvent } from "./Events/OpenPopupEvent";
@@ -567,7 +568,7 @@ class IframeListener {
                             handleOpenMenuEvent(iframeEvent.data.key);
                         } else if (iframeEvent.type == "login") {
                             analyticsClient.login();
-                            window.location.href = "/login";
+                            openLoginOverlay();
                         } else if (iframeEvent.type == "redirectPricing") {
                             if (connectionManager.currentRoom && connectionManager.currentRoom.pricingUrl) {
                                 window.location.href = connectionManager.currentRoom.pricingUrl;

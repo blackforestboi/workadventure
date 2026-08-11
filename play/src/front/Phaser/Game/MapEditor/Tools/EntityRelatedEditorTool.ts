@@ -95,21 +95,6 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
 
     public handleKeyDownEvent(event: KeyboardEvent): void {
         switch (event.key.toLowerCase()) {
-            case "escape": {
-                if (get(mapEditorEntityModeStore) === "EDIT") {
-                    if (document.activeElement instanceof HTMLElement) {
-                        document.activeElement.blur();
-                    }
-                    mapEditorSelectedEntityStore.set(undefined);
-                    mapEditorEntityModeStore.set("ADD");
-                    return;
-                }
-                if (get(mapEditorEntityModeStore) === "ADD") {
-                    this.cleanPreview();
-                    return;
-                }
-                break;
-            }
             case "backspace":
             case "delete": {
                 get(mapEditorSelectedEntityStore)?.delete();
@@ -118,6 +103,24 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                 break;
             }
         }
+    }
+
+    public cancelCurrentAction(): boolean {
+        if (get(mapEditorEntityModeStore) === "EDIT") {
+            if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+            }
+            mapEditorSelectedEntityStore.set(undefined);
+            mapEditorEntityModeStore.set("ADD");
+            return true;
+        }
+
+        if (this.entityPrefab === undefined && this.entityPrefabPreview === undefined) {
+            return false;
+        }
+
+        this.cleanPreview();
+        return true;
     }
 
     protected unsubscribeToStores(): void {

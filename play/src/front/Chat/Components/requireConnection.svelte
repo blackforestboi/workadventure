@@ -3,6 +3,7 @@
     import LL from "../../../i18n/i18n-svelte";
     import messageSmileyImg from "../images/message-smiley.svg";
     import { analyticsClient } from "../../Administration/AnalyticsClient";
+    import { openLoginOverlay } from "../../Stores/LoginOverlayStore";
 
     interface Props {
         emoji?: Snippet;
@@ -12,6 +13,11 @@
     }
 
     let { emoji, title, buttonLabel, children }: Props = $props();
+
+    function login(): void {
+        analyticsClient.login();
+        openLoginOverlay();
+    }
 </script>
 
 <div class="flex flex-col items-center justify-center text-center px-4 py-12">
@@ -29,16 +35,16 @@
         {/if}
     </div>
     <div class="flex justify-center">
-        <a
+        <button
+            type="button"
             class="flex justify-center rounded-lg h-10 bg-secondary hover:bg-secondary-800 hover:no-underline hover:text-white no-underline transition-all items-center my-4 text-base px-8 text-white"
-            href="/login"
-            onclick={() => analyticsClient.login()}
+            onclick={login}
         >
             {#if buttonLabel}
                 {@render buttonLabel()}
             {:else}
                 {$LL.menu.profile.login()}
             {/if}
-        </a>
+        </button>
     </div>
 </div>

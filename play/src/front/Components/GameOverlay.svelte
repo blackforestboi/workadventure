@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import type { Game } from "../Phaser/Game/Game";
     import { errorStore } from "../Stores/ErrorStore";
     import { errorScreenStore } from "../Stores/ErrorScreenStore";
@@ -14,6 +15,7 @@
     import { duplicateUserConnectedStore } from "../Stores/DuplicateUserConnectedStore";
     import { forceRefreshChatStore } from "../Stores/ChatStore";
     import { loaderVisibleStore } from "../Stores/LoaderStore";
+    import { loginOverlayVisibleStore, openLoginOverlay } from "../Stores/LoginOverlayStore";
     import { showModalGlobalComminucationVisibilityStore } from "../Stores/ModalStore";
     import { isActivatedStore as calendarIsActivatedStore, isCalendarVisibleStore } from "../Stores/CalendarStore";
     import { isActivatedStore as todoListIsActivatedStore, isTodoListVisibleStore } from "../Stores/TodoListStore";
@@ -42,12 +44,18 @@
     import Onboarding from "./Onboarding/Onboarding.svelte";
     import PwaInstallScreen from "./PwaInstall/PwaInstallScreen.svelte";
     import AiGenerationSettingsOverlay from "./AssetGeneration/AiGenerationSettingsOverlay.svelte";
+    import LoginOverlay from "./Login/LoginOverlay.svelte";
 
     interface Props {
         game: Game;
     }
 
     let { game }: Props = $props();
+
+    onMount(() => {
+        window.addEventListener("workadventure:open-login-overlay", openLoginOverlay);
+        return () => window.removeEventListener("workadventure:open-login-overlay", openLoginOverlay);
+    });
 </script>
 
 <!-- Preload image loader TODO HUGO : Better way ? -->
@@ -125,5 +133,8 @@
 {/if}
 
 <AiGenerationSettingsOverlay />
+{#if $loginOverlayVisibleStore}
+    <LoginOverlay />
+{/if}
 <FloatingUiPopupList />
 <!-- </div> -->

@@ -182,7 +182,7 @@ services:
       DEFAULT_WOKA_NAME: ${DEFAULT_WOKA_NAME:-}
       DEFAULT_WOKA_TEXTURE: ${DEFAULT_WOKA_TEXTURE:-}
       SKIP_CAMERA_PAGE: ${SKIP_CAMERA_PAGE:-false}
-      BYPASS_PWA: ${BYPASS_PWA:-false}
+      BYPASS_PWA: ${BYPASS_PWA:-true}
       PROVIDE_DEFAULT_WOKA_NAME: ${PROVIDE_DEFAULT_WOKA_NAME:-}
       PROVIDE_DEFAULT_WOKA_TEXTURE: ${PROVIDE_DEFAULT_WOKA_TEXTURE:-}
       SERVER_NAME: $SERVER_NAME
@@ -638,6 +638,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.oidc.rule=Host(`oidc.workadventure.localhost`)"
       - "traefik.http.routers.oidc.entryPoints=web"
+      - "traefik.http.routers.oidc.middlewares=auth-overlay-headers"
+      # The mock login is displayed inside the Vite app's SSO overlay in local development.
+      - "traefik.http.middlewares.auth-overlay-headers.headers.customresponseheaders.Content-Security-Policy="
+      - "traefik.http.middlewares.auth-overlay-headers.headers.customresponseheaders.X-Content-Security-Policy="
+      - "traefik.http.middlewares.auth-overlay-headers.headers.customresponseheaders.X-Frame-Options="
     healthcheck:
       #disable: true
       timeout: 5s
@@ -654,6 +659,7 @@ services:
       - "traefik.http.routers.matrix.entryPoints=web"
       - "traefik.http.services.matrix.loadbalancer.server.port=8008"
       - "traefik.http.routers.matrix.service=matrix"
+      - "traefik.http.routers.matrix.middlewares=auth-overlay-headers"
     volumes:
       - ./synapse:/data/
       #- ./synapse/homeserver.template.yaml:/data/homeserver.template.yaml
