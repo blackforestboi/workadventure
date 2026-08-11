@@ -21,6 +21,7 @@ import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { TexturesHelper } from "../../../Helpers/TexturesHelper";
 import type { Entity } from "../../../ECS/Entity";
 import { EntityResizeHandles } from "../Entities/EntityResizeHandles";
+import { getEntityDisplaySize } from "../../../../Utils/EntityPrefabSize";
 import { MapEditorTool } from "./MapEditorTool";
 
 import Image = Phaser.GameObjects.Image;
@@ -151,6 +152,13 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                                     entityPrefab.imagePath,
                                 );
                             }
+                            const preview = this.entityPrefabPreview;
+                            const displaySize = getEntityDisplaySize(
+                                preview.width,
+                                preview.height,
+                                entityPrefab.defaultSizeInTiles,
+                            );
+                            preview.setDisplaySize(displaySize.width, displaySize.height);
                             TexturesHelper.playEntityAnimation(this.entityPrefabPreview, entityPrefab);
                             this.scene.markDirty();
                         })
