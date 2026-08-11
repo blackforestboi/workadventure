@@ -52,10 +52,11 @@ COPY libs ./libs
 COPY --from=proto-builder /usr/libs/messages/src ./libs/messages/src
 COPY --from=builder /usr/src/map-storage/dist-ui ./map-storage/dist-ui
 COPY --chown=node:node map-storage map-storage
+COPY --chmod=755 contrib/railway/map-storage/entrypoint.sh /usr/local/bin/tpot-map-storage-entrypoint
 RUN chown node:node -R /usr/src/map-storage
 WORKDIR /usr/src/map-storage
 RUN mkdir ./dist
 
 HEALTHCHECK --interval=5s --timeout=10s --start-period=5s --retries=10 CMD curl -f http://localhost:3000/ping || exit 1
 USER node
-CMD ["npm", "run", "start"]
+CMD ["/usr/local/bin/tpot-map-storage-entrypoint"]
