@@ -1,5 +1,6 @@
-import type { TeapotGeneratedAssetView } from "./TeapotGeneratedAssetApi";
 import { VisualAssetAnimation } from "@workadventure/map-editor";
+
+import type { TeapotGeneratedAssetView } from "./TeapotGeneratedAssetApi";
 
 const DATABASE_NAME = "teapot-generated-map-assets";
 const DATABASE_VERSION = 1;
