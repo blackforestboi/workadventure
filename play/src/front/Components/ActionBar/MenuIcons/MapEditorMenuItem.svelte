@@ -7,8 +7,8 @@
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import { isCalendarVisibleStore } from "../../../Stores/CalendarStore";
-    import { mapEditorActivated, mapEditorModeStore, mapExplorationModeStore } from "../../../Stores/MapEditorStore";
-    import { mapEditorMenuVisibleStore, openedMenuStore } from "../../../Stores/MenuStore";
+    import { mapEditorModeStore, mapExplorationModeStore } from "../../../Stores/MapEditorStore";
+    import { mapEditorActivated, mapEditorMenuVisibleStore, openedMenuStore } from "../../../Stores/MenuStore";
     import { isTodoListVisibleStore } from "../../../Stores/TodoListStore";
     import { warningMessageStore } from "../../../Stores/ErrorStore";
     import { worldCreationApi } from "../../../Services/WorldCreationApi";
