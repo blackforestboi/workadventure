@@ -22,8 +22,6 @@ import { z } from "zod";
 import type { ITiledMap, ITiledMapLayer, ITiledMapObject, ITiledMapTileset } from "@workadventure/tiled-map-type-guard";
 import {
     type AreaData,
-    ENTITIES_FOLDER_PATH_NO_PREFIX,
-    ENTITY_COLLECTION_FILE,
     EntityPermissions,
     type EntityPrefabType,
     GameMap,
@@ -73,6 +71,7 @@ import { joystickBaseImg, joystickBaseKey, joystickThumbImg, joystickThumbKey } 
 import { PropertyUtils } from "../Map/PropertyUtils";
 import { analyticsClient } from "../../Administration/AnalyticsClient";
 import { PathfindingManager } from "../../Utils/PathfindingManager";
+import { getCustomEntityCollectionUrl } from "../../Utils/CustomEntityCollectionUrl";
 import type {
     GroupCreatedUpdatedMessageInterface,
     MessageUserMovedInterface,
@@ -637,8 +636,7 @@ export class GameScene extends DirtyScene {
     }
 
     public getCustomEntityCollectionUrl() {
-        const mapStoragePath = `${PUBLIC_MAP_STORAGE_PREFIX}${ENTITIES_FOLDER_PATH_NO_PREFIX}/${ENTITY_COLLECTION_FILE}`;
-        return new URL(mapStoragePath, this.wamUrlFile).toString();
+        return getCustomEntityCollectionUrl(this.wamUrlFile, PUBLIC_MAP_STORAGE_PREFIX);
     }
 
     //hook initialisation
