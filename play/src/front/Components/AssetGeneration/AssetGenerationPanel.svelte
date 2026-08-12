@@ -29,6 +29,7 @@
 
     interface AcceptedGeneratedAsset {
         blob: Blob;
+        title?: string;
         providerId: AssetGenerationProviderId;
         modelId: string;
         prompt: string;
@@ -51,6 +52,7 @@
         onGenerationFailure?: (reason: "provider-error" | "cancelled") => void | Promise<void>;
         onDiscardCandidate?: () => void | Promise<void>;
         onGenerated?: (asset: AcceptedGeneratedAsset) => void | Promise<void>;
+        onUseImage?: () => void;
         onAccept: (asset: AcceptedGeneratedAsset) => void | Promise<void>;
     }
 
@@ -70,6 +72,7 @@
         onGenerationFailure,
         onDiscardCandidate,
         onGenerated,
+        onUseImage,
         onAccept,
     }: Props = $props();
 
@@ -79,14 +82,12 @@
     let lifecycle = $state<AssetGenerationLifecycleState>("idle");
     let error = $state("");
     let referencePreviews: readonly { id: string; objectUrl: string }[] = $state([]);
-    let reviewOpen = $state(false);
     let candidate: Blob | null = $state(null);
     let candidateUrl = $state("");
     let candidateProvenance: Omit<AcceptedGeneratedAsset, "blob"> | null = $state(null);
     let wokaStage: "idle-frame" | "sprite-sheet" = $state("idle-frame");
     let acceptedIdleFrame: Blob | null = $state(null);
     let acceptedIdleFrameUrl = $state("");
-    let reviewSelection: { providerId: AssetGenerationProviderId; modelId: string } | null = $state(null);
     let animateAsset = $state(false);
     let animationFrameCount = $state(4);
     let animationFrameDurationMs = $state(200);
@@ -127,8 +128,12 @@
         referencePreviews = references.list().map(({ id: referenceId, objectUrl }) => ({ id: referenceId, objectUrl }));
     }
 
-    function requestApproval() {
+    function requestGeneration() {
         error = "";
+        if (prompt.trim() === "" && onUseImage !== undefined) {
+            onUseImage();
+            return;
+        }
         const selection = assetGenerationSettings.getReadySelection();
         if (selection === undefined) {
             error = "Configure an image provider and model in AI settings first.";
@@ -151,20 +156,16 @@
             error = "Accept a front-facing idle frame before generating the sprite sheet.";
             return;
         }
-        reviewSelection = selection;
-        reviewOpen = true;
+        void generate(selection);
     }
 
-    async function approveAndGenerate() {
-        reviewOpen = false;
+    async function generate(selection: { providerId: AssetGenerationProviderId; modelId: string }) {
         lifecycle = "generating";
         error = "";
         const generationController = new AbortController();
         controller = generationController;
         let generationAuthorized = false;
         try {
-            const selection = reviewSelection;
-            if (selection === null) throw new Error("Choose an AI provider and model in settings before generating.");
             const generation = createCurrentGeneration(selection.modelId);
             const approvalId = authorizeGeneration === undefined ? crypto.randomUUID() : await authorizeGeneration();
             generationAuthorized = true;
@@ -183,6 +184,7 @@
                                 : { kind: "known", currency: "USD", maximumAmount: maximumCostUsd },
                     },
                     request: generation.request,
+                    titlePrompt: prompt,
                 },
                 {
                     signal: generationController.signal,
@@ -200,6 +202,7 @@
             candidate = normalized;
             candidateUrl = URL.createObjectURL(normalized);
             candidateProvenance = {
+                title: result.title,
                 providerId: selection.providerId,
                 modelId: selection.modelId,
                 prompt,
@@ -280,7 +283,6 @@
         candidate = null;
         candidateUrl = "";
         candidateProvenance = null;
-        reviewSelection = null;
         wokaStage = "sprite-sheet";
         lifecycle = "ready";
     }
@@ -290,8 +292,6 @@
         if (acceptedIdleFrameUrl !== "") URL.revokeObjectURL(acceptedIdleFrameUrl);
         acceptedIdleFrame = null;
         acceptedIdleFrameUrl = "";
-        reviewSelection = null;
-        reviewOpen = false;
         wokaStage = "idle-frame";
         lifecycle = "ready";
         error = "";
@@ -302,7 +302,6 @@
         candidateProvenance = null;
         if (candidateUrl !== "") URL.revokeObjectURL(candidateUrl);
         candidateUrl = "";
-        reviewSelection = null;
     }
 
     function createCurrentGeneration(modelId: string): {
@@ -403,11 +402,6 @@
                 ? "Claude subscription"
                 : "AI provider";
     }
-
-    function currentProviderName(): string {
-        const selectedProvider = reviewSelection === null ? readySelection?.providerId : reviewSelection.providerId;
-        return providerLabel(selectedProvider);
-    }
 </script>
 
 <section
@@ -416,7 +410,7 @@
 >
     <div class={compact ? "mb-2" : "mb-3 flex items-center justify-between gap-2"}>
         <div>
-            <h3 class={compact ? "text-sm font-medium" : "font-semibold"}>{title}</h3>
+            <h3 class={compact ? "text-base font-semibold" : "font-semibold"}>{title}</h3>
             {#if !compact}<p class="text-xs text-white/65">{promptGuidance}</p>{/if}
         </div>
         {#if !compact}
@@ -553,7 +547,7 @@
             {/if}
         {/if}
         <div class={compact ? "mt-3 flex items-center justify-between gap-2" : "mt-3 flex flex-wrap gap-2"}>
-            {#if compact}
+            {#if compact && prompt.trim() !== ""}
                 <Button
                     appearance="border"
                     size="sm"
@@ -567,19 +561,13 @@
                 <Button
                     variant="primary"
                     size="sm"
-                    onclick={requestApproval}
+                    onclick={requestGeneration}
                     disabled={busy ||
-                        prompt.trim() === "" ||
+                        (prompt.trim() === "" && onUseImage === undefined) ||
                         ((!stagedWoka || wokaStage === "idle-frame") &&
                             requiredReferenceCount !== undefined &&
                             referencePreviews.length !== requiredReferenceCount)}
-                    >{compact
-                        ? "Generate"
-                        : stagedWoka && wokaStage === "sprite-sheet"
-                          ? "Review direction generation"
-                          : stagedWoka
-                            ? "Review front-idle generation"
-                            : "Review generation"}</Button
+                    >{prompt.trim() === "" && onUseImage !== undefined ? "Use image" : "Generate"}</Button
                 >
             {/if}
             {#if !compact}
@@ -593,38 +581,16 @@
         </div>
     {/if}
 
-    {#if reviewOpen}
-        <div
-            class="mt-3 rounded-lg border border-amber-300/40 bg-amber-950/30 p-3"
-            role="alertdialog"
-            aria-label="Approve paid generation"
-        >
-            <p class="text-sm">
-                <strong>{currentProviderName()}</strong> will receive your prompt{referencePreviews.length > 0 ||
-                (stagedWoka && wokaStage === "sprite-sheet")
-                    ? " and reference images"
-                    : ""} and create one
-                {stagedWoka
-                    ? wokaStage === "idle-frame"
-                        ? "front-facing idle draft"
-                        : "directional walking sheet"
-                    : "image"}
-                with <strong>{reviewSelection?.modelId ?? "the configured model"}</strong>.
-            </p>
-            <p class="mt-1 text-xs text-amber-100">
-                {maximumCostUsd === undefined
-                    ? "Maximum cost is unknown because the provider did not return a preflight price."
-                    : `The proposal states a maximum cost of $${maximumCostUsd.toFixed(2)}.`}
-                This approval authorizes exactly one call and is never retried automatically.
-            </p>
-            <div class="mt-2 flex gap-2">
-                <Button variant="warning" size="sm" onclick={approveAndGenerate}>Approve and generate</Button>
-                <Button appearance="border" size="sm" onclick={() => (reviewOpen = false)}>Back</Button>
+    {#if lifecycle === "generating" || lifecycle === "cancelling"}
+        <div class="mt-3 rounded-lg border border-secondary/40 bg-secondary/10 p-3" role="status" aria-live="polite">
+            <div class="mx-auto flex h-[240px] w-[240px] max-w-full items-center justify-center rounded bg-black/20">
+                <div class="h-40 w-40 animate-pulse rounded-lg border border-secondary/40 bg-secondary/20"></div>
             </div>
+            <p class="mt-2 text-center text-xs text-white/70">
+                {lifecycle === "cancelling" ? "Cancelling image generation…" : "Generating image…"}
+            </p>
         </div>
-    {/if}
-
-    {#if candidate && candidateUrl}
+    {:else if candidate && candidateUrl}
         <div class="mt-3 rounded-lg border border-emerald-300/30 bg-emerald-950/20 p-3">
             <AnimatedAssetPreview
                 imageSource={candidateUrl}

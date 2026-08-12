@@ -199,7 +199,12 @@ export class EntitiesManager extends EventEmitter {
     public updateEntitiesPrefabMetadata(
         modifiedEntityPrefabId: string,
         metadata: Pick<EntityPrefab, "name" | "tags"> &
-            Partial<Pick<EntityPrefab, "animation" | "collisionGrid" | "defaultSizeInTiles" | "depthOffset">>,
+            Partial<
+                Pick<
+                    EntityPrefab,
+                    "animation" | "collisionGrid" | "defaultSizeInTiles" | "defaultHeightInTiles" | "depthOffset"
+                >
+            >,
     ): void {
         const entities = this.getEntities();
         for (const entity of entities.values()) {

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { DeterministicFakeImageProvider } from "../../../../src/front/Services/AssetGeneration/DeterministicFakeImageProvider";
 import { GenerationCredentialWorkerRuntime } from "../../../../src/front/Services/AssetGeneration/GenerationCredentialWorkerRuntime";
+import type { ImageGenerationProvider } from "../../../../src/front/Services/AssetGeneration/AssetGenerationTypes";
 import type { GenerationWorkerResponse } from "../../../../src/front/Services/AssetGeneration/GenerationWorkerProtocol";
 
 describe("GenerationCredentialWorkerRuntime", () => {
@@ -47,4 +48,61 @@ describe("GenerationCredentialWorkerRuntime", () => {
         expect(responses.some((response) => response.type === "generation.result")).toBe(true);
         expect(JSON.stringify(responses)).not.toContain(secret);
     });
+
+    it("generates a title alongside the image without exposing the credential", async () => {
+        const provider = new DeterministicFakeImageProvider();
+        const generateTitle = vi.fn(async () => "Mossy Notice Board");
+        (provider as ImageGenerationProvider).generateTitle = generateTitle;
+        const runtime = new GenerationCredentialWorkerRuntime([provider]);
+        const responses: GenerationWorkerResponse[] = [];
+
+        await runtime.handleMessage(
+            {
+                type: "credential.configure",
+                requestId: "configure-1",
+                providerId: "fake",
+                credential: "worker-only-secret",
+            },
+            (response) => responses.push(response),
+        );
+        await runtime.handleMessage(createGenerationMessage(), (response) => responses.push(response));
+
+        expect(generateTitle).toHaveBeenCalledWith(
+            "Original title prompt",
+            "worker-only-secret",
+            expect.any(AbortSignal),
+        );
+        expect(responses.find((response) => response.type === "generation.result")).toMatchObject({
+            type: "generation.result",
+            result: { title: "Mossy Notice Board" },
+        });
+        expect(JSON.stringify(responses)).not.toContain("worker-only-secret");
+    });
 });
+
+function createGenerationMessage() {
+    return {
+        type: "generation.execute" as const,
+        requestId: "generate-1",
+        jobId: "job-1",
+        batch: {
+            approvalId: "approval-1",
+            approvedAt: "2026-08-09T12:00:00.000Z",
+            metadata: {
+                providerId: "fake" as const,
+                modelId: "fake/deterministic-image",
+                target: "environment-object" as const,
+                outputCount: 1,
+                maximumCost: { kind: "known" as const, currency: "USD" as const, maximumAmount: 0 },
+            },
+            request: {
+                modelId: "fake/deterministic-image",
+                target: "environment-object" as const,
+                prompt: "A tree",
+                outputCount: 1,
+                references: [],
+            },
+            titlePrompt: "Original title prompt",
+        },
+    };
+}

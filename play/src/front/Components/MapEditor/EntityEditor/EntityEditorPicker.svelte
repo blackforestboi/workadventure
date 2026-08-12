@@ -85,6 +85,12 @@
         mapEditorModifyCustomEntityEventStore.set($state.snapshot(customEntity));
     }
 
+    function showCustomAssets() {
+        clearEntitySelection();
+        showUpload = false;
+        selectCategoryStore.set({ kind: "special", tag: "custom" });
+    }
+
     async function saveEntity(customEntity: EntityPrefab) {
         if (customEntity.type === "Custom") {
             saveCustomEntityModifications(customEntity);
@@ -121,6 +127,8 @@
                     collisionGrid: $state.snapshot(customEntity.collisionGrid),
                     depthOffset: customEntity.depthOffset,
                     defaultSizeInTiles: customEntity.defaultSizeInTiles,
+                    defaultHeightInTiles: customEntity.defaultHeightInTiles,
+                    previewPadding: customEntity.previewPadding,
                     color: customEntity.color,
                 },
             });
@@ -303,6 +311,11 @@
     let filteredEntityPrefabVariants = $derived(
         getEntitiesPrefabsVariantsFilteredByTag($entitiesPrefabsVariants, $selectCategoryStore, searchTerm),
     );
+    let hasVariantOptions = $derived(
+        pickedEntityVariant !== undefined &&
+            (pickedEntityVariant.colors.length > 1 ||
+                pickedEntityVariant.getEntityPrefabsPositions(selectedColor).length > 1),
+    );
 
     onDestroy(() => {
         mapEditorSelectedEntityPrefabStoreUnsubscriber();
@@ -329,14 +342,15 @@
             {:else if $selectCategoryStore === undefined}
                 <p class="m-0 text-[22px]">{$LL.mapEditor.entityEditor.header.title()}</p>
             {:else}
-                <div class="flex flex-row items-center gap-4">
+                <div class="flex min-w-0 items-center gap-2">
                     <button
-                        class="p-2 rounded-full flex flex-row items-center hover:bg-white/10"
+                        class="flex shrink-0 items-center rounded-full p-2 hover:bg-white/10"
                         data-testid="clearCurrentSelection"
                         onclick={displayTagListAndClearCurrentSelection}
                     >
-                        <IconChevronLeft />{$LL.mapEditor.entityEditor.buttons.back()}
+                        <IconChevronLeft />
                     </button>
+                    <p class="m-0 truncate text-lg">{getCategoryLabel($selectCategoryStore)}</p>
                 </div>
             {/if}
             {#if !showUpload}
@@ -368,7 +382,7 @@
     <div class="min-h-0 flex-1 overflow-auto">
         {#if showUpload}
             <div class="px-3 pb-3">
-                <EntityUpload />
+                <EntityUpload onClose={showCustomAssets} />
             </div>
         {:else if $selectCategoryStore === undefined && searchTerm === ""}
             <ul class="list-none !p-0 min-w-full">
@@ -385,23 +399,15 @@
             </ul>
         {:else}
             <div class="flex min-h-full flex-col gap-3">
-                <section class="shrink-0 rounded-xl border border-white/10 bg-black/10 p-3">
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <span class="font-bold text-lg">
-                            {$selectCategoryStore ? getCategoryLabel($selectCategoryStore) : "Assets"}
-                        </span>
-                        <span class="text-xs opacity-60">{filteredEntityPrefabVariants.length} options</span>
-                    </div>
-                    <div class="max-h-[220px] overflow-auto">
-                        <EntitiesGrid
-                            entityPrefabVariants={filteredEntityPrefabVariants}
-                            onSelectEntity={onPickEntityVariant}
-                            currentSelectedEntityId={pickedEntity?.id}
-                        />
-                    </div>
-                </section>
+                <div class="max-h-[220px] overflow-auto">
+                    <EntitiesGrid
+                        entityPrefabVariants={filteredEntityPrefabVariants}
+                        onSelectEntity={onPickEntityVariant}
+                        currentSelectedEntityId={pickedEntity?.id}
+                    />
+                </div>
 
-                {#if pickedEntityVariant && pickedEntity}
+                {#if pickedEntityVariant && pickedEntity && hasVariantOptions}
                     <section class="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
@@ -446,7 +452,7 @@
                                 description={pickedEntity.type === "Custom"
                                     ? "Edit the asset and paint the areas players cannot cross."
                                     : "Edit this built-in asset. Saving creates a custom copy for this room."}
-                                closeForm={clearEntitySelection}
+                                closeForm={pickedEntity.type === "Custom" ? showCustomAssets : clearEntitySelection}
                                 removeEntity={({ entityId }) => {
                                     removeEntity(entityId);
                                 }}

@@ -119,6 +119,7 @@ export class GenerationCredentialWorkerRuntime {
             throw new AssetGenerationError("invalid_request", "A generation job with this ID is already active.");
         }
 
+        const provider = this.getProvider(providerId);
         const credential = this.getCredential(providerId);
         const controller = new AbortController();
         this.activeGenerations.set(message.jobId, {
@@ -128,6 +129,14 @@ export class GenerationCredentialWorkerRuntime {
             approvalId: message.batch.approvalId,
         });
         try {
+            const titlePromise = provider.generateTitle
+                ?.call(
+                    provider,
+                    message.batch.titlePrompt ?? message.batch.request.prompt,
+                    credential,
+                    controller.signal,
+                )
+                .catch(() => undefined);
             const result = await generationService.generate(message.batch, credential, controller.signal, (event) =>
                 postResponse({
                     type: "generation.lifecycle",
@@ -136,11 +145,12 @@ export class GenerationCredentialWorkerRuntime {
                     event,
                 }),
             );
+            const title = await titlePromise;
             postResponse({
                 type: "generation.result",
                 requestId: message.requestId,
                 jobId: message.jobId,
-                result,
+                result: title === undefined ? result : { ...result, title },
             });
         } catch (error: unknown) {
             postResponse({

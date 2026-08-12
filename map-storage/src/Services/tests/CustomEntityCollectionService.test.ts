@@ -112,15 +112,35 @@ describe("CustomEntityCollectionService", () => {
         expect(persistedCollection.collection[0]?.animation).toEqual(animation);
     });
 
-    it("persists the default width used for newly placed entities", async () => {
+    it("persists the editor positioning metadata for newly created assets", async () => {
         const service = new CustomEntityCollectionService("maps.example.test");
 
-        await service.uploadEntity({ ...uploadEntityMessage, defaultSizeInTiles: 0.5 });
+        await service.uploadEntity({
+            ...uploadEntityMessage,
+            collisionGrid: [
+                [1, 0],
+                [0, 1],
+            ],
+            defaultSizeInTiles: 0.5,
+            defaultHeightInTiles: 3,
+            previewPadding: -28,
+        });
 
         const persistedCollection = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as {
-            collection: { defaultSizeInTiles?: number }[];
+            collection: {
+                collisionGrid?: number[][];
+                defaultSizeInTiles?: number;
+                defaultHeightInTiles?: number;
+                previewPadding?: number;
+            }[];
         };
+        expect(persistedCollection.collection[0]?.collisionGrid).toEqual([
+            [1, 0],
+            [0, 1],
+        ]);
         expect(persistedCollection.collection[0]?.defaultSizeInTiles).toBe(0.5);
+        expect(persistedCollection.collection[0]?.defaultHeightInTiles).toBe(3);
+        expect(persistedCollection.collection[0]?.previewPadding).toBe(-28);
     });
 
     it("keeps a saved asset update available to every map client", async () => {
@@ -136,6 +156,8 @@ describe("CustomEntityCollectionService", () => {
             collisionGrid: [[1]],
             depthOffset: -8,
             defaultSizeInTiles: 4,
+            defaultHeightInTiles: 2,
+            previewPadding: 12,
         };
 
         await service.modifyEntity(update);
@@ -147,6 +169,8 @@ describe("CustomEntityCollectionService", () => {
                 collisionGrid?: number[][];
                 depthOffset?: number;
                 defaultSizeInTiles?: number;
+                defaultHeightInTiles?: number;
+                previewPadding?: number;
             }[];
         };
         expect(persistedCollection.collection[0]).toMatchObject({
@@ -155,6 +179,8 @@ describe("CustomEntityCollectionService", () => {
             collisionGrid: [[1]],
             depthOffset: -8,
             defaultSizeInTiles: 4,
+            defaultHeightInTiles: 2,
+            previewPadding: 12,
         });
     });
 

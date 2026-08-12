@@ -378,6 +378,8 @@ message UploadEntityMessage {
   optional int32 depthOffset = 9;
   optional google.protobuf.Value animation = 10;
   optional double defaultSizeInTiles = 11;
+  optional int32 previewPadding = 12;
+  optional double defaultHeightInTiles = 13;
 }
 
 message UploadFileMessage {
@@ -397,6 +399,8 @@ message ModifyCustomEntityMessage {
   optional int32 depthOffset = 5;
   optional google.protobuf.Value animation = 6;
   optional double defaultSizeInTiles = 7;
+  optional int32 previewPadding = 8;
+  optional double defaultHeightInTiles = 9;
 }
 
 message DeleteCustomEntityMessage {

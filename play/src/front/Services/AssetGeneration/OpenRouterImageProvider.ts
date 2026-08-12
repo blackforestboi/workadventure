@@ -17,6 +17,7 @@ const OPENROUTER_KEY_ENDPOINT = "https://openrouter.ai/api/v1/key";
 const MAX_GENERATED_IMAGE_BYTES = 25 * 1024 * 1024;
 export const OPENROUTER_GENERATION_MODEL_ID = "google/gemini-3.1-flash-image";
 export const OPENROUTER_GENERATION_MODEL_NAME = "Nano Banana 2";
+export const OPENROUTER_TITLE_MODEL_ID = "openai/gpt-5-nano";
 /**
  * Use the established Image API in production. The Chat Completions route is
  * retained as an opt-in experiment for models that expose image reasoning.
@@ -138,6 +139,35 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
             },
             usage: mergeUsage(generated.map(({ payload }) => parseUsage(recordValue(payload, "usage")))),
         };
+    }
+
+    public async generateTitle(prompt: string, credential: string, signal: AbortSignal): Promise<string | undefined> {
+        const response = await this.performFetch(
+            this.chatCompletionsEndpoint,
+            {
+                method: "POST",
+                headers: this.createHeaders(credential),
+                body: JSON.stringify({
+                    model: OPENROUTER_TITLE_MODEL_ID,
+                    max_tokens: 16,
+                    messages: [
+                        {
+                            role: "system",
+                            content:
+                                "Create a concise, descriptive 2 to 5 word title for a generated game image. Return only the title, with no quotes, filename, punctuation, or explanation.",
+                        },
+                        { role: "user", content: prompt },
+                    ],
+                }),
+                signal,
+            },
+            signal,
+        );
+        if (!response.ok) {
+            const payload = await this.readErrorPayload(response);
+            throw createProviderHttpError(this.id, response.status, openRouterErrorReason(payload));
+        }
+        return normalizeGeneratedTitle(stringValue(firstChatMessage(await this.readJson(response)), "content"));
     }
 
     private async generateSingleAsset(
@@ -387,6 +417,17 @@ function firstChatMessage(payload: unknown): Record<string, unknown> {
     const message = recordValue(choice, "message");
     if (!isRecord(message)) throw malformedOpenRouterResponse();
     return message;
+}
+
+function normalizeGeneratedTitle(value: string | undefined): string | undefined {
+    if (value === undefined) return undefined;
+    const title = value
+        .replace(/["'`]/g, "")
+        .replace(/[^A-Za-z0-9& -]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80);
+    return title === "" ? undefined : title;
 }
 
 function findImageDataUrl(value: unknown): string | undefined {

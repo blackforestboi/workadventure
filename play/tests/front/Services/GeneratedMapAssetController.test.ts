@@ -117,6 +117,7 @@ describe("GeneratedMapAssetController", () => {
 
         const saved = await controller.saveGenerated({
             blob: png([1, 2, 3]),
+            title: "Mossy Notice Board",
             providerId: "openrouter",
             modelId: "image-model",
             prompt: "  A mossy shrine  ",
@@ -125,7 +126,7 @@ describe("GeneratedMapAssetController", () => {
         expect(saved.blob).toBeInstanceOf(Blob);
         expect(store.records[0]).toMatchObject({
             ownerScope: "user:user-1",
-            name: "A mossy shrine",
+            name: "Mossy Notice Board",
             provenance: { providerId: "openrouter", modelId: "image-model" },
             syncStatus: "pending",
         });
@@ -133,7 +134,7 @@ describe("GeneratedMapAssetController", () => {
         expect(JSON.stringify(store.records[0])).not.toContain("A mossy shrine  ");
         expect(upload).toHaveBeenCalledWith(
             expect.any(Blob),
-            "A mossy shrine",
+            "Mossy Notice Board",
             "map-entity",
             { source: "generated", providerId: "openrouter", modelId: "image-model" },
             undefined,

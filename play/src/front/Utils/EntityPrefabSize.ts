@@ -5,11 +5,18 @@ export function getEntityDisplaySize(
     naturalWidth: number,
     naturalHeight: number,
     defaultSizeInTiles: number | undefined,
+    defaultHeightInTiles?: number,
 ): { width: number; height: number } {
     if (defaultSizeInTiles === undefined || naturalWidth <= 0 || naturalHeight <= 0) {
         return { width: naturalWidth, height: naturalHeight };
     }
 
     const width = defaultSizeInTiles * MAP_TILE_SIZE;
-    return { width, height: width * (naturalHeight / naturalWidth) };
+    return {
+        width,
+        height:
+            defaultHeightInTiles === undefined
+                ? width * (naturalHeight / naturalWidth)
+                : defaultHeightInTiles * MAP_TILE_SIZE,
+    };
 }

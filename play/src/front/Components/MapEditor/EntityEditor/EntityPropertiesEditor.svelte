@@ -6,6 +6,7 @@
     import { v4 as uuid } from "uuid";
     import {
         mapEditorEntityModeStore,
+        mapEditorModifyCustomEntityEventStore,
         mapEditorSelectedEntityPrefabStore,
         mapEditorSelectedEntityStore,
     } from "../../../Stores/MapEditorStore";
@@ -37,6 +38,7 @@
     import RightsPropertyEditor from "../PropertyEditor/RightsPropertyEditor.svelte";
     import type { Entity } from "../../../Phaser/ECS/Entity";
     import { gameManager } from "../../../Phaser/Game/GameManager";
+    import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
 
     const applicationManager = gameManager.getCurrentGameScene().applicationManager;
 
@@ -46,6 +48,7 @@
     let entitySearchable = $state(false);
     let showDescriptionField = $state(false);
     let selectedEntity: Entity | undefined = undefined;
+    let activeTab = $state<"actions" | "edit">("actions");
 
     let selectedEntityUnsubscriber = mapEditorSelectedEntityStore.subscribe((currentEntity) => {
         if (currentEntity) {
@@ -65,8 +68,17 @@
                 entitySearchable = descriptionProperty.searchable ?? false;
             }
             selectedEntity = currentEntity;
+            activeTab = "actions";
+        } else {
+            selectedEntity = undefined;
         }
     });
+
+    function saveCustomAsset(prefab: ReturnType<Entity["getPrefab"]>) {
+        if (prefab.type === "Custom") {
+            mapEditorModifyCustomEntityEventStore.set($state.snapshot(prefab));
+        }
+    }
 
     function onAddProperty(type: EntityDataPropertiesKeys, subtype?: string) {
         if ($mapEditorSelectedEntityStore) {
@@ -337,10 +349,6 @@
     {$LL.mapEditor.entityEditor.editInstructions()}
 {:else}
     <div class="overflow-x-hidden overflow-y-auto">
-        <div class="header-container">
-            <h3>{$LL.mapEditor.entityEditor.editing({ name: $mapEditorSelectedEntityStore.getPrefab().name })}</h3>
-            <p class="m-0 text-xs text-white/60">Drag the object to move it. Drag a corner handle to resize it.</p>
-        </div>
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <p
@@ -353,301 +361,334 @@
             <IconArrowLeft font-size="12" class="cursor-pointer" />
             <span class="ml-1 cursor-pointer">{$LL.mapEditor.entityEditor.itemPicker.backToSelectObject()}</span>
         </p>
-        <div class="properties-buttons flex flex-row flex-wrap m-2">
-            <AddPropertyButtonWrapper
-                property="livekitRoomProperty"
-                onclick={() => onAddProperty("livekitRoomProperty")}
-            />
-            <AddPropertyButtonWrapper property="exit" onclick={() => onAddProperty("exit")} />
-            <AddPropertyButtonWrapper
-                property="jitsiRoomProperty"
-                onclick={() => {
-                    onAddProperty("jitsiRoomProperty");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="playAudio"
-                onclick={() => {
-                    onAddProperty("playAudio");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="tooltipPropertyData"
-                onclick={() => onAddProperty("tooltipPropertyData")}
-            />
+        <div class="header-container">
+            <h3 class="my-2 text-xl font-medium">
+                {$LL.mapEditor.entityEditor.editing({ name: $mapEditorSelectedEntityStore.getPrefab().name })}
+            </h3>
         </div>
-        <div class="properties-buttons flex flex-row flex-wrap m-2">
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                onclick={() => {
-                    onAddProperty("openWebsite");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openFile"
-                onclick={() => {
-                    onAddProperty("openFile");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="klaxoon"
-                onclick={() => {
-                    onAddProperty("openWebsite", "klaxoon");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="youtube"
-                onclick={() => {
-                    onAddProperty("openWebsite", "youtube");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="googleDrive"
-                onclick={() => {
-                    onAddProperty("openWebsite", "googleDrive");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="googleDocs"
-                onclick={() => {
-                    onAddProperty("openWebsite", "googleDocs");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="googleSheets"
-                onclick={() => {
-                    onAddProperty("openWebsite", "googleSheets");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="googleSlides"
-                onclick={() => {
-                    onAddProperty("openWebsite", "googleSlides");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="eraser"
-                onclick={() => {
-                    onAddProperty("openWebsite", "eraser");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="excalidraw"
-                onclick={() => {
-                    onAddProperty("openWebsite", "excalidraw");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="cards"
-                onclick={() => {
-                    onAddProperty("openWebsite", "cards");
-                }}
-            />
-            <AddPropertyButtonWrapper
-                property="openWebsite"
-                subProperty="tldraw"
-                onclick={() => {
-                    onAddProperty("openWebsite", "tldraw");
-                }}
-            />
-        </div>
-        <div class="properties-buttons flex flex-row flex-wrap m-2">
-            {#each applicationManager.applications as app, index (`my-own-app-${index}`)}
-                <AddPropertyButtonWrapper
-                    property="openWebsite"
-                    subProperty={app.name}
-                    onclick={() => {
-                        onAddSpecificProperty(app);
-                    }}
-                />
-            {/each}
-        </div>
-        <div class="entity-name-container">
-            <Input
-                id="objectName"
-                label={$LL.mapEditor.entityEditor.objectName()}
-                type="text"
-                placeholder={$LL.mapEditor.entityEditor.objectNamePlaceholder()}
-                bind:value={entityName}
-                onchange={onUpdateName}
-            />
-        </div>
-        <div class="entity-name-container">
-            {#if !showDescriptionField}
-                <a
-                    href="#addDescriptionField"
-                    class="pl-0 text-blue-500 flex flex-row items-center"
-                    onclick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        toggleDescriptionField();
-                    }}>+ {$LL.mapEditor.entityEditor.addDescriptionField()}</a
+        <div class="mb-3 flex gap-2 border-b border-white/10">
+            <button
+                class:font-semibold={activeTab === "actions"}
+                class={`border-b-2 px-3 py-2 text-sm ${activeTab === "actions" ? "border-secondary" : "border-transparent opacity-60"}`}
+                onclick={() => (activeTab = "actions")}
+            >
+                Actions
+            </button>
+            {#if selectedEntity?.getPrefab().type === "Custom"}
+                <button
+                    class:font-semibold={activeTab === "edit"}
+                    class={`border-b-2 px-3 py-2 text-sm ${activeTab === "edit" ? "border-secondary" : "border-transparent opacity-60"}`}
+                    onclick={() => (activeTab = "edit")}
                 >
-            {:else}
-                <button class="pl-0 text-blue-500 flex flex-row items-center" onclick={toggleDescriptionField}>
-                    <IconChevronDown />{$LL.mapEditor.entityEditor.addDescriptionField()}</button
-                >
-
-                <TextArea
-                    label={$LL.mapEditor.entityEditor.objectDescription()}
-                    id="objectDescription"
-                    placeHolder={$LL.mapEditor.entityEditor.objectDescriptionPlaceholder()}
-                    bind:value={entityDescription}
-                    onchange={onUpdateDescription}
-                    onkeypress={() => {}}
-                />
+                    Edit
+                </button>
             {/if}
         </div>
+        {#if activeTab === "edit" && selectedEntity?.getPrefab().type === "Custom"}
+            <CustomEntityEditionForm
+                customEntity={selectedEntity.getPrefab()}
+                closeForm={() => (activeTab = "actions")}
+                applyEntityModifications={saveCustomAsset}
+                saveLabel="Save asset"
+                description="Edit the image, placement size, and collision areas."
+            />
+        {:else}
+            <div class="properties-buttons flex flex-row flex-wrap m-2">
+                <AddPropertyButtonWrapper
+                    property="livekitRoomProperty"
+                    onclick={() => onAddProperty("livekitRoomProperty")}
+                />
+                <AddPropertyButtonWrapper property="exit" onclick={() => onAddProperty("exit")} />
+                <AddPropertyButtonWrapper
+                    property="jitsiRoomProperty"
+                    onclick={() => {
+                        onAddProperty("jitsiRoomProperty");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="playAudio"
+                    onclick={() => {
+                        onAddProperty("playAudio");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="tooltipPropertyData"
+                    onclick={() => onAddProperty("tooltipPropertyData")}
+                />
+            </div>
+            <div class="properties-buttons flex flex-row flex-wrap m-2">
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    onclick={() => {
+                        onAddProperty("openWebsite");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openFile"
+                    onclick={() => {
+                        onAddProperty("openFile");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="klaxoon"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "klaxoon");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="youtube"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "youtube");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="googleDrive"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "googleDrive");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="googleDocs"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "googleDocs");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="googleSheets"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "googleSheets");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="googleSlides"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "googleSlides");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="eraser"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "eraser");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="excalidraw"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "excalidraw");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="cards"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "cards");
+                    }}
+                />
+                <AddPropertyButtonWrapper
+                    property="openWebsite"
+                    subProperty="tldraw"
+                    onclick={() => {
+                        onAddProperty("openWebsite", "tldraw");
+                    }}
+                />
+            </div>
+            <div class="properties-buttons flex flex-row flex-wrap m-2">
+                {#each applicationManager.applications as app, index (`my-own-app-${index}`)}
+                    <AddPropertyButtonWrapper
+                        property="openWebsite"
+                        subProperty={app.name}
+                        onclick={() => {
+                            onAddSpecificProperty(app);
+                        }}
+                    />
+                {/each}
+            </div>
+            <div class="entity-name-container">
+                <Input
+                    id="objectName"
+                    label={$LL.mapEditor.entityEditor.objectName()}
+                    type="text"
+                    placeholder={$LL.mapEditor.entityEditor.objectNamePlaceholder()}
+                    bind:value={entityName}
+                    onchange={onUpdateName}
+                />
+            </div>
+            <div class="entity-name-container">
+                {#if !showDescriptionField}
+                    <a
+                        href="#addDescriptionField"
+                        class="pl-0 text-blue-500 flex flex-row items-center"
+                        onclick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            toggleDescriptionField();
+                        }}>+ {$LL.mapEditor.entityEditor.addDescriptionField()}</a
+                    >
+                {:else}
+                    <button class="pl-0 text-blue-500 flex flex-row items-center" onclick={toggleDescriptionField}>
+                        <IconChevronDown />{$LL.mapEditor.entityEditor.addDescriptionField()}</button
+                    >
 
-        <InputSwitch
-            label={$LL.mapEditor.entityEditor.objectSearchable()}
-            id="searchable"
-            bind:value={entitySearchable}
-            onchange={onUpdateSearchable}
-        />
-
-        <div class="properties-container flex flex-col gap-8 p-1">
-            {#each properties as property, i (property.id)}
-                {#if property.type !== "entityDescriptionProperties"}
-                    <div class="property-box border border-solid border-white/20 bg-white/5 rounded p-2">
-                        {#if properties[i].type === "playAudio"}
-                            <PlayAudioPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => {
-                                    onDeleteProperty(property.id);
-                                }}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "personalAreaPropertyData"}
-                            <PersonalAreaPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "restrictedRightsPropertyData"}
-                            <RightsPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "silent"}
-                            <SilentPropertyEditor onclose={() => onDeleteProperty(property.id)} />
-                        {:else if properties[i].type === "livekitRoomProperty"}
-                            <LivekitRoomPropertyEditor
-                                bind:property={properties[i]}
-                                hasHighlightProperty={properties.some((property) => property.type === "highlight")}
-                                shouldDisableDisableChatButton={properties.some(
-                                    (property) => property.type === "matrixRoomPropertyData",
-                                )}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                                onhighlightareaonenter={() => onAddProperty("highlight")}
-                            />
-                        {:else if properties[i].type === "speakerMegaphone"}
-                            <SpeakerMegaphonePropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "listenerMegaphone"}
-                            <ListenerMegaphonePropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "start"}
-                            <StartPropertyEditor
-                                bind:property={properties[i]}
-                                startAreaName={entityName}
-                                updateStartAreaNameCallback={(name) => {
-                                    entityName = name;
-                                    onUpdateName();
-                                }}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "exit"}
-                            <ExitPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "matrixRoomPropertyData"}
-                            <MatrixRoomPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "focusable"}
-                            <FocusablePropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "highlight"}
-                            <HighlightPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "tooltipPropertyData"}
-                            <TooltipPropertyButton
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "lockableAreaPropertyData"}
-                            <LockableAreaPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "maxUsersInAreaPropertyData"}
-                            <MaxUsersInAreaPropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => onDeleteProperty(property.id)}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "jitsiRoomProperty"}
-                            <JitsiRoomPropertyEditor
-                                bind:property={properties[i]}
-                                isArea={false}
-                                onclose={() => {
-                                    onDeleteProperty(property.id);
-                                }}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "openWebsite"}
-                            <OpenWebsitePropertyEditor
-                                bind:property={properties[i]}
-                                triggerOptionActivated={false}
-                                onclose={() => {
-                                    onDeleteProperty(property.id);
-                                }}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {:else if properties[i].type === "openFile"}
-                            <OpenFilePropertyEditor
-                                bind:property={properties[i]}
-                                onclose={() => {
-                                    onDeleteProperty(property.id);
-                                }}
-                                onchange={() => onUpdateProperty(properties[i])}
-                            />
-                        {/if}
-                    </div>
+                    <TextArea
+                        label={$LL.mapEditor.entityEditor.objectDescription()}
+                        id="objectDescription"
+                        placeHolder={$LL.mapEditor.entityEditor.objectDescriptionPlaceholder()}
+                        bind:value={entityDescription}
+                        onchange={onUpdateDescription}
+                        onkeypress={() => {}}
+                    />
                 {/if}
-            {/each}
-        </div>
+            </div>
+
+            <InputSwitch
+                label={$LL.mapEditor.entityEditor.objectSearchable()}
+                id="searchable"
+                bind:value={entitySearchable}
+                onchange={onUpdateSearchable}
+            />
+
+            <div class="properties-container flex flex-col gap-8 p-1">
+                {#each properties as property, i (property.id)}
+                    {#if property.type !== "entityDescriptionProperties"}
+                        <div class="property-box border border-solid border-white/20 bg-white/5 rounded p-2">
+                            {#if properties[i].type === "playAudio"}
+                                <PlayAudioPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => {
+                                        onDeleteProperty(property.id);
+                                    }}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "personalAreaPropertyData"}
+                                <PersonalAreaPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "restrictedRightsPropertyData"}
+                                <RightsPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "silent"}
+                                <SilentPropertyEditor onclose={() => onDeleteProperty(property.id)} />
+                            {:else if properties[i].type === "livekitRoomProperty"}
+                                <LivekitRoomPropertyEditor
+                                    bind:property={properties[i]}
+                                    hasHighlightProperty={properties.some((property) => property.type === "highlight")}
+                                    shouldDisableDisableChatButton={properties.some(
+                                        (property) => property.type === "matrixRoomPropertyData",
+                                    )}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                    onhighlightareaonenter={() => onAddProperty("highlight")}
+                                />
+                            {:else if properties[i].type === "speakerMegaphone"}
+                                <SpeakerMegaphonePropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "listenerMegaphone"}
+                                <ListenerMegaphonePropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "start"}
+                                <StartPropertyEditor
+                                    bind:property={properties[i]}
+                                    startAreaName={entityName}
+                                    updateStartAreaNameCallback={(name) => {
+                                        entityName = name;
+                                        onUpdateName();
+                                    }}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "exit"}
+                                <ExitPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "matrixRoomPropertyData"}
+                                <MatrixRoomPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "focusable"}
+                                <FocusablePropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "highlight"}
+                                <HighlightPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "tooltipPropertyData"}
+                                <TooltipPropertyButton
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "lockableAreaPropertyData"}
+                                <LockableAreaPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "maxUsersInAreaPropertyData"}
+                                <MaxUsersInAreaPropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => onDeleteProperty(property.id)}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "jitsiRoomProperty"}
+                                <JitsiRoomPropertyEditor
+                                    bind:property={properties[i]}
+                                    isArea={false}
+                                    onclose={() => {
+                                        onDeleteProperty(property.id);
+                                    }}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "openWebsite"}
+                                <OpenWebsitePropertyEditor
+                                    bind:property={properties[i]}
+                                    triggerOptionActivated={false}
+                                    onclose={() => {
+                                        onDeleteProperty(property.id);
+                                    }}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {:else if properties[i].type === "openFile"}
+                                <OpenFilePropertyEditor
+                                    bind:property={properties[i]}
+                                    onclose={() => {
+                                        onDeleteProperty(property.id);
+                                    }}
+                                    onchange={() => onUpdateProperty(properties[i])}
+                                />
+                            {/if}
+                        </div>
+                    {/if}
+                {/each}
+            </div>
+        {/if}
     </div>
 {/if}
 

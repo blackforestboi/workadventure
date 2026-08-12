@@ -270,9 +270,15 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
 
     public updatePrefabMetadata(
         metadata: Pick<EntityPrefab, "name" | "tags"> &
-            Partial<Pick<EntityPrefab, "animation" | "collisionGrid" | "defaultSizeInTiles" | "depthOffset">>,
+            Partial<
+                Pick<
+                    EntityPrefab,
+                    "animation" | "collisionGrid" | "defaultSizeInTiles" | "defaultHeightInTiles" | "depthOffset"
+                >
+            >,
     ): void {
         const previousSizeInTiles = this.prefab.defaultSizeInTiles;
+        const previousHeightInTiles = this.prefab.defaultHeightInTiles;
         this.prefab = {
             ...this.prefab,
             ...metadata,
@@ -280,11 +286,17 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
 
         if (
             metadata.defaultSizeInTiles !== undefined &&
-            metadata.defaultSizeInTiles !== previousSizeInTiles &&
+            (metadata.defaultSizeInTiles !== previousSizeInTiles ||
+                metadata.defaultHeightInTiles !== previousHeightInTiles) &&
             this.width > 0 &&
             this.height > 0
         ) {
-            const displaySize = getEntityDisplaySize(this.width, this.height, metadata.defaultSizeInTiles);
+            const displaySize = getEntityDisplaySize(
+                this.width,
+                this.height,
+                metadata.defaultSizeInTiles ?? previousSizeInTiles,
+                metadata.defaultHeightInTiles ?? previousHeightInTiles,
+            );
             this.entityData.width = displaySize.width;
             this.entityData.height = displaySize.height;
             this.setDisplaySize(displaySize.width, displaySize.height);
