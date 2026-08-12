@@ -1,22 +1,22 @@
 <script lang="ts">
+    import { IconMicrophone } from "@wa-icons";
     import { analyticsClient } from "../../../Administration/AnalyticsClient";
-    import FollowIcon from "../../Icons/FollowIcon.svelte";
-    import ActionBarButton from "../ActionBarButton.svelte";
+    import { gameManager } from "../../../Phaser/Game/GameManager";
     import {
         followConnectionModeStore,
         followRoleStore,
         followStateStore,
         followUsersStore,
     } from "../../../Stores/FollowStore";
-    import LL from "../../../../i18n/i18n-svelte";
-    import { gameManager } from "../../../Phaser/Game/GameManager";
     import { openedMenuStore } from "../../../Stores/MenuStore";
+    import LL from "../../../../i18n/i18n-svelte";
+    import ActionBarButton from "../ActionBarButton.svelte";
 
-    function followClick() {
+    function voicePinClick() {
         switch ($followStateStore) {
             case "off":
-                followConnectionModeStore.set("movement");
-                gameManager.getCurrentGameScene().connection?.emitFollowRequest();
+                followConnectionModeStore.set("voice");
+                gameManager.getCurrentGameScene().connection?.emitFollowRequest(false, true);
                 followRoleStore.set("leader");
                 followStateStore.set("active");
                 break;
@@ -32,17 +32,16 @@
 
 <ActionBarButton
     onclick={() => {
-        analyticsClient.follow();
-        followClick();
+        analyticsClient.pinMeetingAction();
+        voicePinClick();
     }}
-    classList="group/btn-follow"
+    classList="group/btn-voice-pin"
     tooltipTitle={$followStateStore === "active"
-        ? $LL.actionbar.help.unfollow.title()
-        : $LL.actionbar.help.follow.title()}
+        ? $LL.actionbar.help.unpinVoice.title()
+        : $LL.actionbar.help.voicePin.title()}
     disabledHelp={$openedMenuStore !== undefined}
     state={$followStateStore === "active" ? "active" : "normal"}
-    media="./static/Videos/Follow.mp4"
-    desc={$followStateStore === "active" ? $LL.actionbar.help.unfollow.desc() : $LL.actionbar.help.follow.desc()}
+    desc={$followStateStore === "active" ? $LL.actionbar.help.unpinVoice.desc() : $LL.actionbar.help.voicePin.desc()}
 >
-    <FollowIcon />
+    <IconMicrophone class="h-6 w-6" />
 </ActionBarButton>

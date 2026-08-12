@@ -122,6 +122,11 @@ const actionbar: DeepPartial<Translation["actionbar"]> = {
             title: "إيقاف المتابعة",
             desc: "يمكنك اختيار إيقاف متابعة مستخدم في أي وقت. سيتوقف ووكاه عن متابعته، مما يمنحك حرية الحركة.",
         },
+        voicePin: {
+            title: "Pin voice connection",
+            desc: "Stay connected by voice while everyone moves independently.",
+        },
+        unpinVoice: { title: "Unpin voice connection", desc: "End the pinned voice connection." },
         lock: {
             title: "قفل المحادثة",
             desc: "بتفعيل هذه الميزة، تضمن عدم انضمام أي شخص إلى المناقشة. أنت سيد مساحتك، ويمكن فقط لأولئك الموجودين بالفعل التفاعل.",

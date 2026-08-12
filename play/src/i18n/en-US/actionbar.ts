@@ -127,6 +127,14 @@ const actionbar: BaseTranslation = {
             title: "Stop following",
             desc: "You can choose to unfollow a user at any time. Your Woka will then stop following them, giving you back your freedom of movement.",
         },
+        voicePin: {
+            title: "Pin voice connection",
+            desc: "Ask nearby users to stay connected by voice while everyone can move independently.",
+        },
+        unpinVoice: {
+            title: "Unpin voice connection",
+            desc: "End the pinned voice connection while keeping your normal movement control.",
+        },
         lock: {
             title: "Lock conversation",
             desc: "By enabling this feature, you ensure that no one can join the discussion. You are the master of your space, and only those already present can interact.",

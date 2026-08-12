@@ -16,7 +16,12 @@ import { popupStore } from "../../Stores/PopupStore";
 import SayPopUp from "../../Components/PopUp/SayPopUp.svelte";
 import { isPopupJustClosed } from "../Game/Say/SayManager";
 import LL from "../../../i18n/i18n-svelte";
-import { followRoleStore, followStateStore, followUsersStore } from "../../Stores/FollowStore";
+import {
+    followConnectionModeStore,
+    followRoleStore,
+    followStateStore,
+    followUsersStore,
+} from "../../Stores/FollowStore";
 import { localUserStore } from "../../Connection/LocalUserStore";
 import { isSpaceKey } from "./KeyboardUtils";
 import type { Shortcut } from "./UserInputManager";
@@ -177,6 +182,7 @@ export class GameSceneUserInputHandler implements UserInputHandlerInterface {
     public sendFollowRequest() {
         this.gameScene.connection?.emitFollowRequest();
         followRoleStore.set("leader");
+        followConnectionModeStore.set("movement");
         followStateStore.set("active");
     }
 

@@ -8,7 +8,12 @@ import { UserInputEvent } from "../UserInput/UserInputManager";
 import { Character } from "../Entity/Character";
 
 import { userMovingStore } from "../../Stores/GameStore";
-import { followStateStore, followRoleStore, followUsersStore } from "../../Stores/FollowStore";
+import {
+    followConnectionModeStore,
+    followStateStore,
+    followRoleStore,
+    followUsersStore,
+} from "../../Stores/FollowStore";
 import { WOKA_SPEED } from "../../Enum/EnvironmentVariable";
 import { visibilityStore } from "../../Stores/VisibilityStore";
 import { passStatusToOnline } from "../../Rules/StatusRules/statusChangerFunctions";
@@ -54,7 +59,11 @@ export class Player extends Character {
 
         let x = 0;
         let y = 0;
-        if ((state === "active" || state === "ending") && role === "follower") {
+        if (
+            (state === "active" || state === "ending") &&
+            role === "follower" &&
+            get(followConnectionModeStore) === "movement"
+        ) {
             [x, y] = this.computeFollowMovement();
         }
         if (this.pathToFollow) {
@@ -80,12 +89,16 @@ export class Player extends Character {
     public sendFollowRequest() {
         this.scene.connection?.emitFollowRequest();
         followRoleStore.set("leader");
+        followConnectionModeStore.set("movement");
         followStateStore.set("active");
     }
 
     public startFollowing() {
         followStateStore.set("active");
-        this.scene.connection?.emitFollowConfirmation(get(followUsersStore)[0]);
+        this.scene.connection?.emitFollowConfirmation(
+            get(followUsersStore)[0],
+            get(followConnectionModeStore) === "voice",
+        );
     }
 
     public setPathToFollow(
@@ -129,7 +142,7 @@ export class Player extends Character {
         }
 
         // Compute movement deltas
-        const followMode = get(followStateStore) !== "off";
+        const followMode = get(followStateStore) !== "off" && get(followConnectionModeStore) === "movement";
         const speed = this.deduceSpeed(activeEvents.get(UserInputEvent.SpeedUp), followMode);
         const moveAmount = speed * 20;
         x = x * moveAmount;

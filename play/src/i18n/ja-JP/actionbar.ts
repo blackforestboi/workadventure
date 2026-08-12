@@ -123,6 +123,11 @@ const actionbar: DeepPartial<Translation["actionbar"]> = {
             title: "フォローを停止",
             desc: "いつでもユーザーのフォローを停止することを選択できます。その後、Wokaはそれらをフォローしなくなり、移動の自由を取り戻します。",
         },
+        voicePin: {
+            title: "Pin voice connection",
+            desc: "Stay connected by voice while everyone moves independently.",
+        },
+        unpinVoice: { title: "Unpin voice connection", desc: "End the pinned voice connection." },
         lock: {
             title: "会話をロック",
             desc: "この機能を有効にすると、誰もディスカッションに参加できなくなります。あなたがスペースの主人であり、すでに存在する人だけが対話できます。",

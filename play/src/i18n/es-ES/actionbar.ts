@@ -124,6 +124,11 @@ const actionbar: DeepPartial<Translation["actionbar"]> = {
             title: "Dejar de seguir",
             desc: "Puedes elegir dejar de seguir a un usuario en cualquier momento. Tu Woka dejará de seguirlos, devolviéndote tu libertad de movimiento.",
         },
+        voicePin: {
+            title: "Pin voice connection",
+            desc: "Stay connected by voice while everyone moves independently.",
+        },
+        unpinVoice: { title: "Unpin voice connection", desc: "End the pinned voice connection." },
         lock: {
             title: "Bloquear conversación",
             desc: "Al habilitar esta función, te aseguras de que nadie pueda unirse a la discusión. Eres el dueño de tu espacio, y solo los que ya están presentes pueden interactuar.",

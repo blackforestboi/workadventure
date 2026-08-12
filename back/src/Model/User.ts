@@ -141,7 +141,7 @@ export class User implements Movable, CustomJsonReplacerInterface {
         this.movedSubject.next(position);
     }
 
-    public addFollower(follower: User): void {
+    public addFollower(follower: User, voiceOnly = false): void {
         this.followedBy.add(follower);
         follower._following = this;
 
@@ -150,6 +150,7 @@ export class User implements Movable, CustomJsonReplacerInterface {
             followConfirmationMessage: {
                 follower: follower.id,
                 leader: this.id,
+                voiceOnly,
             },
         });
     }

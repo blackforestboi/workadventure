@@ -1240,7 +1240,7 @@ export class SocketManager {
             user?.group?.leader?.stopLeading();
         }
 
-        leader.addFollower(user);
+        leader.addFollower(user, message.voiceOnly);
     }
 
     handleFollowAbortMessage(room: GameRoom, user: User, message: FollowAbortMessage) {
