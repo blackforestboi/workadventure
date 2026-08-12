@@ -15,6 +15,9 @@ describe("entity placement preview initialization", () => {
         expect(entityRelatedEditorToolSource).toMatch(
             /preview\.setDisplaySize\([\s\S]*?this\.onEntityPrefabPreviewReady\(pointer\);/,
         );
+        expect(entityRelatedEditorToolSource).toMatch(
+            /this\.entityPrefabPreview = this\.scene\.add\.sprite\([\s\S]*?this\.scene\.getGameRenderLayers\(\)\.addWorldObject\(this\.entityPrefabPreview\);/,
+        );
         expect(entityEditorToolSource).toMatch(
             /onEntityPrefabPreviewReady\(pointer: Pointer\): void \{\s*this\.updateEntityPrefabPreviewPosition\(pointer\);\s*this\.changePreviewTint\(\);\s*\}/,
         );

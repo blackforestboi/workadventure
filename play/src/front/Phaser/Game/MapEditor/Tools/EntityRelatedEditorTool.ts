@@ -145,6 +145,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                                     Math.floor(pointer.worldY),
                                     entityPrefab.imagePath,
                                 );
+                                this.scene.getGameRenderLayers().addWorldObject(this.entityPrefabPreview);
                             }
                             const preview = this.entityPrefabPreview;
                             const displaySize = getEntityDisplaySize(
