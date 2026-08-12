@@ -74,6 +74,16 @@ export function createTerrainAutotileRegion(
     return { layer, ...bounds, gids };
 }
 
+export function createTerrainTileRegion(
+    layer: string,
+    start: TerrainTileCoordinate,
+    end: TerrainTileCoordinate,
+    gid: number,
+): TeapotTileRegion {
+    const bounds = normalizeTerrainRectangle(start, end);
+    return { layer, ...bounds, gids: Array.from({ length: bounds.width * bounds.height }, () => gid) };
+}
+
 export function translateTerrainAutotileTiles(tiles: TerrainAutotileTiles, firstGid: number): TerrainAutotileTiles {
     return {
         topLeft: firstGid + tiles.topLeft,

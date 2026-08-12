@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
     createTerrainAutotileRegion,
+    createTerrainTileRegion,
     normalizeTerrainRectangle,
     translateTerrainAutotileTiles,
     type TerrainAutotileTiles,
@@ -44,6 +45,25 @@ describe("terrain rectangle auto-tiling", () => {
             width: 4,
             height: 3,
             gids: [1, 2, 2, 3, 4, 5, 5, 6, 7, 8, 8, 9],
+        });
+    });
+
+    it("fills every cell of a normalized tile rectangle with the selected GID", () => {
+        expect(createTerrainTileRegion("floor", { x: 4, y: 3 }, { x: 1, y: 1 }, 42)).toEqual({
+            layer: "floor",
+            x: 1,
+            y: 1,
+            width: 4,
+            height: 3,
+            gids: [42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42],
+        });
+    });
+
+    it("fills a tile rectangle with zero when the eraser is selected", () => {
+        expect(createTerrainTileRegion("floor", { x: 1, y: 1 }, { x: 2, y: 2 }, 0)).toMatchObject({
+            width: 2,
+            height: 2,
+            gids: [0, 0, 0, 0],
         });
     });
 

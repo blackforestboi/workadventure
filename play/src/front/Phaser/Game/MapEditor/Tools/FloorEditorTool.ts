@@ -19,6 +19,7 @@ import { asError } from "catch-unknown";
 
 import {
     createTerrainAutotileRegion,
+    createTerrainTileRegion,
     normalizeTerrainRectangle,
     translateTerrainAutotileTiles,
     type TerrainAutotileTiles,
@@ -54,6 +55,8 @@ type TilesetSelection =
 
 type PendingTilesetSelection = TilesetSelection & { firstGid: number; tileCount: number };
 
+type ShapeBrush = { kind: "autotile"; tiles: TerrainAutotileTiles } | { kind: "tile"; gid: number };
+
 const AUTHORING_PATH_OVERLAY_COLORS = {
     collision: { base: 0x4d9dff, checks: 0x84bdff },
     exit: { base: 0xf59e0b, checks: 0xfcd34d },
@@ -83,6 +86,7 @@ export class FloorEditorTool extends MapEditorTool {
     private selectedAutotile: { familyId: string; tiles: TerrainAutotileTiles } | undefined;
     private shapeStart: { layer: string; x: number; y: number } | undefined;
     private shapeEnd: { layer: string; x: number; y: number } | undefined;
+    private shapeBrush: ShapeBrush | undefined;
     private shapeOutline: GameObjects.Graphics | undefined;
     private hoveredTile: { layer: string; x: number; y: number } | undefined;
     private hoverTilePreview: GameObjects.Image | undefined;
@@ -92,6 +96,7 @@ export class FloorEditorTool extends MapEditorTool {
     private panning = false;
     private lastPaintedTileKey: string | undefined;
     private activeEditGroup: FloorEdit[] | undefined;
+    private readonly shiftKey: Phaser.Input.Keyboard.Key | undefined;
     private readonly pointerMoveEventHandler = (pointer: Phaser.Input.Pointer) => this.handlePointerMove(pointer);
     private readonly pointerDownEventHandler = (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer);
     private readonly pointerUpEventHandler = (pointer: Phaser.Input.Pointer) => this.handlePointerUp(pointer);
@@ -101,6 +106,7 @@ export class FloorEditorTool extends MapEditorTool {
         super();
         this.mapEditorModeManager = mapEditorModeManager;
         this.scene = this.mapEditorModeManager.getScene();
+        this.shiftKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     }
 
     public update(_time: number, _dt: number): void {}
@@ -124,6 +130,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.selectedAutotile = undefined;
         this.shapeStart = undefined;
         this.shapeEnd = undefined;
+        this.shapeBrush = undefined;
         this.publishedMap = structuredClone(this.scene.mapFile);
         this.draftMap = undefined;
         this.draftBaseMap = undefined;
@@ -358,7 +365,7 @@ export class FloorEditorTool extends MapEditorTool {
             if (this.shapeStart === undefined) this.clearHoverPreview();
             return;
         }
-        if (this.shapeStart !== undefined && this.selectedAutotile !== undefined && pointer.leftButtonDown()) {
+        if (this.shapeStart !== undefined && this.shapeBrush !== undefined && pointer.leftButtonDown()) {
             this.shapeEnd = tile;
             this.showShapeOutline(this.shapeStart, tile);
             return;
@@ -384,10 +391,17 @@ export class FloorEditorTool extends MapEditorTool {
         }
         const tile = this.getTileAtPointer(pointer);
         if (tile === undefined) return;
-        if (this.selectedAutotile !== undefined) {
+        const shapeBrush =
+            this.selectedAutotile === undefined
+                ? this.shiftKey?.isDown
+                    ? { kind: "tile" as const, gid: this.selectedGid }
+                    : undefined
+                : { kind: "autotile" as const, tiles: this.selectedAutotile.tiles };
+        if (shapeBrush !== undefined) {
             this.painting = true;
             this.shapeStart = tile;
             this.shapeEnd = tile;
+            this.shapeBrush = shapeBrush;
             this.showShapeOutline(tile, tile);
             return;
         }
@@ -399,7 +413,7 @@ export class FloorEditorTool extends MapEditorTool {
 
     private handlePointerUp(pointer: Phaser.Input.Pointer): void {
         this.stopPanning(pointer);
-        if (this.shapeStart !== undefined && this.shapeEnd !== undefined && this.selectedAutotile !== undefined) {
+        if (this.shapeStart !== undefined && this.shapeEnd !== undefined && this.shapeBrush !== undefined) {
             this.finishShapeDrag();
             return;
         }
@@ -472,17 +486,19 @@ export class FloorEditorTool extends MapEditorTool {
     private finishShapeDrag(): void {
         const start = this.shapeStart;
         const end = this.shapeEnd;
-        const selection = this.selectedAutotile;
+        const brush = this.shapeBrush;
         this.painting = false;
         this.shapeStart = undefined;
         this.shapeEnd = undefined;
+        this.shapeBrush = undefined;
         this.shapeOutline?.clear();
-        if (start === undefined || end === undefined || selection === undefined || this.publishedMap === undefined)
-            return;
+        if (start === undefined || end === undefined || brush === undefined || this.publishedMap === undefined) return;
 
         const source = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
         const rawRegions = appendDefaultCollisionRegions(source, [
-            createTerrainAutotileRegion(start.layer, start, end, selection.tiles),
+            brush.kind === "autotile"
+                ? createTerrainAutotileRegion(start.layer, start, end, brush.tiles)
+                : createTerrainTileRegion(start.layer, start, end, brush.gid),
         ]);
         const patch = TeapotTilePatch.parse({
             mapId: this.scene.getMapUrl(),
@@ -498,6 +514,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.painting = false;
         this.shapeStart = undefined;
         this.shapeEnd = undefined;
+        this.shapeBrush = undefined;
         this.shapeOutline?.clear();
     }
 

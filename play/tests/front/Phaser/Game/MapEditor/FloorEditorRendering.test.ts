@@ -277,4 +277,22 @@ describe("floor editor rendering", () => {
         expect(pointerDownSource).toBeDefined();
         expect(pointerDownSource).not.toContain("if (this.saving) return");
     });
+
+    it("uses the rectangle lifecycle for a Shift-held single-tile brush", () => {
+        const pointerDownSource = floorEditorToolSource.match(
+            /private handlePointerDown\([\s\S]*?\n {4}private handlePointerUp/,
+        )?.[0];
+        const finishShapeDragSource = floorEditorToolSource.match(
+            /private finishShapeDrag\([\s\S]*?\n {4}private cancelShapeDrag/,
+        )?.[0];
+
+        expect(pointerDownSource).toBeDefined();
+        expect(pointerDownSource).toContain("this.shiftKey?.isDown");
+        expect(pointerDownSource).not.toContain("this.selectedGid !== 0");
+        expect(pointerDownSource).toContain('{ kind: "tile" as const, gid: this.selectedGid }');
+        expect(pointerDownSource).toContain("this.shapeBrush = shapeBrush");
+        expect(finishShapeDragSource).toBeDefined();
+        expect(finishShapeDragSource).toContain('brush.kind === "autotile"');
+        expect(finishShapeDragSource).toContain("createTerrainTileRegion(start.layer, start, end, brush.gid)");
+    });
 });
