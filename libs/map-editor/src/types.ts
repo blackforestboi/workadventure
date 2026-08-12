@@ -341,6 +341,8 @@ export const EntityRawPrefab = z.object({
     defaultSizeInTiles: z.number().positive().optional(),
     defaultHeightInTiles: z.number().positive().optional(),
     previewPadding: z.number().int().min(-64).max(64).optional(),
+    previewOffsetX: z.number().int().min(-512).max(512).optional(),
+    previewOffsetY: z.number().int().min(-512).max(512).optional(),
 });
 
 export const EntityPrefabType = z.union([z.literal("Default"), z.literal("Custom")]);

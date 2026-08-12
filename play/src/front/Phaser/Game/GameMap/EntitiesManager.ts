@@ -146,7 +146,14 @@ export class EntitiesManager extends EventEmitter {
 
         const colGrid = entity.getCollisionGrid();
         if (colGrid) {
-            this.gameMapFrontWrapper.modifyToCollisionsLayer(entity.x, entity.y, "0", colGrid, withGridUpdate);
+            const collisionPosition = entity.getCollisionGridPosition();
+            this.gameMapFrontWrapper.modifyToCollisionsLayer(
+                collisionPosition.x,
+                collisionPosition.y,
+                "0",
+                colGrid,
+                withGridUpdate,
+            );
         }
 
         this.entities.set(entityId, entity);
@@ -183,7 +190,8 @@ export class EntitiesManager extends EventEmitter {
 
         const colGrid = entity.getReversedCollisionGrid();
         if (colGrid) {
-            this.gameMapFrontWrapper.modifyToCollisionsLayer(entity.x, entity.y, "0", colGrid);
+            const collisionPosition = entity.getCollisionGridPosition();
+            this.gameMapFrontWrapper.modifyToCollisionsLayer(collisionPosition.x, collisionPosition.y, "0", colGrid);
         }
         entity.destroy();
         this.scene.markDirty();
@@ -202,7 +210,13 @@ export class EntitiesManager extends EventEmitter {
             Partial<
                 Pick<
                     EntityPrefab,
-                    "animation" | "collisionGrid" | "defaultSizeInTiles" | "defaultHeightInTiles" | "depthOffset"
+                    | "animation"
+                    | "collisionGrid"
+                    | "defaultSizeInTiles"
+                    | "defaultHeightInTiles"
+                    | "depthOffset"
+                    | "previewOffsetX"
+                    | "previewOffsetY"
                 >
             >,
     ): void {
@@ -308,17 +322,9 @@ export class EntitiesManager extends EventEmitter {
                 this.isEntityEditorToolActive() &&
                 get(mapEditorEntityModeStore) === "EDIT"
             ) {
-                const collisitonGrid = entity.getPrefab().collisionGrid;
                 const depthOffset = entity.getPrefab().depthOffset ?? 0;
-                const tileDim = this.scene.getGameMapFrontWrapper().getTileDimensions();
-                entity.x =
-                    collisitonGrid || this.shiftKey?.isDown
-                        ? Math.floor(dragX / tileDim.width) * tileDim.width
-                        : Math.floor(dragX);
-                entity.y =
-                    collisitonGrid || this.shiftKey?.isDown
-                        ? Math.floor(dragY / tileDim.height) * tileDim.height
-                        : Math.floor(dragY);
+                entity.x = dragX;
+                entity.y = dragY;
                 entity.setDepth(entity.y + entity.displayHeight + depthOffset);
 
                 this.changeEntityTint(entity);
@@ -335,11 +341,11 @@ export class EntitiesManager extends EventEmitter {
                     !this.scene
                         .getGameMapFrontWrapper()
                         .canEntityBePlacedOnMap(
-                            entity.getTopLeft(),
+                            entity.getCollisionGridPosition(),
                             entity.displayWidth,
                             entity.displayHeight,
                             entity.getCollisionGrid(),
-                            entity.getOldPosition(),
+                            this.getOldCollisionGridPosition(entity),
                             this.shiftKey?.isDown,
                         )
                 ) {
@@ -443,11 +449,11 @@ export class EntitiesManager extends EventEmitter {
             !this.scene
                 .getGameMapFrontWrapper()
                 .canEntityBePlacedOnMap(
-                    entity.getTopLeft(),
+                    entity.getCollisionGridPosition(),
                     entity.displayWidth,
                     entity.displayHeight,
                     entity.getCollisionGrid(),
-                    entity.getOldPosition(),
+                    this.getOldCollisionGridPosition(entity),
                     this.shiftKey?.isDown,
                 )
         ) {
@@ -460,6 +466,15 @@ export class EntitiesManager extends EventEmitter {
             }
         }
         this.scene.markDirty();
+    }
+
+    private getOldCollisionGridPosition(entity: Entity): { x: number; y: number } {
+        const previousPosition = entity.getOldPosition();
+        const collisionPosition = entity.getCollisionGridPosition();
+        return {
+            x: previousPosition.x + collisionPosition.x - entity.x,
+            y: previousPosition.y + collisionPosition.y - entity.y,
+        };
     }
 
     private isEntityEditorToolActive(): boolean {

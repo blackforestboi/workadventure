@@ -11,12 +11,15 @@ export function getEntityDisplaySize(
         return { width: naturalWidth, height: naturalHeight };
     }
 
+    // A stored height means these values describe the independent collision grid.
+    // Keep the raster at its natural placed size instead of stretching it to that grid.
+    if (defaultHeightInTiles !== undefined) {
+        return { width: naturalWidth, height: naturalHeight };
+    }
+
     const width = defaultSizeInTiles * MAP_TILE_SIZE;
     return {
         width,
-        height:
-            defaultHeightInTiles === undefined
-                ? width * (naturalHeight / naturalWidth)
-                : defaultHeightInTiles * MAP_TILE_SIZE,
+        height: width * (naturalHeight / naturalWidth),
     };
 }

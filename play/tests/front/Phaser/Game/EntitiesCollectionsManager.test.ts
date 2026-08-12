@@ -28,4 +28,29 @@ describe("EntitiesCollectionsManager", () => {
             expect.objectContaining({ name: "Generated tree" }),
         );
     });
+
+    it("keeps saved grid settings in the custom catalog", async () => {
+        const manager = new EntitiesCollectionsManager();
+        manager.loadCollections([]);
+        await manager.getEntityPrefab("custom entities", "missing");
+
+        manager.addUploadedEntity(
+            {
+                ...uploadedEntity("Pool table"),
+                defaultSizeInTiles: 1,
+                defaultHeightInTiles: 1,
+                previewPadding: 24,
+            },
+            "https://maps.example.test/entities/",
+        );
+        manager.modifyCustomEntity("generated-tree-id", "Pool table", ["Nature"], 0, [[1, 0]], 2, 3, undefined, -12);
+
+        const prefab = get(manager.getEntitiesPrefabsVariantStore())[0]?.defaultPrefab;
+        expect(prefab).toMatchObject({
+            collisionGrid: [[1, 0]],
+            defaultSizeInTiles: 2,
+            defaultHeightInTiles: 3,
+            previewPadding: -12,
+        });
+    });
 });

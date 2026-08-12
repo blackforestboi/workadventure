@@ -17,16 +17,21 @@
         updateCollisionGrid,
     }: Props = $props();
     let columnCount = $derived(Math.max(1, ...collisionGrid.map((row) => row.length)));
+    let rowCount = $derived(Math.max(1, collisionGrid.length));
+    let cellSize = $derived(Math.min(collisionGridWidth / columnCount, collisionGridHeight / rowCount));
+    let displayedGridWidth = $derived(cellSize * columnCount);
+    let displayedGridHeight = $derived(cellSize * rowCount);
 </script>
 
 <div
-    class="absolute grid"
-    style:left={`${offsetX}px`}
-    style:top={`${offsetY}px`}
-    style:width={`${collisionGridWidth}px`}
-    style:height={`${collisionGridHeight}px`}
+    data-collision-grid
+    class="pointer-events-auto absolute grid"
+    style:left={`${offsetX + (collisionGridWidth - displayedGridWidth) / 2}px`}
+    style:top={`${offsetY + (collisionGridHeight - displayedGridHeight) / 2}px`}
+    style:width={`${displayedGridWidth}px`}
+    style:height={`${displayedGridHeight}px`}
     style:grid-template-columns={`repeat(${columnCount}, minmax(0, 1fr))`}
-    style:grid-template-rows={`repeat(${Math.max(1, collisionGrid.length)}, minmax(0, 1fr))`}
+    style:grid-template-rows={`repeat(${rowCount}, minmax(0, 1fr))`}
     aria-label="Collision areas"
 >
     {#each collisionGrid as row, rowIndex (rowIndex)}

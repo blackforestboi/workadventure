@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import assetGenerationPanelSource from "../../../../src/front/Components/AssetGeneration/AssetGenerationPanel.svelte?raw";
 import entityEditorPickerSource from "../../../../src/front/Components/MapEditor/EntityEditor/EntityEditorPicker.svelte?raw";
 import entityUploadSource from "../../../../src/front/Components/MapEditor/EntityEditor/EntityUpload/EntityUpload.svelte?raw";
+import entityPropertiesEditorSource from "../../../../src/front/Components/MapEditor/EntityEditor/EntityPropertiesEditor.svelte?raw";
+import customEntityEditionFormSource from "../../../../src/front/Components/MapEditor/EntityEditor/CustomEntityEditionForm/CustomEntityEditionForm.svelte?raw";
 
 describe("asset generation panel", () => {
     it("only opens AI settings in response to an explicit user action", () => {
@@ -81,13 +83,16 @@ describe("asset generation panel", () => {
         );
     });
 
-    it("hides the variant selector when there is nothing to choose", () => {
-        expect(entityEditorPickerSource).toContain("let hasVariantOptions = $derived(");
+    it("keeps editing available while hiding variant controls with nothing to choose", () => {
+        expect(entityEditorPickerSource).toContain("let hasColorOptions = $derived.by(");
+        expect(entityEditorPickerSource).toContain("let hasPositionOptions = $derived.by(");
         expect(entityEditorPickerSource).toContain("pickedEntityVariant.colors.length > 1");
         expect(entityEditorPickerSource).toContain(
             "pickedEntityVariant.getEntityPrefabsPositions(selectedColor).length > 1",
         );
-        expect(entityEditorPickerSource).toContain("{#if pickedEntityVariant && pickedEntity && hasVariantOptions}");
+        expect(entityEditorPickerSource).toContain("{#if pickedEntityVariant && pickedEntity}");
+        expect(entityEditorPickerSource).toContain("{#if hasColorOptions}");
+        expect(entityEditorPickerSource).toContain("{#if hasPositionOptions}");
     });
 
     it("keeps category options flat beneath search", () => {
@@ -98,6 +103,19 @@ describe("asset generation panel", () => {
         expect(entityEditorPickerSource).not.toContain(
             '<section class="shrink-0 rounded-xl border border-white/10 bg-black/10 p-3">',
         );
+    });
+
+    it("keeps the asset save action in the selected-object sidebar header", () => {
+        expect(entityPropertiesEditorSource).toContain('activeTab === "edit"');
+        expect(entityPropertiesEditorSource).toContain("Save asset");
+        expect(entityPropertiesEditorSource).toContain("showHeader={false}");
+        expect(entityPropertiesEditorSource).toContain("onSaveReady={(save) => (saveAsset = save)}");
+        expect(entityPropertiesEditorSource).toContain("onSaveStatusChange={(status) => (assetSaveStatus = status)}");
+        expect(customEntityEditionFormSource).toContain("showHeader?: boolean;");
+        expect(customEntityEditionFormSource).toContain("{#if showHeader}");
+        expect(customEntityEditionFormSource).toContain('saveStatus === "saving"');
+        expect(customEntityEditionFormSource).toContain('"Saving…"');
+        expect(customEntityEditionFormSource).toContain('"Saved"');
     });
 
     it("adapts the compact uploader controls to an image and prompt", () => {

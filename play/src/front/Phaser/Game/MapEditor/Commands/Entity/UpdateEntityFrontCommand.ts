@@ -64,7 +64,7 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
         if (!entity) {
             return;
         }
-        const { x: oldX, y: oldY } = entity.getOldPosition();
+        const oldCollisionPosition = entity.getCollisionGridPosition();
         const oldCollisionGrid = entity.getCollisionGrid();
         entity?.updateEntity(config);
         // If the entity is activable, and not in the activatable entities array of the entity manager,
@@ -72,7 +72,7 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
         if (entity.isActivatable() && !this.entitiesManager.getActivatableEntities().includes(entity)) {
             this.entitiesManager.getActivatableEntities().push(entity);
         }
-        this.updateCollisionGrid(entity, oldX, oldY, oldCollisionGrid);
+        this.updateCollisionGrid(entity, oldCollisionPosition.x, oldCollisionPosition.y, oldCollisionGrid);
         this.scene.markDirty();
     }
 
@@ -88,7 +88,10 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
             this.scene.getGameMapFrontWrapper().modifyToCollisionsLayer(oldX, oldY, "0", reversedGrid);
         }
         if (grid) {
-            this.scene.getGameMapFrontWrapper().modifyToCollisionsLayer(entity.x, entity.y, "0", grid);
+            const collisionPosition = entity.getCollisionGridPosition();
+            this.scene
+                .getGameMapFrontWrapper()
+                .modifyToCollisionsLayer(collisionPosition.x, collisionPosition.y, "0", grid);
         }
     }
 }

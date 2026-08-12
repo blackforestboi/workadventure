@@ -21,15 +21,15 @@ describe("entity prefab default size", () => {
         expect(getEntityDisplaySize(512, 256, tiles)).toEqual({ width, height: width / 2 });
     });
 
-    it("uses a stored tile height for rectangular assets", () => {
-        expect(getEntityDisplaySize(512, 256, 1, 3)).toEqual({ width: 32, height: 96 });
+    it("keeps the raster's natural dimensions when grid width and height are stored", () => {
+        expect(getEntityDisplaySize(512, 256, 1, 3)).toEqual({ width: 512, height: 256 });
     });
 
     it("keeps legacy natural dimensions when no default is stored", () => {
         expect(getEntityDisplaySize(512, 256, undefined)).toEqual({ width: 512, height: 256 });
     });
 
-    it("applies the stored tile width to the preview used for new placements", () => {
+    it("preserves natural preview dimensions when a collision grid has width and height", () => {
         expect(entityRelatedEditorToolSource).toContain("getEntityDisplaySize(");
         expect(entityRelatedEditorToolSource).toContain("entityPrefab.defaultSizeInTiles");
         expect(entityRelatedEditorToolSource).toContain("entityPrefab.defaultHeightInTiles");

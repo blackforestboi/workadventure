@@ -360,7 +360,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
             choose: "اختر كائنًا",
         },
         title: "وضع الكائن", // Place object
-        editing: "تعديل: {name}", // Editing: {name}
+        editing: "{name}",
         drop: "أسقط ملفك في أي مكان",
         itemPicker: {
             searchPlaceholder: "بحث", // Search

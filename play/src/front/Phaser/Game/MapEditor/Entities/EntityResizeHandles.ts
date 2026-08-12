@@ -30,15 +30,26 @@ export class EntityResizeHandles {
     }
 
     public update(): void {
-        const bounds = this.getBounds();
+        const bounds = this.getOutlineBounds();
         const depth = this.entity.depth + 10;
-        this.outline
-            .clear()
-            .lineStyle(1, 0xffffff, 0.95)
-            .strokeRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4)
-            .lineStyle(1, 0x53d8fb, 0.65)
-            .strokeRect(bounds.x + 2, bounds.y + 2, Math.max(0, bounds.width - 4), Math.max(0, bounds.height - 4))
-            .setDepth(depth);
+        this.outline.clear().lineStyle(2, 0x53d8fb, 0.95).strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+
+        const collisionGrid = this.entity.getCollisionGrid();
+        if (collisionGrid?.length && collisionGrid[0]?.length) {
+            const columns = Math.max(...collisionGrid.map((row) => row.length));
+            const tileWidth = bounds.width / columns;
+            const tileHeight = bounds.height / collisionGrid.length;
+            this.outline.lineStyle(1, 0x53d8fb, 0.8);
+            for (let column = 1; column < columns; column += 1) {
+                const x = bounds.x + column * tileWidth;
+                this.outline.lineBetween(x, bounds.y, x, bounds.y + bounds.height);
+            }
+            for (let row = 1; row < collisionGrid.length; row += 1) {
+                const y = bounds.y + row * tileHeight;
+                this.outline.lineBetween(bounds.x, y, bounds.x + bounds.width, y);
+            }
+        }
+        this.outline.setDepth(depth);
         this.positionHandle("north-west", bounds.x, bounds.y, depth + 1);
         this.positionHandle("north-east", bounds.x + bounds.width, bounds.y, depth + 1);
         this.positionHandle("south-east", bounds.x + bounds.width, bounds.y + bounds.height, depth + 1);
@@ -89,6 +100,20 @@ export class EntityResizeHandles {
             y: this.entity.y,
             width: this.entity.displayWidth,
             height: this.entity.displayHeight,
+        };
+    }
+
+    private getOutlineBounds(): Bounds {
+        const collisionGrid = this.entity.getCollisionGrid();
+        if (!collisionGrid?.length || !collisionGrid[0]?.length) {
+            return this.getBounds();
+        }
+        const position = this.entity.getCollisionGridPosition();
+        return {
+            x: position.x,
+            y: position.y,
+            width: Math.max(...collisionGrid.map((row) => row.length)) * 32,
+            height: collisionGrid.length * 32,
         };
     }
 }

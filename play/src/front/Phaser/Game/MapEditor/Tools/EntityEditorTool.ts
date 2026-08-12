@@ -28,6 +28,7 @@ import { EditorToolName } from "../MapEditorModeManager";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { mapEditorActivated } from "../../../../Stores/MenuStore";
 import { hasPointerDragged } from "../PanGesture";
+import { getCollisionGridOffset } from "../Entities/EntityCollisionGrid";
 import { EntityRelatedEditorTool } from "./EntityRelatedEditorTool";
 
 import Key = Phaser.Input.Keyboard.Key;
@@ -357,6 +358,11 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         this.scene.markDirty();
     }
 
+    protected onEntityPrefabPreviewReady(pointer: Pointer): void {
+        this.updateEntityPrefabPreviewPosition(pointer);
+        this.changePreviewTint();
+    }
+
     protected handlePointerDownEvent(pointer: Pointer, gameObjects: GameObject[]): void {
         const clickedAreaPreview = this.isAreaPreviewClicked(pointer, gameObjects);
 
@@ -395,22 +401,15 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
             this.cleanPreview();
             return;
         }
-        let x = Math.floor(pointer.worldX);
-        let y = Math.floor(pointer.worldY);
-
-        if (this.entityPrefab.collisionGrid || this.shiftKey?.isDown) {
-            const offsets = this.getEntityPrefabAlignWithGridOffset();
-            x = Math.floor(pointer.worldX / 32) * 32 + offsets.x;
-            y = Math.floor(pointer.worldY / 32) * 32 + offsets.y;
-        }
+        const previewPosition = this.getEntityPrefabPreviewPosition(pointer);
 
         const entityId = uuidv4();
 
         const properties = get(mapEditorCopiedEntityDataPropertiesStore);
 
         const entityData: WAMEntityData = {
-            x: Math.floor(x - this.entityPrefabPreview.displayWidth * 0.5),
-            y: Math.floor(y - this.entityPrefabPreview.displayHeight * 0.5),
+            x: Math.floor(previewPosition.x - this.entityPrefabPreview.displayWidth * 0.5),
+            y: Math.floor(previewPosition.y - this.entityPrefabPreview.displayHeight * 0.5),
             width: this.entityPrefabPreview.displayWidth,
             height: this.entityPrefabPreview.displayHeight,
             prefabRef: this.entityPrefab,
@@ -549,8 +548,18 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         if (!this.entityPrefabPreview || !this.entityPrefab) {
             return false;
         }
+        const collisionOffset = getCollisionGridOffset(
+            this.entityPrefab.collisionGrid,
+            this.entityPrefabPreview.displayWidth,
+            this.entityPrefabPreview.displayHeight,
+            this.entityPrefab.previewOffsetX,
+            this.entityPrefab.previewOffsetY,
+        );
         return gameMapFrontWrapper.canEntityBePlacedOnMap(
-            this.entityPrefabPreview.getTopLeft(),
+            {
+                x: this.entityPrefabPreview.getTopLeft().x + collisionOffset.x,
+                y: this.entityPrefabPreview.getTopLeft().y + collisionOffset.y,
+            },
             this.entityPrefabPreview.displayWidth,
             this.entityPrefabPreview.displayHeight,
             this.entityPrefab.collisionGrid,
@@ -564,21 +573,18 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
             return;
         }
 
-        if (this.entityPrefab.collisionGrid || this.shiftKey?.isDown) {
-            const offset = this.getEntityPrefabAlignWithGridOffset();
-            this.entityPrefabPreview.setPosition(
-                Math.floor(pointer.worldX / 32) * 32 + offset.x,
-                Math.floor(pointer.worldY / 32) * 32 + offset.y,
-            );
-        } else {
-            this.entityPrefabPreview.setPosition(Math.floor(pointer.worldX), Math.floor(pointer.worldY));
-        }
+        const previewPosition = this.getEntityPrefabPreviewPosition(pointer);
+        this.entityPrefabPreview.setPosition(previewPosition.x, previewPosition.y);
 
         this.entityPrefabPreview.setDepth(
             this.entityPrefabPreview.y +
                 this.entityPrefabPreview.displayHeight * 0.5 +
                 (this.entityPrefab.depthOffset ?? 0),
         );
+    }
+
+    private getEntityPrefabPreviewPosition(pointer: Pointer): { x: number; y: number } {
+        return { x: pointer.worldX, y: pointer.worldY };
     }
 
     private updateEntity(entityData: EntityData) {

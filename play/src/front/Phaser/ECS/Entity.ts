@@ -25,7 +25,10 @@ import type { OutlineableInterface } from "../Game/OutlineableInterface";
 import { SpeechDomElement } from "../Entity/SpeechDomElement";
 import LL from "../../../i18n/i18n-svelte";
 import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
-import { reverseEntityCollisionGrid, scaleEntityCollisionGrid } from "../Game/MapEditor/Entities/EntityCollisionGrid";
+import {
+    getScaledCollisionGridFrame,
+    reverseEntityCollisionGrid,
+} from "../Game/MapEditor/Entities/EntityCollisionGrid";
 import { getEntityDisplaySize } from "../../Utils/EntityPrefabSize";
 import { Room } from "../../Connection/Room";
 import ExitPasswordModal from "../../Components/Modal/ExitPasswordModal.svelte";
@@ -261,7 +264,24 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
     }
 
     public getCollisionGrid(): number[][] | undefined {
-        return scaleEntityCollisionGrid(this.prefab.collisionGrid, this.displayWidth, this.displayHeight);
+        return this.getCollisionGridFrame().collisionGrid;
+    }
+
+    public getCollisionGridPosition(): { x: number; y: number } {
+        const { offset } = this.getCollisionGridFrame();
+        return { x: this.x + offset.x, y: this.y + offset.y };
+    }
+
+    private getCollisionGridFrame(): ReturnType<typeof getScaledCollisionGridFrame> {
+        return getScaledCollisionGridFrame(
+            this.prefab.collisionGrid,
+            this.width,
+            this.height,
+            this.displayWidth,
+            this.displayHeight,
+            this.prefab.previewOffsetX,
+            this.prefab.previewOffsetY,
+        );
     }
 
     public getReversedCollisionGrid(): number[][] | undefined {
@@ -273,7 +293,13 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
             Partial<
                 Pick<
                     EntityPrefab,
-                    "animation" | "collisionGrid" | "defaultSizeInTiles" | "defaultHeightInTiles" | "depthOffset"
+                    | "animation"
+                    | "collisionGrid"
+                    | "defaultSizeInTiles"
+                    | "defaultHeightInTiles"
+                    | "depthOffset"
+                    | "previewOffsetX"
+                    | "previewOffsetY"
                 >
             >,
     ): void {

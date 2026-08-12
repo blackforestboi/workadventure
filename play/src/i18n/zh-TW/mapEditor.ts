@@ -358,7 +358,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
             choose: "選擇一個物件",
         },
         title: "放置您的物件",
-        editing: "編輯中：{name}",
+        editing: "{name}",
         drop: "將檔案拖放到任意位置",
         itemPicker: {
             searchPlaceholder: "搜尋",

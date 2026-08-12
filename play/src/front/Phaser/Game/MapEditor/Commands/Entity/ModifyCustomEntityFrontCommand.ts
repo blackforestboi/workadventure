@@ -31,6 +31,8 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             defaultSizeInTiles,
             defaultHeightInTiles,
             previewPadding,
+            previewOffsetX,
+            previewOffsetY,
         } = this.modifyCustomEntityMessage;
         this.entitiesCollectionManager.modifyCustomEntity(
             id,
@@ -42,6 +44,8 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             defaultHeightInTiles,
             animation,
             previewPadding,
+            previewOffsetX,
+            previewOffsetY,
         );
         this.entitiesManager.updateEntitiesPrefabMetadata(id, {
             name,
@@ -50,6 +54,8 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             depthOffset,
             defaultSizeInTiles,
             defaultHeightInTiles,
+            previewOffsetX,
+            previewOffsetY,
             ...(animation === undefined ? {} : { animation }),
         });
         this.gameFrontWrapper.recomputeEntitiesCollisionGrid();
