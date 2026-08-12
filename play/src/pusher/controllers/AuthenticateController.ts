@@ -10,11 +10,21 @@ import Debug from "debug";
 import type { AuthTokenData } from "../services/JWTTokenManager";
 import { jwtTokenManager } from "../services/JWTTokenManager";
 import { openIDClient } from "../services/OpenIDClient";
-import { DISABLE_ANONYMOUS, FRONT_URL, MATRIX_PUBLIC_URI, PUSHER_URL } from "../enums/EnvironmentVariable";
+import {
+    DISABLE_ANONYMOUS,
+    FRONT_URL,
+    MATRIX_PUBLIC_URI,
+    OPID_CLIENT_ID,
+    OPID_CLIENT_ISSUER,
+    PUSHER_URL,
+    TEAPOT_X_CLIENT_ID,
+    TEAPOT_X_REDIRECT_URI,
+} from "../enums/EnvironmentVariable";
 import { adminService } from "../services/AdminService";
 import { validateQuery } from "../services/QueryValidator";
 import { VerifyDomainService } from "../services/verifyDomain/VerifyDomainService";
 import { matrixProvider } from "../services/MatrixProvider";
+import { selectLoginProvider } from "../services/LoginProvider";
 import { getClientIpFromXForwardedFor } from "../services/ClientIp";
 import { BaseHttpController } from "./BaseHttpController";
 
@@ -122,6 +132,25 @@ export class AuthenticateController extends BaseHttpController {
             if (!verifyDomainResult) {
                 res.status(403);
                 res.send("Unauthorized domain in playUri");
+                return;
+            }
+
+            const loginProvider = selectLoginProvider({
+                xClientId: TEAPOT_X_CLIENT_ID,
+                xRedirectUri: TEAPOT_X_REDIRECT_URI,
+                frontUrl: FRONT_URL,
+                openIdClientId: OPID_CLIENT_ID,
+                openIdIssuer: OPID_CLIENT_ISSUER,
+            });
+            if (loginProvider === "x") {
+                const xLoginUrl = new URL("/teapot/auth/x/start", FRONT_URL);
+                xLoginUrl.searchParams.set("returnTo", query.playUri);
+                res.redirect(xLoginUrl.toString());
+                return;
+            }
+
+            if (loginProvider === undefined) {
+                res.status(503).send("Login is not configured for this deployment.");
                 return;
             }
 
