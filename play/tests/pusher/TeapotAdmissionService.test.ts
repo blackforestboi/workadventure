@@ -133,16 +133,11 @@ describe("TeapotAdmissionService", () => {
         ).rejects.toBeInstanceOf(TeapotDataConflictError);
     });
 
-    it("provides the world-entry gate used by HTTP and websocket boundaries", async () => {
+    it("temporarily lets X-authenticated users enter without invitation checks", async () => {
         const fixture = createFixture();
         const pending = await fixture.services.localIdentity.resolve({ localSubject: "pending" });
-        const admittedIdentity = await fixture.services.localIdentity.resolve({ localSubject: "admitted" });
-        const admitted = await fixture.repository.updateAdmissionState(admittedIdentity.id, "admitted");
         const gate = new TeapotWorldAdmissionGate(fixture.services);
 
-        await expect(gate.assertTokenCanEnter({ identifier: pending.id, authProvider: "x" })).rejects.toThrow(
-            "Three endorsements",
-        );
-        await expect(gate.assertTokenCanEnter({ identifier: admitted.id, authProvider: "x" })).resolves.toBeUndefined();
+        await expect(gate.assertTokenCanEnter({ identifier: pending.id, authProvider: "x" })).resolves.toBeUndefined();
     });
 });
