@@ -3,6 +3,7 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import type { TeapotIdentity } from "../../common/Teapot/TeapotIdentity";
 import type { AuthTokenData } from "../services/JWTTokenManager";
 import type { TeapotDataServices } from "../teapot/createTeapotDataServices";
+import { isTeapotInvitationAdmissionEnforced } from "../teapot/TeapotInvitationAdmissionPolicy";
 import type { ResponseWithUserIdentifier } from "./Authenticated";
 
 export type TeapotAuthoringAccessErrorCode = "x_authentication_required" | "admission_required" | "account_suspended";
@@ -67,7 +68,7 @@ export async function assertTeapotBrowserAuthoringAccess(
             "X authentication is required for Teapot authoring",
         );
     }
-    return requireAdmittedXIdentity(userId, 401, resolvedDependencies);
+    return requireXIdentity(userId, 401, resolvedDependencies);
 }
 
 /** Rechecks the owner behind an MCP bearer session, including sessions issued before a config/state change. */
@@ -77,7 +78,7 @@ export async function assertTeapotMcpSessionAuthoringAccess(
 ): Promise<TeapotIdentity | undefined> {
     const resolvedDependencies = resolveDependencies(dependencies);
     if (!resolvedDependencies.isXAdmissionConfigured()) return undefined;
-    return requireAdmittedXIdentity(userId, 403, resolvedDependencies);
+    return requireXIdentity(userId, 403, resolvedDependencies);
 }
 
 export function sendTeapotAuthoringAccessError(res: Response, error: unknown): boolean {
@@ -87,7 +88,7 @@ export function sendTeapotAuthoringAccessError(res: Response, error: unknown): b
     return true;
 }
 
-async function requireAdmittedXIdentity(
+async function requireXIdentity(
     userId: string,
     missingIdentityStatus: 401 | 403,
     dependencies: TeapotAuthoringAccessDependencies,
@@ -107,7 +108,7 @@ async function requireAdmittedXIdentity(
     if (identity.admissionState === "suspended") {
         throw new TeapotAuthoringAccessError(403, "account_suspended", "This Teapot account is suspended");
     }
-    if (identity.admissionState !== "admitted") {
+    if (isTeapotInvitationAdmissionEnforced() && identity.admissionState !== "admitted") {
         throw new TeapotAuthoringAccessError(
             403,
             "admission_required",

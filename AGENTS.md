@@ -29,3 +29,7 @@ WorkAdventure is a TypeScript monorepo (npm workspaces) for building collaborati
 - `docs/agent/i18n.md`
 - `docs/agent/common-issues.md`
 - `docs/agent/devtools.md`
+
+## Production deployment
+
+- Deploy requested production changes directly to Railway by default; do not push to GitHub unless the user explicitly asks.
