@@ -98,62 +98,65 @@
 </script>
 
 {#if visible}
-    <div class="teapot-admission-backdrop">
-        <div
-            class="teapot-admission-card"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Teapot Maps admission"
-            aria-live="polite"
-        >
-            <p class="eyebrow">TEAPOT MAPS</p>
-            {#if token === null}
-                <h1>Enter with X</h1>
-                <p>Your X account becomes your stable identity in this world.</p>
-                <a class="primary" href={teapotAdmissionApi.createLoginUrl()}>Continue with X</a>
-            {:else if status === null}
-                <h1>Sign-in needs attention</h1>
-                <p>We could not verify this session. Sign in again to continue.</p>
-                <a class="primary" href={teapotAdmissionApi.createLoginUrl()}>Sign in with X</a>
-            {:else if status?.identity.admissionState === "pending"}
-                <h1>Three invitations open the door</h1>
-                <p>
-                    {status.acceptedEndorsements} of {status.requiredEndorsements} endorsements received. Share one candidate-specific
-                    link with people who are already inside.
-                </p>
-                {#if shareUrl}
-                    <label for="teapot-share-link">Your invitation link</label>
-                    <input
-                        id="teapot-share-link"
-                        readonly
-                        value={shareUrl}
-                        onclick={(event) => event.currentTarget.select()}
-                    />
-                {:else}
-                    <button class="primary" disabled={busy} onclick={createShareLink}>Create invitation link</button>
-                {/if}
-                <button disabled={busy} onclick={refreshStatus}>Refresh status</button>
-            {:else if status?.identity.admissionState === "suspended"}
-                <h1>This account is suspended</h1>
-                <p>An operator needs to restore access before you can enter.</p>
-            {:else if readyToEnter}
-                <h1>You’re in</h1>
-                <p>Three people endorsed you. Reload once to enter the world.</p>
-                <button class="primary" onclick={() => window.location.reload()}>Enter the world</button>
-            {:else if inviteToken !== null}
-                {#if pending}
-                    <h1>Endorse {pending.candidate.displayName ?? "this person"}?</h1>
-                    <p>This is one of three distinct endorsements they need to join the world.</p>
-                    <button class="primary" disabled={busy} onclick={confirmInvite}>Confirm endorsement</button>
-                {:else}
-                    <h1>Invitation to endorse</h1>
-                    <p>Review the candidate before adding your endorsement.</p>
-                    <button class="primary" disabled={busy} onclick={reviewInvite}>Review invitation</button>
-                {/if}
-            {/if}
-            {#if error}<p class="error" role="alert">{error}</p>{/if}
+    {#if status === null}
+        <div class="teapot-admission-map" role="dialog" aria-modal="true" aria-label="Sign up for Teapot Maps">
+            <a class="sign-up" href={teapotAdmissionApi.createLoginUrl()}>Sign up</a>
         </div>
-    </div>
+    {:else}
+        <div class="teapot-admission-backdrop">
+            <div
+                class="teapot-admission-card"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Teapot Maps admission"
+                aria-live="polite"
+            >
+                <p class="eyebrow">TEAPOT MAPS</p>
+                {#if token === null}
+                    <h1>Enter with X</h1>
+                    <p>Your X account becomes your stable identity in this world.</p>
+                    <a class="primary" href={teapotAdmissionApi.createLoginUrl()}>Continue with X</a>
+                {:else if status?.identity.admissionState === "pending"}
+                    <h1>Three invitations open the door</h1>
+                    <p>
+                        {status.acceptedEndorsements} of {status.requiredEndorsements} endorsements received. Share one candidate-specific
+                        link with people who are already inside.
+                    </p>
+                    {#if shareUrl}
+                        <label for="teapot-share-link">Your invitation link</label>
+                        <input
+                            id="teapot-share-link"
+                            readonly
+                            value={shareUrl}
+                            onclick={(event) => event.currentTarget.select()}
+                        />
+                    {:else}
+                        <button class="primary" disabled={busy} onclick={createShareLink}>Create invitation link</button
+                        >
+                    {/if}
+                    <button disabled={busy} onclick={refreshStatus}>Refresh status</button>
+                {:else if status?.identity.admissionState === "suspended"}
+                    <h1>This account is suspended</h1>
+                    <p>An operator needs to restore access before you can enter.</p>
+                {:else if readyToEnter}
+                    <h1>You’re in</h1>
+                    <p>Three people endorsed you. Reload once to enter the world.</p>
+                    <button class="primary" onclick={() => window.location.reload()}>Enter the world</button>
+                {:else if inviteToken !== null}
+                    {#if pending}
+                        <h1>Endorse {pending.candidate.displayName ?? "this person"}?</h1>
+                        <p>This is one of three distinct endorsements they need to join the world.</p>
+                        <button class="primary" disabled={busy} onclick={confirmInvite}>Confirm endorsement</button>
+                    {:else}
+                        <h1>Invitation to endorse</h1>
+                        <p>Review the candidate before adding your endorsement.</p>
+                        <button class="primary" disabled={busy} onclick={reviewInvite}>Review invitation</button>
+                    {/if}
+                {/if}
+                {#if error}<p class="error" role="alert">{error}</p>{/if}
+            </div>
+        </div>
+    {/if}
 {/if}
 
 <style>
@@ -167,6 +170,40 @@
         background: color-mix(in srgb, #151927 82%, transparent);
         backdrop-filter: blur(10px);
         pointer-events: auto;
+    }
+
+    .teapot-admission-map {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: url("/resources/tpot-map.png") center / cover no-repeat;
+    }
+
+    .sign-up {
+        min-width: min(240px, 100%);
+        padding: 14px 28px;
+        border: 1px solid #ffffffa8;
+        border-radius: 999px;
+        color: #151515;
+        background: #ffffffb8;
+        box-shadow: 0 8px 32px #0004;
+        backdrop-filter: blur(8px);
+        font-size: 1.125rem;
+        font-weight: 700;
+        text-align: center;
+        text-decoration: none;
+        transition:
+            background 150ms ease,
+            transform 150ms ease;
+    }
+
+    .sign-up:hover,
+    .sign-up:focus-visible {
+        background: #ffffffe0;
+        transform: translateY(-2px);
     }
 
     .teapot-admission-card {
