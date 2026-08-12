@@ -262,7 +262,10 @@ describe("Teapot authoring route coverage", () => {
         );
         expect(response.json).toHaveBeenCalledWith(
             expect.objectContaining({
-                policies: expect.arrayContaining([expect.objectContaining({ role: "admin", mode: "specific" })]),
+                policies: expect.arrayContaining([
+                    expect.objectContaining({ role: "admin", mode: "specific" }),
+                    expect.objectContaining({ role: "directory", mode: "everyone" }),
+                ]),
                 visitors: [expect.objectContaining({ identifier: "past-visitor", visitCount: 1 })],
             }),
         );
