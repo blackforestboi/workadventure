@@ -1,11 +1,16 @@
-import { BRAND_NAME } from "./Enum/EnvironmentVariable";
+import { BRANDING } from "./Branding";
 
 const LEGACY_BRAND_PATTERN =
     /(?<![A-Za-z0-9@._/-])(?:WorkAdventures?|Workadventures?|workadventures?)(?![A-Za-z0-9._/-])/g;
+const LEGACY_BRAND_URL_PATTERN = /https?:\/\/(?:play\.|docs\.)?workadventu\.re/gi;
+const LEGACY_BRAND_EMAIL_PATTERN = /hello@workadventu\.re/gi;
 
-/** Replaces legacy product-name wording in translated or server-provided UI text. */
+/** Replaces legacy product-name wording and contact links in translated/server-provided UI text. */
 export function replaceLegacyBrand(value: string): string {
-    return value.replace(LEGACY_BRAND_PATTERN, BRAND_NAME);
+    return value
+        .replace(LEGACY_BRAND_URL_PATTERN, BRANDING.websiteUrl)
+        .replace(LEGACY_BRAND_EMAIL_PATTERN, BRANDING.contactEmail)
+        .replace(LEGACY_BRAND_PATTERN, BRANDING.name);
 }
 
 function isExcludedElement(element: Element): boolean {

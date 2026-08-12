@@ -441,7 +441,7 @@
             }
             case "excalidraw": {
                 name = defaultNativeIntegrationAppName.EXCALIDRAW;
-                placeholder = "https://excalidraw.workadventu.re/";
+                placeholder = "https://excalidraw.example/";
                 title = $LL.chat.form.application.excalidraw.title();
                 description = $LL.chat.form.application.excalidraw.description();
                 img = excalidrawSvg;
@@ -449,7 +449,7 @@
             }
             case "cards": {
                 name = defaultNativeIntegrationAppName.CARDS;
-                placeholder = "https://member.workadventu.re?tenant=<your cards tenant>&learning=<Your cards learning>";
+                placeholder = "https://member.example?tenant=<your cards tenant>&learning=<Your cards learning>";
                 title = $LL.chat.form.application.cards.title();
                 description = $LL.chat.form.application.cards.description();
                 img = cardsPng;

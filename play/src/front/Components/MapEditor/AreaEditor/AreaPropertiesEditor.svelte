@@ -243,17 +243,17 @@
                         placeholder = "https://app.eraser.io/workspace/ExSd8Z4wPsaqMMgTN4VU";
                         break;
                     case "excalidraw":
-                        placeholder = "https://excalidraw.workadventu.re/";
+                        placeholder = "https://excalidraw.example/";
                         break;
                     case "cards":
                         placeholder =
-                            "https://member.workadventu.re/cards?tenant=<your tenant from cards>&learning=<your leaning from cards>";
+                            "https://member.example/cards?tenant=<your tenant from cards>&learning=<your leaning from cards>";
                         break;
                     case "tldraw":
                         placeholder = "https://tldraw.com/";
                         break;
                     default:
-                        placeholder = "https://workadventu.re";
+                        placeholder = "https://your-map-domain.example";
                         break;
                 }
                 return {

@@ -748,7 +748,7 @@ class ConnectionManager {
     }
 
     // Used when a disconnect happens to wait until the pusher server is reachable again
-    public waitForPusherPing(): Promise<void> {
+    public waitForPusherPing(signal?: AbortSignal): Promise<void> {
         if (this._unloading) {
             return Promise.resolve();
         }
@@ -772,7 +772,7 @@ class ConnectionManager {
                 return time;
             },
             retryCondition: (error: AxiosError) => {
-                if (this._unloading) {
+                if (this._unloading || signal?.aborted) {
                     return false;
                 }
                 if (isNetworkOrIdempotentRequestError(error)) {
@@ -785,7 +785,7 @@ class ConnectionManager {
             },
         });
 
-        return pingAxios.get("ping", { responseType: "text", timeout: 5_000 }).then((response) => {
+        return pingAxios.get("ping", { responseType: "text", timeout: 5_000, signal }).then((response) => {
             if (typeof response.data === "string" && response.data === "pong") {
                 return;
             }

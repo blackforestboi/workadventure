@@ -277,12 +277,12 @@
                         buttonLabel = $LL.mapEditor.properties.eraser.label();
                         break;
                     case "excalidraw":
-                        placeholder = "https://excalidraw.workadventu.re/";
+                        placeholder = "https://excalidraw.example/";
                         buttonLabel = $LL.mapEditor.properties.excalidraw.label();
                         break;
                     case "cards":
                         placeholder =
-                            "https://member.workadventu.re?tenant=<your cards tenant>&learning=<Your cards learning>";
+                            "https://member.example?tenant=<your cards tenant>&learning=<Your cards learning>";
                         buttonLabel = $LL.mapEditor.properties.cards.label();
                         break;
                     case "tldraw":
@@ -290,7 +290,7 @@
                         buttonLabel = $LL.mapEditor.properties.tldraw.label();
                         break;
                     default:
-                        placeholder = "https://workadventu.re";
+                        placeholder = "https://your-map-domain.example";
                         buttonLabel = $LL.mapEditor.properties.openWebsite.label();
                 }
                 return {

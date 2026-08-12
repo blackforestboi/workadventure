@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
     createEmptyCollisionGrid,
+    initializeCollisionGrid,
     resizeCollisionGrid,
 } from "../../../../src/front/Components/MapEditor/EntityEditor/CustomEntityEditionForm/CollisionGridResizer";
 import customEntityEditionFormSource from "../../../../src/front/Components/MapEditor/EntityEditor/CustomEntityEditionForm/CustomEntityEditionForm.svelte?raw";
@@ -15,6 +16,24 @@ describe("collision grid resizer", () => {
             [0, 0, 0],
         ]);
         expect(createEmptyCollisionGrid(0, 0)).toEqual([[0]]);
+    });
+
+    it("preserves a saved collision grid instead of rebuilding it from the asset tile dimensions", () => {
+        const savedGrid = [
+            [1, 0, 1, 0],
+            [0, 1, 0, 1],
+            [1, 1, 0, 0],
+        ];
+
+        expect(initializeCollisionGrid(savedGrid, 1, 2)).toEqual(savedGrid);
+    });
+
+    it("creates a grid from the asset dimensions only when no collision grid was saved", () => {
+        expect(initializeCollisionGrid([], 1, 2)).toEqual([[0, 0]]);
+    });
+
+    it("uses the preserving initializer when the asset editor image loads", () => {
+        expect(customEntityEditionFormSource).toContain("initializeCollisionGrid(collisionGrid, rows, columns)");
     });
 
     it("preserves painted regions when changing grid resolution", () => {

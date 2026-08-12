@@ -320,7 +320,10 @@ export class IoSocketController {
                                 title: "Please refresh",
                                 subtitle: "New version available",
                                 image: BRAND_ERROR_IMAGE_URL || "/resources/icons/new_version.png",
-                                imageLogo: BRAND_ERROR_LOGO_URL || BRAND_LOGO_URL || "/static/images/logo.png",
+                                imageLogo:
+                                    BRAND_ERROR_LOGO_URL ||
+                                    BRAND_LOGO_URL ||
+                                    "/static/images/branding/default-icon.svg",
                                 code: "NEW_VERSION",
                                 details: `A new version of ${BRAND_NAME} is available. Please refresh your window`,
                                 canRetryManual: true,

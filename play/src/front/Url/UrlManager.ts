@@ -43,13 +43,14 @@ class UrlManager {
     }
 
     public pushRoomIdToUrl(room: Room): void {
-        if (window.location.pathname === room.id) return;
+        const roomPath = `/${room.id}`;
+        if (window.location.pathname === roomPath) return;
         //Set last room visited! (connected or nor, must to be saved in local storage and cache API)
         //use href to keep # value
         localUserStore.setLastRoomUrl(room.href).catch((e) => console.error(e));
         const hash = window.location.hash;
         const search = room.search.toString();
-        history.pushState({}, BRANDING.name, room.id + (search ? "?" + search : "") + hash);
+        history.pushState({}, BRANDING.name, roomPath + (search ? "?" + search : "") + hash);
     }
 
     public getStartPositionNameFromUrl(): string | undefined {

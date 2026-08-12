@@ -13,4 +13,11 @@ describe("replaceLegacyBrand", () => {
             "workadventure.localhost/workadventure",
         );
     });
+
+    it("rewrites legacy website and support links", () => {
+        const rewritten = replaceLegacyBrand("https://workadventu.re/faq hello@workadventu.re");
+
+        expect(rewritten).toContain("tpot.world");
+        expect(rewritten).not.toContain("workadventu.re");
+    });
 });

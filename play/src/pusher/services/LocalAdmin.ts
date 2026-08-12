@@ -55,6 +55,7 @@ import {
     MATRIX_ADMIN_USER,
     MATRIX_ADMIN_PASSWORD,
     MATRIX_DOMAIN,
+    BRAND_WEBSITE_URL,
 } from "../enums/EnvironmentVariable";
 import type { AdminBannedData, FetchMemberDataByUuidResponse } from "./AdminApi";
 import type { AdminInterface } from "./AdminInterface";
@@ -191,7 +192,7 @@ class LocalAdmin implements AdminInterface {
         if (ERASER_ENABLED) {
             applications.push({
                 name: "Eraser",
-                doc: "https://workadventu.re",
+                doc: BRAND_WEBSITE_URL ?? "https://tpot.world",
                 description: "Eraser (White board)",
                 enabled: true,
                 default: true,
@@ -213,7 +214,7 @@ class LocalAdmin implements AdminInterface {
         if (CARDS_ENABLED) {
             applications.push({
                 name: "Cards",
-                doc: "https://workadventu.re",
+                doc: BRAND_WEBSITE_URL ?? "https://tpot.world",
                 description: "Cards (learning tool)",
                 enabled: true,
                 default: true,

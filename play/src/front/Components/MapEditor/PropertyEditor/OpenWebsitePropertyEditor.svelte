@@ -46,6 +46,7 @@
         ON_ACTION_TRIGGER_ENTER,
         ON_ICON_TRIGGER_BUTTON,
     } from "../../../WebRtc/LayoutManager";
+    import { BRANDING } from "../../../Branding";
     import PropertyEditorBase from "./PropertyEditorBase.svelte";
     import { IconAlertTriangle } from "@wa-icons";
 
@@ -76,6 +77,8 @@
     };
 
     let optionAdvancedActivated = $state(shouldDisplayAdvancedOption());
+
+    const troubleshootingUrl = `${BRANDING.websiteUrl}/map-building/troubleshooting.md#content-issues-embedding-a-website`;
 
     let embeddable = $state(true);
     let embeddableLoading = $state(false);
@@ -715,9 +718,8 @@
                     <span class="err text-warning-900 text-xs italic mt-1">
                         <IconAlertTriangle font-size="12" />
                         {$LL.mapEditor.properties.openWebsite.messageNotEmbeddableLink()}.
-                        <a
-                            href="https://workadventu.re/map-building/troubleshooting.md#content-issues-embedding-a-website"
-                            target="_blank">{$LL.mapEditor.properties.openWebsite.findOutMoreHere()}.</a
+                        <a href={troubleshootingUrl} target="_blank"
+                            >{$LL.mapEditor.properties.openWebsite.findOutMoreHere()}.</a
                         >
                     </span>
                 {/if}
@@ -789,9 +791,8 @@
                         <span class="err text-warning-900 text-xs italic">
                             <IconAlertTriangle font-size="12" />
                             {$LL.mapEditor.properties.openWebsite.warningEmbeddableLink()}.
-                            <a
-                                href="https://workadventu.re/map-building/troubleshooting.md#content-issues-embedding-a-website"
-                                target="_blank">{$LL.mapEditor.properties.openWebsite.findOutMoreHere()}.</a
+                            <a href={troubleshootingUrl} target="_blank"
+                                >{$LL.mapEditor.properties.openWebsite.findOutMoreHere()}.</a
                             >
                         </span>àà
                     </div>

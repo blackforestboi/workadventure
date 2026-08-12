@@ -4,6 +4,7 @@
     import { connectionManager } from "../../Connection/ConnectionManager";
     import { SimpleCoWebsite } from "../../WebRtc/CoWebsite/SimpleCoWebsite";
     import { coWebsites } from "../../Stores/CoWebsiteStore";
+    import { BRANDING } from "../../Branding";
 
     function close(): void {
         errorStore.clearClosableMessages();
@@ -49,7 +50,7 @@
             <p class="text-sm place-self-center">
                 {$LL.error.errorDialog.messageFAQ()}
                 <a
-                    href="https://workadventu.re/faq"
+                    href={`${BRANDING.websiteUrl}/faq`}
                     onclick={(event) => {
                         event.stopPropagation();
                         event.preventDefault();

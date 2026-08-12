@@ -9,7 +9,7 @@
     import Input from "../../../Input/Input.svelte";
     import Button from "../../../UI/Button.svelte";
     import EntityEditionCollisionGrid from "./EntityEditionCollisionGrid.svelte";
-    import { createEmptyCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
+    import { initializeCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
     import { getDefaultHeightInTiles, getOpaqueImageBounds } from "./OpaqueImageBounds";
     import { ENTITY_SIZE_TILE_OPTIONS, MAP_TILE_SIZE } from "../../../../Utils/EntityPrefabSize";
     import EntityEditorTabs from "../EntityEditorTabs.svelte";
@@ -143,13 +143,12 @@
         imageResizeObserver = new ResizeObserver(([entry]) => {
             collisionGridWidth = entry?.contentRect.width ?? imageRef.width;
             collisionGridHeight = entry?.contentRect.height ?? imageRef.height;
-            resizeCollisionGridForFrame();
         });
         imageResizeObserver.observe(imageRef);
         collisionGridWidth = imageRef.width;
         collisionGridHeight = imageRef.height;
         detectTileFootprint(imageRef);
-        resizeCollisionGridForFrame();
+        initializeCollisionGridForFrame();
     }
 
     function detectTileFootprint(imageRef: HTMLImageElement) {
@@ -201,7 +200,6 @@
 
     function updatePreviewPadding(event: Event) {
         previewPadding = Number((event.currentTarget as HTMLInputElement).value);
-        resizeCollisionGridForFrame();
     }
 
     function startPreviewDrag(event: PointerEvent) {
@@ -237,10 +235,14 @@
         if (collisionGridWidth <= 0 || collisionGridHeight <= 0) return;
         const columns = Math.max(1, Math.ceil(defaultSizeInTiles));
         const rows = Math.max(1, Math.ceil(defaultHeightInTiles));
-        collisionGrid =
-            collisionGrid.length === 0
-                ? createEmptyCollisionGrid(rows, columns)
-                : resizeCollisionGrid(collisionGrid, rows, columns);
+        collisionGrid = resizeCollisionGrid(collisionGrid, rows, columns);
+    }
+
+    function initializeCollisionGridForFrame() {
+        if (collisionGridWidth <= 0 || collisionGridHeight <= 0) return;
+        const columns = Math.max(1, Math.ceil(defaultSizeInTiles));
+        const rows = Math.max(1, Math.ceil(defaultHeightInTiles));
+        collisionGrid = initializeCollisionGrid(collisionGrid, rows, columns);
     }
 
     function updateDepthOffset(depthOption: DepthOption) {

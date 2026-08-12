@@ -221,7 +221,7 @@ export class FrontController extends BaseHttpController {
                 icon:
                     process.env.SERVER_ICON ||
                     BRAND_MANIFEST_ICON_URL ||
-                    process.env.PUSHER_URL + "/static/images/favicons/icon-512x512.png",
+                    process.env.PUSHER_URL + "/static/images/branding/default-icon.svg",
                 version: version + (process.env.NODE_ENV !== "production" ? "-dev" : ""),
             });
             return;
@@ -340,7 +340,7 @@ export class FrontController extends BaseHttpController {
                     url: "/",
                     icons: [
                         {
-                            src: BRAND_MANIFEST_ICON_URL || "/static/images/favicons/android-icon-192x192.png",
+                            src: BRAND_MANIFEST_ICON_URL || "/static/images/branding/default-icon.svg",
                             sizes: "192x192",
                             type: "image/png",
                         },

@@ -23,11 +23,20 @@ import {
     BRAND_WEBSITE_URL,
 } from "./Enum/EnvironmentVariable";
 import defaultErrorImage from "./Components/UI/images/error.gif";
-import defaultErrorLogo from "./Components/images/logo-min-white.png";
 import defaultLoadingBackground from "./Components/images/map-exemple.png";
-import defaultLoadingLogo from "./Components/images/Workadventure.gif";
-import defaultLogo from "./Components/images/logo.svg";
+import defaultBrandLogo from "./Components/images/default-brand-logo.svg";
 import defaultPwaBackground from "./Components/images/pwa-background-image.jpg";
+
+const DEFAULT_BRAND_WEBSITE_URL = "https://tpot.world";
+const websiteUrl = BRAND_WEBSITE_URL ?? DEFAULT_BRAND_WEBSITE_URL;
+
+function getDefaultContactEmail(url: string): string {
+    try {
+        return `hello@${new URL(url).hostname}`;
+    } catch {
+        return "hello@tpot.world";
+    }
+}
 
 /**
  * All user-visible branding and loading/error assets live behind this registry.
@@ -40,22 +49,23 @@ export const BRANDING = Object.freeze({
     author: BRAND_AUTHOR,
     provider: BRAND_PROVIDER,
     themeColor: BRAND_THEME_COLOR,
-    websiteUrl: BRAND_WEBSITE_URL,
+    websiteUrl,
+    contactEmail: getDefaultContactEmail(websiteUrl),
     assets: Object.freeze({
-        logo: BRAND_LOGO_URL ?? defaultLogo,
-        loadingLogo: BRAND_LOADING_LOGO_URL ?? defaultLoadingLogo,
-        loginLogo: BRAND_LOGIN_LOGO_URL ?? BRAND_LOGO_URL ?? defaultLogo,
-        errorLogo: BRAND_ERROR_LOGO_URL ?? BRAND_LOGO_URL ?? defaultErrorLogo,
+        logo: BRAND_LOGO_URL ?? defaultBrandLogo,
+        loadingLogo: BRAND_LOADING_LOGO_URL ?? defaultBrandLogo,
+        loginLogo: BRAND_LOGIN_LOGO_URL ?? BRAND_LOGO_URL ?? defaultBrandLogo,
+        errorLogo: BRAND_ERROR_LOGO_URL ?? BRAND_LOGO_URL ?? defaultBrandLogo,
         errorImage: BRAND_ERROR_IMAGE_URL ?? defaultErrorImage,
         loadingBackground: BRAND_LOADING_BACKGROUND_URL ?? defaultLoadingBackground,
         pwaBackground: BRAND_PWA_BACKGROUND_URL ?? defaultPwaBackground,
-        poweredByLogo: BRAND_POWERED_BY_LOGO_URL ?? BRAND_LOGO_URL ?? defaultLogo,
-        statusIcon: BRAND_STATUS_ICON_URL ?? "/static/images/favicons/favicon-32x32.png",
+        poweredByLogo: BRAND_POWERED_BY_LOGO_URL ?? BRAND_LOGO_URL ?? defaultBrandLogo,
+        statusIcon: BRAND_STATUS_ICON_URL ?? defaultBrandLogo,
         statusCharacter: BRAND_STATUS_CHARACTER_URL ?? "resources/characters/pipoya/Cat 01-1.png",
         statusFontImage: BRAND_STATUS_FONT_IMAGE_URL ?? "resources/fonts/arcade.png",
         statusFontData: BRAND_STATUS_FONT_DATA_URL ?? "resources/fonts/arcade.xml",
-        favicon: BRAND_FAVICON_URL ?? "/static/images/favicons/favicon-512x512.svg",
-        manifestIcon: BRAND_MANIFEST_ICON_URL ?? "/static/images/favicons/icon-512x512.png",
-        cardImage: BRAND_CARD_IMAGE_URL ?? "/static/images/favicons/icon-512x512.png",
+        favicon: BRAND_FAVICON_URL ?? "/static/images/branding/default-icon.svg",
+        manifestIcon: BRAND_MANIFEST_ICON_URL ?? "/static/images/branding/default-icon.svg",
+        cardImage: BRAND_CARD_IMAGE_URL ?? "/static/images/branding/default-icon.svg",
     }),
 });

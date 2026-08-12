@@ -32,12 +32,12 @@ export const MetaTagsDefaultValue: RequiredMetaTagsData = {
         {
             rel: "icon",
             sizes: "512x512",
-            src: BRAND_FAVICON_URL || "/static/images/favicons/favicon-512x512.svg",
+            src: BRAND_FAVICON_URL || "/static/images/branding/default-icon.svg",
         },
     ],
     manifestIcons: [
         {
-            src: BRAND_MANIFEST_ICON_URL || "/static/images/favicons/icon-512x512.png",
+            src: BRAND_MANIFEST_ICON_URL || "/static/images/branding/default-icon.svg",
             sizes: "512x512",
             type: "image/png",
         },
@@ -45,7 +45,7 @@ export const MetaTagsDefaultValue: RequiredMetaTagsData = {
     appName: BRAND_NAME,
     shortAppName: BRAND_SHORT_NAME,
     themeColor: BRAND_THEME_COLOR,
-    cardImage: BRAND_CARD_IMAGE_URL || "/static/images/favicons/icon-512x512.png",
+    cardImage: BRAND_CARD_IMAGE_URL || "/static/images/branding/default-icon.svg",
 };
 
 export class MetaTagsBuilder {

@@ -1,14 +1,15 @@
 <script lang="ts">
     import { LL } from "../../../i18n/i18n-svelte";
     import { contactPageStore } from "../../Stores/MenuStore";
+    import { BRANDING } from "../../Branding";
 
     function goToGettingStarted() {
-        const sparkHost = "https://workadventu.re/getting-started";
+        const sparkHost = `${BRANDING.websiteUrl}/getting-started`;
         window.open(sparkHost, "_blank");
     }
 
     function goToBuildingMap() {
-        const sparkHost = "https://workadventu.re/map-building/";
+        const sparkHost = `${BRANDING.websiteUrl}/map-building/`;
         window.open(sparkHost, "_blank");
     }
 </script>

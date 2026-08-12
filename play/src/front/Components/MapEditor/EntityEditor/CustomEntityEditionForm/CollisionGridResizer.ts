@@ -29,6 +29,14 @@ export function resizeCollisionGrid(sourceGrid: number[][], rows: number, column
     );
 }
 
+export function initializeCollisionGrid(sourceGrid: number[][], rows: number, columns: number): number[][] {
+    if (sourceGrid.length === 0 || sourceGrid.every((row) => row.length === 0)) {
+        return createEmptyCollisionGrid(rows, columns);
+    }
+
+    return sourceGrid.map((row) => [...row]);
+}
+
 export function createEmptyCollisionGrid(rows: number, columns: number): number[][] {
     return Array.from({ length: Math.max(1, rows) }, () => Array(Math.max(1, columns)).fill(0));
 }

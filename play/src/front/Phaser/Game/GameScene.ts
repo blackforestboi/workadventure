@@ -357,6 +357,7 @@ export class GameScene extends DirtyScene {
     private readonly localPlayerAssetOcclusion = new LocalPlayerAssetOcclusion();
     private actionableItems: Map<number, ActionableItem> = new Map<number, ActionableItem>();
     private isReconnecting: boolean | undefined = undefined;
+    private isClosing = false;
     private playerName!: string;
     private popUpElements: Map<number, DOMElement> = new Map<number, DOMElement>();
     private remotePlayersSpatialIndex = new SpatialMap<number, RemotePlayer>(CONVERSATION_BUBBLE_SPATIAL_GRID_SIZE);
@@ -655,6 +656,7 @@ export class GameScene extends DirtyScene {
         this.input.topOnly = false;
         this.preloading = false;
         this.cleanupDone = false;
+        this.isClosing = false;
 
         this.bindSceneEventHandlers();
 
@@ -1158,6 +1160,7 @@ export class GameScene extends DirtyScene {
     }
 
     public cleanupClosingScene(): void {
+        this.isClosing = true;
         this.abortController?.abort();
         this.unregisterAudioContextPlaybackRetry?.();
         this.unregisterAudioContextPlaybackRetry = undefined;
@@ -1994,21 +1997,32 @@ export class GameScene extends DirtyScene {
                 this.getGameMap().getWamFile()?.getLastCommandId(),
             )
             .then(async (onConnect: OnConnectInterface) => {
+                if (this.isClosing) {
+                    onConnect.connection.closeConnection();
+                    return;
+                }
+
                 this.connection = onConnect.connection;
 
                 // The serverDisconnected stream is completed in the RoomConnection. No need to unsubscribe.
                 //eslint-disable-next-line rxjs/no-ignored-subscription, svelte/no-ignored-unsubscribe
                 this.connection.serverDisconnected.subscribe(() => {
+                    if (this.isClosing) return;
+
                     showConnectionIssueMessage();
                     console.info("Player disconnected from server. Waiting for pusher ping.");
                     connectionManager
-                        .waitForPusherPing()
+                        .waitForPusherPing(this.abortController.signal)
                         .then(() => {
+                            if (this.isClosing) return;
+
                             console.info("Pusher reachable again. Reloading scene.");
                             this.cleanupClosingScene();
                             this.createSuccessorGameScene(true, true);
                         })
                         .catch((e) => {
+                            if (this.isClosing) return;
+
                             console.error(
                                 `Error while waiting for Pusher to come back online: ${asError(e).message}`,
                                 e,
@@ -4422,14 +4436,13 @@ ${escapedMessage}
             this.scene.start(ErrorSceneName, {
                 title: "Connection rejected",
                 subTitle: "The world you are trying to join is full. Try again later.",
-                message: "If you want more information, you may contact us at: hello@workadventu.re",
+                message: `If you want more information, you may contact us at: ${BRANDING.contactEmail}`,
             });
         } else {
             this.scene.start(ErrorSceneName, {
                 title: "Connection rejected",
                 subTitle: "You cannot join the World. Try again later. \n\r \n\r Error: " + message + ".",
-                message:
-                    "If you want more information, you may contact administrator or contact us at: hello@workadventu.re",
+                message: `If you want more information, you may contact administrator or contact us at: ${BRANDING.contactEmail}`,
             });
         }
     }
