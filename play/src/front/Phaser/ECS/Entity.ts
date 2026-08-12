@@ -27,6 +27,9 @@ import LL from "../../../i18n/i18n-svelte";
 import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
 import { reverseEntityCollisionGrid, scaleEntityCollisionGrid } from "../Game/MapEditor/Entities/EntityCollisionGrid";
 import { getEntityDisplaySize } from "../../Utils/EntityPrefabSize";
+import { Room } from "../../Connection/Room";
+import ExitPasswordModal from "../../Components/Modal/ExitPasswordModal.svelte";
+import { modals } from "@wa-modals";
 
 import Sprite = Phaser.GameObjects.Sprite;
 import Graphics = Phaser.GameObjects.Graphics;
@@ -552,6 +555,29 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
                             });
                             // Fixme: close the menu without impact audio manager and playing
                             //actionsMenuStore.clear();
+                        },
+                    });
+                    break;
+                }
+                case "exit": {
+                    const url = property.areaName ? `${property.url}#${property.areaName}` : property.url;
+                    actions.push({
+                        actionName: property.buttonLabel ?? "Exit",
+                        protected: true,
+                        priority: 1,
+                        callback: () => {
+                            const followExit = () => {
+                                (this.scene as GameScene)
+                                    .onMapExit(Room.getRoomPathFromExitUrl(url, window.location.toString()))
+                                    .catch((error) => console.error("Error while following object exit:", error));
+                                actionsMenuStore.clear();
+                            };
+
+                            if (property.password) {
+                                modals.open(ExitPasswordModal, { password: property.password, onSuccess: followExit });
+                            } else {
+                                followExit();
+                            }
                         },
                     });
                     break;

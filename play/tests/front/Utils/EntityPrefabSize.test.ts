@@ -10,6 +10,7 @@ describe("entity prefab default size", () => {
     it.each([
         [0.5, 16],
         [1, 32],
+        [3, 96],
         [100, 3200],
     ])("maps %s tiles to %spx while preserving aspect ratio", (tiles, width) => {
         expect(getEntityDisplaySize(512, 256, tiles)).toEqual({ width, height: width / 2 });

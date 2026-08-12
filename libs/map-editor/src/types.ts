@@ -62,6 +62,7 @@ export const ExitPropertyData = PropertyBase.extend({
     type: z.literal("exit"),
     url: z.string(),
     areaName: z.string(),
+    password: z.string().optional(),
 });
 
 export const JitsiRoomPropertyData = PropertyBase.extend({

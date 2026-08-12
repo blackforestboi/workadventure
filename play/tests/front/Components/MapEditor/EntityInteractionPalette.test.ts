@@ -2,31 +2,37 @@ import { describe, expect, it } from "vitest";
 
 import entityPropertiesEditorSource from "../../../../src/front/Components/MapEditor/EntityEditor/EntityPropertiesEditor.svelte?raw";
 import addPropertyButtonWrapperSource from "../../../../src/front/Components/MapEditor/PropertyEditor/AddPropertyButtonWrapper.svelte?raw";
+import exitPropertyEditorSource from "../../../../src/front/Components/MapEditor/PropertyEditor/ExitPropertyEditor.svelte?raw";
+import entitySource from "../../../../src/front/Phaser/ECS/Entity.ts?raw";
+import exitPasswordModalSource from "../../../../src/front/Components/Modal/ExitPasswordModal.svelte?raw";
 
 describe("entity interaction palette", () => {
-    it("offers the area interaction types that are supported by entities", () => {
+    it("offers only the requested area interaction types", () => {
+        for (const property of [
+            "livekitRoomProperty",
+            "exit",
+            "jitsiRoomProperty",
+            "playAudio",
+            "tooltipPropertyData",
+        ]) {
+            expect(entityPropertiesEditorSource).toContain(`property="${property}"`);
+        }
+
         for (const property of [
             "personalAreaPropertyData",
             "restrictedRightsPropertyData",
             "silent",
-            "livekitRoomProperty",
             "speakerMegaphone",
             "listenerMegaphone",
             "start",
-            "exit",
-            "jitsiRoomProperty",
-            "playAudio",
             "matrixRoomPropertyData",
             "focusable",
             "highlight",
-            "tooltipPropertyData",
             "lockableAreaPropertyData",
             "maxUsersInAreaPropertyData",
         ]) {
-            expect(entityPropertiesEditorSource).toContain(`property="${property}"`);
+            expect(entityPropertiesEditorSource).not.toContain(`property="${property}"`);
         }
-        expect(entityPropertiesEditorSource).toContain('subProperty="cards"');
-        expect(entityPropertiesEditorSource).toContain('subProperty="tldraw"');
     });
 
     it("wraps the complete area interaction palette to the available editor width", () => {
@@ -48,5 +54,13 @@ describe("entity interaction palette", () => {
         ]) {
             expect(addPropertyButtonWrapperSource).not.toContain(flag);
         }
+    });
+
+    it("supports password-protected object exits", () => {
+        expect(exitPropertyEditorSource).toContain('id="exitPassword"');
+        expect(exitPropertyEditorSource).toContain('type="password"');
+        expect(entitySource).toContain('case "exit"');
+        expect(entitySource).toContain("modals.open(ExitPasswordModal");
+        expect(exitPasswordModalSource).toContain("Incorrect password");
     });
 });
