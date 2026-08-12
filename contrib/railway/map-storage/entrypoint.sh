@@ -52,12 +52,12 @@ if [ ! -f "$entity_collection_file" ]; then
     chown node:node "$entity_collection_file"
 fi
 
-# A persistent volume can outlive the image version that created it. In
-# particular, older backups or manual restores can leave generated entities
-# owned by root. The server runs as `node`, so repair this writable asset area
-# on every start instead of only during first-volume setup.
-mkdir -p /maps/assets/entities
-chown -R node:node /maps/assets/entities
+# A persistent volume can outlive the image version that created it. Fresh
+# Railway volumes, backups, and manual restores can all be root-owned. The
+# server runs as `node` and must be able to save every editable map, not only
+# generated entity assets, so repair the complete map-storage volume on start.
+mkdir -p /maps
+chown -R node:node /maps
 
 # Railway mounts a new persistent volume as root-owned. The bootstrap needs
 # that privilege, but the map-storage server must still run unprivileged.
