@@ -367,7 +367,10 @@ export const EnvironmentVariables = z.object({
     VIDEO_ANALYTICS_MAX_BATCH_SIZE: PositiveIntAsString.optional()
         .transform((val) => toNumber(val, 1_000))
         .describe("Maximum number of video quality samples sent in one admin batch. Defaults to 1000"),
-    START_ROOM_URL: z.string().optional().describe("Default room URL where users start when accessing the platform"),
+    START_ROOM_URL: z
+        .string()
+        .default("/~/maps/areas.wam")
+        .describe("Default room URL where users start when accessing the platform"),
 
     // Front related environment variables
     DEBUG_MODE: BoolAsString.optional()
