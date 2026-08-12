@@ -17,14 +17,18 @@ describe("registerPostgresPoolErrorHandler", () => {
                 errorListener = listener;
                 return pool;
             }),
-        } as unknown as Pick<Pool, "on">;
+            off: vi.fn(),
+        } as unknown as Pick<Pool, "on" | "off">;
         const error = new Error("Connection terminated unexpectedly");
         const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-        registerPostgresPoolErrorHandler(pool);
+        const unregister = registerPostgresPoolErrorHandler(pool);
         errorListener?.(error);
 
         expect(pool.on).toHaveBeenCalledWith("error", expect.any(Function));
         expect(consoleError).toHaveBeenCalledWith("Teapot PostgreSQL pool discarded a failed connection", error);
+
+        unregister();
+        expect(pool.off).toHaveBeenCalledWith("error", expect.any(Function));
     });
 });
