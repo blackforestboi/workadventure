@@ -135,6 +135,11 @@ export class AuthenticateController extends BaseHttpController {
                 return;
             }
 
+            res.cookie("playUri", query.playUri, {
+                httpOnly: true, // dont let browser javascript access cookie ever
+                secure: req.secure, // only use cookie over https
+            });
+
             const loginProvider = selectLoginProvider({
                 xClientId: TEAPOT_X_CLIENT_ID,
                 xRedirectUri: TEAPOT_X_REDIRECT_URI,
@@ -163,10 +168,6 @@ export class AuthenticateController extends BaseHttpController {
                 query.providerId,
                 query.providerScopes,
             );
-            res.cookie("playUri", query.playUri, {
-                httpOnly: true, // dont let browser javascript access cookie ever
-                secure: req.secure, // only use cookie over https
-            });
 
             res.redirect(loginUri);
             return;
