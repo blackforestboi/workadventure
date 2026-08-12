@@ -1,5 +1,6 @@
-import { AssetGenerationError } from "./AssetGenerationError";
 import type { VisualAssetAnimation } from "@workadventure/map-editor";
+
+import { AssetGenerationError } from "./AssetGenerationError";
 
 const TILE_SIZE = 32;
 const MAX_DIMENSION = 2048;

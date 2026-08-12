@@ -1,11 +1,11 @@
 import * as Sentry from "@sentry/node";
-import { asError } from "catch-unknown";
-
-import type { TeapotIdentity } from "../../common/Teapot/TeapotIdentity";
 import {
     VisualAssetAnimation,
     type VisualAssetAnimation as VisualAssetAnimationValue,
 } from "@workadventure/map-editor";
+import { asError } from "catch-unknown";
+
+import type { TeapotIdentity } from "../../common/Teapot/TeapotIdentity";
 import type { TeapotAuthorizationService } from "./TeapotAuthorizationService";
 import type { TeapotDataRepository } from "./TeapotDataRepository";
 import { validateTeapotGeneratedPng } from "./TeapotGeneratedRasterValidator";
