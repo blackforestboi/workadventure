@@ -73,6 +73,9 @@ import type { ShortMapDescription } from "./ShortMapDescription";
 import { matrixProvider } from "./MatrixProvider";
 import RecordingService from "./RecordingService";
 import type { PusherWebSocket } from "./PusherWebSocket";
+import { getTeapotDataServices } from "../teapot/TeapotDataRuntime";
+import { resolveTeapotRequestIdentity } from "../teapot/TeapotRequestIdentityResolver";
+import { AdminTeapotMapUrlResolver } from "../teapot/TeapotWamRevisionCoordinator";
 
 const debug = Debug("socket");
 
@@ -83,6 +86,7 @@ export class SocketManager implements ZoneEventListener {
     private static readonly RECORDING_QUERY_TIMEOUT_MS = 60_000;
     private rooms: Map<string, PusherRoom> = new Map<string, PusherRoom>();
     private spaces: Map<string, SpaceInterface> = new Map<string, SpaceInterface>();
+    private readonly mapUrlResolver = new AdminTeapotMapUrlResolver();
 
     constructor(private _spaceConnection = new SpaceConnection()) {
         clientEventsEmitter.registerToClientJoin((clientUUid: string, roomId: string) => {
@@ -1229,6 +1233,7 @@ export class SocketManager implements ZoneEventListener {
                 undefined,
                 client.getUserData().tags,
             );
+            roomDescriptions = await this.filterDirectoryRooms(roomDescriptions, client.getUserData().userUuid);
             client.send({
                 message: {
                     $case: "answerMessage",
@@ -1278,6 +1283,34 @@ export class SocketManager implements ZoneEventListener {
                 console.warn("SocketManager => handleRoomsFromSameWorldQuery => error while sending error message", e);
             }
         }
+    }
+
+    private async filterDirectoryRooms(
+        rooms: ShortMapDescription[],
+        identifier: string,
+    ): Promise<ShortMapDescription[]> {
+        const identity = await resolveTeapotRequestIdentity(identifier);
+        return (
+            await Promise.all(
+                rooms.map(async (room) => {
+                    try {
+                        if (!room.roomUrl) return room;
+                        const mapId = await this.mapUrlResolver.resolve(room.roomUrl);
+                        const policy = await getTeapotDataServices().repository.getRoomAccessPolicy(mapId, "directory");
+                        if (policy === null || policy.mode === "everyone") return room;
+                        if (policy.mode === "nobody") return undefined;
+                        const grants = await getTeapotDataServices().repository.listRoomAccessGrants(
+                            mapId,
+                            "directory",
+                        );
+                        return grants.some((grant) => grant.userId === identity.id) ? room : undefined;
+                    } catch (error) {
+                        console.warn("Could not resolve room directory access; keeping room visible", error);
+                        return room;
+                    }
+                }),
+            )
+        ).filter((room): room is ShortMapDescription => room !== undefined);
     }
 
     async handleLeaveSpace(client: PusherWebSocket, spaceName: string) {

@@ -63,4 +63,10 @@ describe("entity interaction palette", () => {
         expect(entitySource).toContain("modals.open(ExitPasswordModal");
         expect(exitPasswordModalSource).toContain("Incorrect password");
     });
+
+    it("accepts external exit URLs while suggesting known room destinations", () => {
+        expect(exitPropertyEditorSource).toContain('placeholder="https://example.com/~/maps/room.wam"');
+        expect(exitPropertyEditorSource).toContain('list="exit-map-options"');
+        expect(exitPropertyEditorSource).toContain('<datalist id="exit-map-options">');
+    });
 });

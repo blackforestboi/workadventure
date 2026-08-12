@@ -18,7 +18,7 @@ import type {
 import { AdminTeapotMapUrlResolver, type TeapotMapUrlResolver } from "../teapot/TeapotWamRevisionCoordinator";
 import { BaseHttpController } from "./BaseHttpController";
 
-const RoomRole = z.enum(["view", "edit", "admin"]);
+const RoomRole = z.enum(["view", "edit", "admin", "directory"]);
 const RoomQuery = z.object({ roomId: z.string().url().max(2_048) });
 const MemberInput = z
     .object({
@@ -182,7 +182,7 @@ export class TeapotRoomEditorAccessController extends BaseHttpController {
 
     private async toPublicAccess(mapId: string): Promise<PublicRoomAccess> {
         const services = getTeapotDataServices();
-        const roles: TeapotRoomAccessRole[] = ["view", "edit", "admin"];
+        const roles: TeapotRoomAccessRole[] = ["view", "edit", "admin", "directory"];
         const policies = await Promise.all(
             roles.map(async (role): Promise<PublicRoomPolicy> => {
                 const policy = await services.repository.getRoomAccessPolicy(mapId, role);
@@ -217,6 +217,7 @@ export class TeapotRoomEditorAccessController extends BaseHttpController {
 
     private legacyMode(role: TeapotRoomAccessRole): TeapotRoomAccessMode {
         if (role === "view") return "everyone";
+        if (role === "directory") return "everyone";
         if (role === "edit") return MAP_EDITOR_ALLOW_ALL_USERS ? "everyone" : "specific";
         return "specific";
     }

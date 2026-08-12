@@ -15,7 +15,7 @@
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import Button from "../../UI/Button.svelte";
 
-    const roles: RoomAccessRole[] = ["view", "edit", "admin"];
+    const roles: RoomAccessRole[] = ["view", "edit", "admin", "directory"];
     const modes: RoomAccessMode[] = ["everyone", "specific", "nobody"];
 
     function emptyPolicy(role: RoomAccessRole): RoomAccessPolicy {
@@ -26,9 +26,10 @@
         view: emptyPolicy("view"),
         edit: emptyPolicy("edit"),
         admin: emptyPolicy("admin"),
+        directory: emptyPolicy("directory"),
     });
     let visitors = $state<RoomVisitor[]>([]);
-    let savedFingerprints = $state<Record<RoomAccessRole, string>>({ view: "", edit: "", admin: "" });
+    let savedFingerprints = $state<Record<RoomAccessRole, string>>({ view: "", edit: "", admin: "", directory: "" });
     let identifier = $state("");
     let displayName = $state("");
     let newMemberRole = $state<RoomAccessRole>("view");

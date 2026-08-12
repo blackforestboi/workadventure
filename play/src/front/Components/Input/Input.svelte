@@ -148,10 +148,10 @@
     </div>
 
     <div class="relative flex flex-col grow">
-        {#if type === "text"}
+        {#if type === "text" || type === "password"}
             <input
                 id={uniqueId}
-                type="text"
+                {type}
                 class="grow input-text input-icon {extraInputClasses}"
                 class:input-icon-left={appendSide === "left"}
                 class:input-text-light={variant === "light"}

@@ -7,7 +7,6 @@
     import axios from "axios";
     import { LL } from "../../../../i18n/i18n-svelte";
     import { gameManager } from "../../../Phaser/Game/GameManager";
-    import Select from "../../Input/Select.svelte";
     import Input from "../../Input/Input.svelte";
     import { IconDoorOut } from "../../Icons";
     import PropertyEditorBase from "./PropertyEditorBase.svelte";
@@ -103,11 +102,12 @@
     {#snippet content()}
         <span>
             <div>
-                <Select
+                <Input
                     id="exitMapSelector"
                     label={$LL.mapEditor.properties.exit.exitMap()}
+                    placeholder="https://example.com/~/maps/room.wam"
                     bind:value={property.url}
-                    onchange={(value: unknown) => {
+                    onchange={() => {
                         property.areaName = "";
                         onValueChange();
                         fetchStartAreasName().catch((e) => console.error(e));
@@ -116,11 +116,13 @@
                         onValueChange();
                         fetchStartAreasName().catch((e) => console.error(e));
                     }}
-                >
+                    list="exit-map-options"
+                />
+                <datalist id="exit-map-options">
                     {#each [...mapsUrl.entries()] as map (map[0])}
-                        <option value={map[0]} selected={map[0] === property.url}>{map[1].name}</option>
+                        <option value={map[0]}>{map[1].name}</option>
                     {/each}
-                </Select>
+                </datalist>
             </div>
             {#if property.url}
                 <div>
