@@ -34,6 +34,17 @@ export function getTeapotDataRuntimeStatus(): TeapotDataRuntimeStatus {
     return { initialized: initialization !== undefined, durable };
 }
 
+/**
+ * node-postgres emits this on the pool when an idle connection is cut by the
+ * database or network. Without a listener, Node treats it as an unhandled
+ * EventEmitter error and terminates the pusher process.
+ */
+export function registerPostgresPoolErrorHandler(pool: Pick<Pool, "on">): void {
+    pool.on("error", (error: Error) => {
+        console.error("Teapot PostgreSQL pool discarded a failed connection", error);
+    });
+}
+
 export function initializeTeapotDataRuntime(): Promise<void> {
     initialization ??= initialize();
     return initialization;
@@ -63,6 +74,7 @@ async function initialize(): Promise<void> {
         connectionTimeoutMillis: 10_000,
         application_name: "teapot-maps-pusher",
     });
+    registerPostgresPoolErrorHandler(pool);
     const adapter = new NodePostgresPoolAdapter(pool);
     await adapter.query("SELECT 1");
     await new PostgresMigrationRunner(adapter, resolveMigrationsDirectory()).migrate();

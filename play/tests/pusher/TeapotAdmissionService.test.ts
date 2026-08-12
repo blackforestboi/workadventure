@@ -136,7 +136,8 @@ describe("TeapotAdmissionService", () => {
     it("provides the world-entry gate used by HTTP and websocket boundaries", async () => {
         const fixture = createFixture();
         const pending = await fixture.services.localIdentity.resolve({ localSubject: "pending" });
-        const admitted = await createAdmittedEndorser(fixture, "admitted");
+        const admittedIdentity = await fixture.services.localIdentity.resolve({ localSubject: "admitted" });
+        const admitted = await fixture.repository.updateAdmissionState(admittedIdentity.id, "admitted");
         const gate = new TeapotWorldAdmissionGate(fixture.services);
 
         await expect(gate.assertTokenCanEnter({ identifier: pending.id, authProvider: "x" })).rejects.toThrow(

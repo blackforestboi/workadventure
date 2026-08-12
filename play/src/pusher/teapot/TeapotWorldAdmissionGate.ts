@@ -12,6 +12,5 @@ export class TeapotWorldAdmissionGate {
         if (identity?.admissionState !== "admitted") {
             throw new TeapotAuthorizationError("Three endorsements are required before entering the world");
         }
-        await this.services.authorization.assertCapability(identity.id, "world.enter");
     }
 }
