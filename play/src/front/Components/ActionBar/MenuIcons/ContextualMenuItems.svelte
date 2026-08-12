@@ -6,7 +6,7 @@
     import { bottomActionBarVisibilityStore } from "../../../Stores/BottomActionBarStore";
     import { inLivekitStore } from "../../../Stores/MediaStore";
     import { onboardingStore } from "../../../Stores/OnboardingStore";
-    import { followStateStore } from "../../../Stores/FollowStore";
+    import { followConnectionModeStore, followStateStore } from "../../../Stores/FollowStore";
     import { requestedMegaphoneStore } from "../../../Stores/MegaphoneStore";
     import { currentPlayerLockableAreasStore } from "../../../Stores/CurrentPlayerAreaLockStore";
     import { currentPlayerGroupLockStateStore } from "../../../Stores/CurrentPlayerGroupStore";
@@ -15,6 +15,7 @@
 
     import AppsMenuItem from "./AppsMenuItem.svelte";
     import FollowMenuItem from "./FollowMenuItem.svelte";
+    import VoicePinMenuItem from "./VoicePinMenuItem.svelte";
     import LockDiscussionMenuItem from "./LockDiscussionMenuItem.svelte";
     import MusicMenuItem from "./MusicMenuItem.svelte";
     import HeaderMenuItem from "./HeaderMenuItem.svelte";
@@ -50,10 +51,14 @@
     <AppsMenuItem />
 {/if}
 
-{#if ($bottomActionBarVisibilityStore && !$inLivekitStore) || $followStateStore !== "off"}
+{#if ($bottomActionBarVisibilityStore && !$inLivekitStore && $followStateStore === "off") || ($followStateStore !== "off" && $followConnectionModeStore === "movement")}
     <!-- <ChangeLayoutMenuItem /> -->
 
     <FollowMenuItem />
+{/if}
+
+{#if ($bottomActionBarVisibilityStore && !$inLivekitStore && $followStateStore === "off") || ($followStateStore !== "off" && $followConnectionModeStore === "voice")}
+    <VoicePinMenuItem />
 {/if}
 
 {#if $currentPlayerLockableAreasStore.length > 0 || ($bottomActionBarVisibilityStore && !$inLivekitStore && $currentPlayerGroupLockStateStore !== undefined) || $onboardingStore === "lockBubble"}

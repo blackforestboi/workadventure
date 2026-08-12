@@ -1140,7 +1140,7 @@ export class RoomConnection implements RoomConnection {
         });
     }
 
-    public emitFollowRequest(forceFollow = false): void {
+    public emitFollowRequest(forceFollow = false, voiceOnly = false): void {
         if (!this.userId) {
             return;
         }
@@ -1151,12 +1151,13 @@ export class RoomConnection implements RoomConnection {
                 followRequestMessage: {
                     leader: this.userId,
                     forceFollow,
+                    voiceOnly,
                 },
             },
         });
     }
 
-    public emitFollowConfirmation(leaderId: number): void {
+    public emitFollowConfirmation(leaderId: number, voiceOnly = false): void {
         if (!this.userId) {
             return;
         }
@@ -1166,6 +1167,7 @@ export class RoomConnection implements RoomConnection {
                 $case: "followConfirmationMessage",
                 followConfirmationMessage: {
                     leader: leaderId,
+                    voiceOnly,
                     follower: this.userId,
                 },
             },

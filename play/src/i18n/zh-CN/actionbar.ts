@@ -122,6 +122,11 @@ const actionbar: DeepPartial<Translation["actionbar"]> = {
             title: "停止关注",
             desc: "您可以随时选择取消关注用户。然后您的 Woka 将停止跟随他们，恢复您的移动自由。",
         },
+        voicePin: {
+            title: "Pin voice connection",
+            desc: "Stay connected by voice while everyone moves independently.",
+        },
+        unpinVoice: { title: "Unpin voice connection", desc: "End the pinned voice connection." },
         lock: {
             title: "锁定对话",
             desc: "通过启用此功能，您可以确保没有人可以加入讨论。您是您空间的主人，只有已经存在的人可以互动。",

@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { followRoleStore, followStateStore, followUsersStore } from "../../Stores/FollowStore";
+    import {
+        followConnectionModeStore,
+        followRoleStore,
+        followStateStore,
+        followUsersStore,
+    } from "../../Stores/FollowStore";
     import LL from "../../../i18n/i18n-svelte";
     import { gameManager } from "../../Phaser/Game/GameManager";
     import Button from "../UI/Button.svelte";
@@ -50,6 +55,7 @@
             $followStateStore === "ending" ||
             $followStateStore === "active",
     );
+    let voiceOnly = $derived($followConnectionModeStore === "voice");
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
@@ -76,7 +82,9 @@
                         stroke-linejoin="round"
                     />
                 </svg>
-                {$LL.follow.interactMenu.title.follow({ leader: name($followUsersStore[0]) })}
+                {voiceOnly
+                    ? $LL.follow.interactMenu.title.voicePin({ leader: name($followUsersStore[0]) })
+                    : $LL.follow.interactMenu.title.follow({ leader: name($followUsersStore[0]) })}
             </div>
         </div>
     {/if}
@@ -85,9 +93,15 @@
         <div class="w-56 min-h-10 bottom-12 text-center z-[150] bg-contrast/80 backdrop-blur rounded-lg text-white">
             <div>{$LL.follow.interactMenu.title.interact()}</div>
             {#if $followRoleStore === "follower"}
-                <div class="m-1">{$LL.follow.interactMenu.stop.follower({ leader: name($followUsersStore[0]) })}</div>
+                <div class="m-1">
+                    {voiceOnly
+                        ? $LL.follow.interactMenu.stop.voiceFollower({ leader: name($followUsersStore[0]) })
+                        : $LL.follow.interactMenu.stop.follower({ leader: name($followUsersStore[0]) })}
+                </div>
             {:else if $followRoleStore === "leader"}
-                <div class="m-1">{$LL.follow.interactMenu.stop.leader()}</div>
+                <div class="m-1">
+                    {voiceOnly ? $LL.follow.interactMenu.stop.voiceLeader() : $LL.follow.interactMenu.stop.leader()}
+                </div>
             {/if}
         </div>
     {/if}
@@ -98,27 +112,35 @@
         >
             {#if $followRoleStore === "follower"}
                 <div class="m-1 px-8 py-4">
-                    {$LL.follow.interactStatus.following({ leader: name($followUsersStore[0]) })}
+                    {voiceOnly
+                        ? $LL.follow.interactStatus.voicePinned({ leader: name($followUsersStore[0]) })
+                        : $LL.follow.interactStatus.following({ leader: name($followUsersStore[0]) })}
                 </div>
             {:else if $followUsersStore.length === 0}
                 <div class="m-1 px-8 py-4">{$LL.follow.interactStatus.waitingFollowers()}</div>
             {:else if $followUsersStore.length === 1}
                 <div class="m-1 px-8 py-4">
-                    {$LL.follow.interactStatus.followed.one({ follower: name($followUsersStore[0]) })}
+                    {voiceOnly
+                        ? $LL.follow.interactStatus.voicePinnedBy.one({ follower: name($followUsersStore[0]) })
+                        : $LL.follow.interactStatus.followed.one({ follower: name($followUsersStore[0]) })}
                 </div>
             {:else if $followUsersStore.length === 2}
                 <div class="m-1 px-8 py-4">
-                    {$LL.follow.interactStatus.followed.two({
-                        firstFollower: name($followUsersStore[0]),
-                        secondFollower: name($followUsersStore[1]),
-                    })}
+                    {voiceOnly
+                        ? $LL.follow.interactStatus.voicePinnedBy.many({ count: $followUsersStore.length })
+                        : $LL.follow.interactStatus.followed.two({
+                              firstFollower: name($followUsersStore[0]),
+                              secondFollower: name($followUsersStore[1]),
+                          })}
                 </div>
             {:else}
                 <div>
-                    {$LL.follow.interactStatus.followed.many({
-                        followers: $followUsersStore.slice(0, -1).map(name).join(", "),
-                        lastFollower: name($followUsersStore[$followUsersStore.length - 1]),
-                    })}
+                    {voiceOnly
+                        ? $LL.follow.interactStatus.voicePinnedBy.many({ count: $followUsersStore.length })
+                        : $LL.follow.interactStatus.followed.many({
+                              followers: $followUsersStore.slice(0, -1).map(name).join(", "),
+                              lastFollower: name($followUsersStore[$followUsersStore.length - 1]),
+                          })}
                 </div>
             {/if}
         </div>
@@ -183,7 +205,7 @@
                         event.preventDefault();
                         reset();
                     }}
-                    >{$LL.actionbar.help.unfollow.title()}
+                    >{voiceOnly ? $LL.actionbar.help.unpinVoice.title() : $LL.actionbar.help.unfollow.title()}
                 </Button>
             {:else if $followUsersStore.length === 1}
                 <Button
@@ -194,7 +216,7 @@
                         event.preventDefault();
                         reset();
                     }}
-                    >{$LL.actionbar.help.unfollow.title()}
+                    >{voiceOnly ? $LL.actionbar.help.unpinVoice.title() : $LL.actionbar.help.unfollow.title()}
                 </Button>
             {:else if $followUsersStore.length > 2}
                 <Button

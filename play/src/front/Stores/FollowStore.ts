@@ -6,23 +6,27 @@ import { popupStore } from "./PopupStore";
 
 type FollowState = "off" | "requesting" | "active" | "ending";
 type FollowRole = "leader" | "follower";
+export type FollowConnectionMode = "movement" | "voice";
 
 export const followStateStore = writable<FollowState>("off");
 export const followRoleStore = writable<FollowRole>("leader");
+export const followConnectionModeStore = writable<FollowConnectionMode>("movement");
 
 function createFollowUsersStore() {
     const { subscribe, update, set } = writable<number[]>([]);
 
     return {
         subscribe,
-        addFollowRequest(leader: number): void {
+        addFollowRequest(leader: number, voiceOnly = false): void {
             followStateStore.set("requesting");
             followRoleStore.set("follower");
+            followConnectionModeStore.set(voiceOnly ? "voice" : "movement");
             set([leader]);
         },
-        addFollower(user: number): void {
+        addFollower(user: number, voiceOnly = false): void {
             followStateStore.set("active");
             followRoleStore.set("leader");
+            followConnectionModeStore.set(voiceOnly ? "voice" : "movement");
             update((followers) => {
                 followers.push(user);
                 return followers;
@@ -40,6 +44,7 @@ function createFollowUsersStore() {
                 if (followers.length === 0) {
                     followStateStore.set("off");
                     followRoleStore.set("leader");
+                    followConnectionModeStore.set("movement");
                 }
 
                 return followers;
@@ -49,6 +54,7 @@ function createFollowUsersStore() {
             set([]);
             followStateStore.set("off");
             followRoleStore.set("leader");
+            followConnectionModeStore.set("movement");
         },
     };
 }

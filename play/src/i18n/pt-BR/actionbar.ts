@@ -128,6 +128,11 @@ const actionbar: BaseTranslation = {
             title: "Parar de seguir",
             desc: "Você pode escolher parar de seguir um usuário a qualquer momento. Seu Woka então parará de segui-lo, devolvendo sua liberdade de movimento.",
         },
+        voicePin: {
+            title: "Pin voice connection",
+            desc: "Stay connected by voice while everyone moves independently.",
+        },
+        unpinVoice: { title: "Unpin voice connection", desc: "End the pinned voice connection." },
         lock: {
             title: "Bloquear conversa",
             desc: "Ao habilitar este recurso, você garante que ninguém possa se juntar à discussão. Você é o mestre do seu espaço, e apenas aqueles já presentes podem interagir.",

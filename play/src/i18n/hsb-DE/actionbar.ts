@@ -124,6 +124,11 @@ const actionbar: DeepPartial<Translation["actionbar"]> = {
             title: "Sćěhowanje zastajić",
             desc: "Móžeće kóždy čas wubrać, zo byšće wužiwarja wjace njesćěhował. Waš Woka budźe potom sćěhowanje zastajić a wam wašu swobodu hibanja wróćić.",
         },
+        voicePin: {
+            title: "Pin voice connection",
+            desc: "Stay connected by voice while everyone moves independently.",
+        },
+        unpinVoice: { title: "Unpin voice connection", desc: "End the pinned voice connection." },
         lock: {
             title: "Rozmołwu zawrěć",
             desc: "Hdyž tutu funkciju aktiwěrujeće, zawěsćeće, zo nihdo njemóže so diskusiji přidać. Sće knjez wašeho ruma, a jenož tute, kotrež su hižo přitomne, móža interagować.",

@@ -3,7 +3,12 @@ import { get } from "svelte/store";
 import { availabilityStatusToJSON } from "@workadventure/messages";
 import type { RoomConnection } from "../../Connection/RoomConnection";
 import { localUserStore } from "../../Connection/LocalUserStore";
-import { followRoleStore, followStateStore, followUsersStore } from "../../Stores/FollowStore";
+import {
+    followConnectionModeStore,
+    followRoleStore,
+    followStateStore,
+    followUsersStore,
+} from "../../Stores/FollowStore";
 import { popupStore } from "../../Stores/PopupStore";
 import { iframeListener } from "../../Api/IframeListener";
 import type { RemotePlayersRepository } from "./RemotePlayersRepository";
@@ -20,11 +25,14 @@ export class FollowManager {
                 if (!localUserStore.getIgnoreFollowRequests()) {
                     if (followRequestMessage.forceFollow) {
                         // If forceFollow, we emit directly back the followConfirmationMessage
-                        followUsersStore.addFollowRequest(followRequestMessage.leader);
+                        followUsersStore.addFollowRequest(followRequestMessage.leader, followRequestMessage.voiceOnly);
                         followStateStore.set("active");
-                        this.connection.emitFollowConfirmation(get(followUsersStore)[0]);
+                        this.connection.emitFollowConfirmation(
+                            get(followUsersStore)[0],
+                            get(followConnectionModeStore) === "voice",
+                        );
                     } else {
-                        followUsersStore.addFollowRequest(followRequestMessage.leader);
+                        followUsersStore.addFollowRequest(followRequestMessage.leader, followRequestMessage.voiceOnly);
                     }
                 }
             }),
@@ -32,7 +40,7 @@ export class FollowManager {
 
         this.subscriptions.push(
             this.connection.followConfirmationMessageStream.subscribe((followConfirmationMessage) => {
-                followUsersStore.addFollower(followConfirmationMessage.follower);
+                followUsersStore.addFollower(followConfirmationMessage.follower, followConfirmationMessage.voiceOnly);
                 const remoteFollower = this.remotePlayersRepository
                     .getPlayers()
                     .get(followConfirmationMessage.follower);
