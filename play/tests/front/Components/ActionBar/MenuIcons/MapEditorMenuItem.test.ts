@@ -15,10 +15,15 @@ describe("MapEditorMenuItem", () => {
         expect(mapEditorMenuItemSource).toContain("window.location.assign(result.roomUrl)");
     });
 
-    it("keeps login gating and exposes a creation loading state", () => {
+    it("keeps both world actions visible for guests and gates the selected action", () => {
         expect(mapEditorMenuItemSource).toContain('new CustomEvent("workadventure:open-login-overlay")');
-        expect(mapEditorMenuItemSource).toContain("if (!$mapEditorActivated && !requireLogin()) return;");
-        expect(mapEditorMenuItemSource).toContain("oncreatenew: localUserStore.isLogged() ? createNewWorld : undefined");
+        expect(mapEditorMenuItemSource).toContain("function openThisWorld() {\n        if (!requireLogin()) return;");
+        expect(mapEditorMenuItemSource).toContain(
+            "async function createNewWorld() {\n        if (!requireLogin()) return;",
+        );
+        expect(mapEditorMenuItemSource).toContain(
+            "function toggleWorldPicker(): void {\n        if (closeFloatingUi !== undefined)",
+        );
         expect(mapEditorWorldPickerSource).toContain("disabled={creatingWorld}");
         expect(mapEditorWorldPickerSource).toContain("{#if oncreatenew !== undefined}");
         expect(mapEditorWorldPickerSource).toContain("$LL.actionbar.mapEditorCreating()");

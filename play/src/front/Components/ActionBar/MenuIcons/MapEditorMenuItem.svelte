@@ -37,6 +37,7 @@
     }
 
     function openThisWorld() {
+        if (!requireLogin()) return;
         analyticsClient.toggleMapEditor(true);
         mapEditorModeStore.switchMode(true);
         gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(EditorToolName.EntityEditor);
@@ -47,6 +48,7 @@
     }
 
     async function createNewWorld() {
+        if (!requireLogin()) return;
         try {
             const result = await worldCreationApi.create(gameManager.currentStartedRoom.href);
             window.location.assign(result.roomUrl);
@@ -64,7 +66,6 @@
     }
 
     function toggleWorldPicker(): void {
-        if (!$mapEditorActivated && !requireLogin()) return;
         if (closeFloatingUi !== undefined) {
             closeWorldPicker();
             return;
