@@ -16,8 +16,10 @@ import {
     ADMIN_SOCKETS_TOKEN,
     DISABLE_ANONYMOUS,
     FRONT_URL,
+    MAP_EDITOR_ALLOW_ALL_USERS,
     PUSHER_ADMIN_WS_MAX_BACKPRESSURE_BYTES,
     SOCKET_IDLE_TIMER,
+    START_ROOM_URL,
     TEAPOT_X_CLIENT_ID,
     TEAPOT_X_REDIRECT_URI,
 } from "../enums/EnvironmentVariable";
@@ -472,6 +474,12 @@ export class IoSocketController {
                     }
 
                     const legacyCanEdit = userData.canEdit ?? false;
+                    const roomUrl = new URL(roomId);
+                    const startRoomUrl = new URL(START_ROOM_URL, roomUrl.origin);
+                    const temporaryRootEditor =
+                        !isLogged &&
+                        MAP_EDITOR_ALLOW_ALL_USERS &&
+                        roomUrl.pathname === startRoomUrl.pathname;
                     const legacyCanAdmin = memberTags.includes("admin");
                     try {
                         const roomAccess = await teapotWamRevisionCoordinator.resolveJoinAccess({
@@ -480,6 +488,7 @@ export class IoSocketController {
                             authToken: tokenData?.accessToken,
                             legacyCanEdit,
                             managementUiAccess: legacyCanAdmin,
+                            temporaryRootEditor,
                             isLogged,
                         });
                         userData.canEdit = roomAccess.canEdit;
@@ -533,6 +542,7 @@ export class IoSocketController {
                         canEdit: userData.canEdit ?? false,
                         legacyCanEdit,
                         legacyCanAdmin,
+                        temporaryRootEditor,
                         spaceUserId: "",
                         backConnection: undefined,
                         listenedZones: new Set<string>(),
@@ -1158,6 +1168,7 @@ export class IoSocketController {
                                         authToken: socketData.token,
                                         legacyCanEdit: socketData.legacyCanEdit,
                                         legacyCanAdmin: socketData.legacyCanAdmin,
+                                        temporaryRootEditor: socketData.temporaryRootEditor,
                                         isLogged: socketData.isLogged,
                                     });
                                     socketManager.forwardMessageToBack(socket, message.message);

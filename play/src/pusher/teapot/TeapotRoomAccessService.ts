@@ -10,6 +10,7 @@ export type TeapotRoomEditContext =
           successfulJoin: boolean;
           legacyCanEdit: boolean;
           legacyCanAdmin?: boolean;
+          temporaryRootEditor?: boolean;
           isLogged?: boolean;
       }
     | {
@@ -80,6 +81,7 @@ export class TeapotRoomAccessService {
         }
 
         if (input.context.kind === "wam" && input.context.legacyCanAdmin) return;
+        if (input.context.kind === "wam" && input.context.temporaryRootEditor) return;
         const everyoneEligible =
             input.context.kind === "direct" ||
             (input.context.successfulJoin && input.context.isLogged !== false);

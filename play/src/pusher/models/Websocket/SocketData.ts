@@ -48,6 +48,8 @@ export type ConnectingSocketData = {
     legacyCanEdit: boolean;
     /** Original room-admin tag, used as the immutable owner/admin override. */
     legacyCanAdmin: boolean;
+    /** Temporary guest edit grant, limited to the configured root room. */
+    temporaryRootEditor?: boolean;
     spaceUserId: string;
     backConnection?: BackConnection;
     listenedZones: Set<string>;

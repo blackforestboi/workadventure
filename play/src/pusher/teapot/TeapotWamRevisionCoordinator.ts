@@ -34,6 +34,7 @@ export interface BeginWamMutationInput {
     authToken?: string;
     legacyCanEdit: boolean;
     legacyCanAdmin?: boolean;
+    temporaryRootEditor?: boolean;
     isLogged?: boolean;
 }
 
@@ -43,6 +44,7 @@ export interface ResolveWamJoinAccessInput {
     authToken?: string;
     legacyCanEdit: boolean;
     managementUiAccess: boolean;
+    temporaryRootEditor?: boolean;
     isLogged?: boolean;
 }
 
@@ -127,7 +129,7 @@ export class TeapotWamRevisionCoordinator {
         if (input.actorIdentifier.trim().length === 0) {
             throw new TeapotAuthorizationError("Room access requires a stable user identity");
         }
-        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit;
+        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit || input.temporaryRootEditor === true;
         const [mapId, identity] = await Promise.all([
             this.mapUrlResolver.resolve(input.roomId, input.authToken),
             this.identityResolver(input.actorIdentifier, isAuthoringSession),
@@ -152,6 +154,7 @@ export class TeapotWamRevisionCoordinator {
                               successfulJoin: true,
                               legacyCanEdit: input.legacyCanEdit,
                               legacyCanAdmin: input.managementUiAccess,
+                              temporaryRootEditor: input.temporaryRootEditor,
                               isLogged: isAuthoringSession,
                           },
                       }),
@@ -172,7 +175,7 @@ export class TeapotWamRevisionCoordinator {
 
     public async begin(input: BeginWamMutationInput): Promise<void> {
         if (input.commandId.trim().length === 0) throw new Error("Map commands require a command ID");
-        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit;
+        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit || input.temporaryRootEditor === true;
         if (!isAuthoringSession) throw new TeapotAuthorizationError("Map editing requires login");
         const duplicate = this.pending.get(input.commandId);
         if (duplicate !== undefined) {
@@ -210,6 +213,7 @@ export class TeapotWamRevisionCoordinator {
                     successfulJoin: true,
                     legacyCanEdit: input.legacyCanEdit,
                     legacyCanAdmin: input.legacyCanAdmin,
+                    temporaryRootEditor: input.temporaryRootEditor,
                     isLogged: isAuthoringSession,
                 },
             });

@@ -28,13 +28,21 @@ async function setup() {
 }
 
 describe("TeapotWamRevisionCoordinator", () => {
-    it("allows a guest only when the legacy root-room policy grants edit access", async () => {
-        const { coordinator, identity, identityResolver } = await setup();
+    it("allows a guest temporary root-room access even when the durable policy is locked", async () => {
+        const { coordinator, identity, identityResolver, repository } = await setup();
+        await repository.replaceRoomEditorPolicy({
+            mapId: "https://maps.test/world.tmj",
+            mode: "nobody",
+            expectedVersion: null,
+            editorIds: [],
+            actorId: identity.id,
+        });
         const join = {
             roomId: "https://play.test/~/world.wam",
             actorIdentifier: identity.id,
-            legacyCanEdit: true,
+            legacyCanEdit: false,
             managementUiAccess: false,
+            temporaryRootEditor: true,
             isLogged: false,
         };
 
@@ -45,7 +53,8 @@ describe("TeapotWamRevisionCoordinator", () => {
                 commandId: "guest-command",
                 roomId: join.roomId,
                 actorIdentifier: identity.id,
-                legacyCanEdit: true,
+                legacyCanEdit: false,
+                temporaryRootEditor: true,
                 isLogged: false,
             }),
         ).resolves.toBeUndefined();
