@@ -29,13 +29,16 @@ const animationQuery = z
 
 const uploadQuery = z.object({
     name: z.string().min(1).max(80),
-    kind: z.enum(["map-entity", "reference"]),
-    source: z.literal("generated").default("generated"),
+    kind: z.enum(["map-entity", "reference", "terrain-surface"]),
+    source: z.enum(["generated", "imported"]).default("generated"),
     providerId: z.string().max(80).optional(),
     modelId: z.string().max(160).optional(),
     animation: animationQuery.optional(),
+    gridColumns: z.coerce.number().int().positive().optional(),
+    gridRows: z.coerce.number().int().positive().optional(),
+    tilePixelSize: z.coerce.number().int().positive().optional(),
 });
-const listQuery = z.object({ kind: z.enum(["map-entity", "reference"]) });
+const listQuery = z.object({ kind: z.enum(["map-entity", "reference", "terrain-surface"]) });
 const assetParams = z.object({ assetId: z.string().min(1).max(128) });
 
 export class TeapotGeneratedAssetController extends BaseHttpController {
@@ -150,6 +153,15 @@ export class TeapotGeneratedAssetController extends BaseHttpController {
                                 ...(query.modelId === undefined ? {} : { modelId: query.modelId }),
                             },
                             query.animation,
+                            query.gridColumns === undefined ||
+                                query.gridRows === undefined ||
+                                query.tilePixelSize === undefined
+                                ? undefined
+                                : {
+                                      columns: query.gridColumns as 5,
+                                      rows: query.gridRows as 5,
+                                      tilePixelSize: query.tilePixelSize,
+                                  },
                         ),
                     );
                 } catch (error: unknown) {

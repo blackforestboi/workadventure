@@ -27,6 +27,7 @@ export async function persistTerrainMutation(
         layerJson: message.layerJson || undefined,
         removeLayer: message.removeLayer,
         beforeLayer: message.beforeLayer || undefined,
+        elevationUpdates: message.elevationUpdates,
     });
     await fileSystem.writeStringAsFile(mapKey, JSON.stringify(updated));
 }

@@ -1582,6 +1582,10 @@ export class GameRoom implements BrothersFinder {
             regions: message.regions,
             tilesetJson: message.tilesetJson === "" ? undefined : message.tilesetJson,
             removeTileset: message.removeTileset,
+            layerJson: message.layerJson === "" ? undefined : message.layerJson,
+            removeLayer: message.removeLayer,
+            beforeLayer: message.beforeLayer === "" ? undefined : message.beforeLayer,
+            elevationUpdates: message.elevationUpdates,
         };
     }
 

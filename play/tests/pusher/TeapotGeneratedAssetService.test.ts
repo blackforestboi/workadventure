@@ -74,6 +74,35 @@ describe("TeapotGeneratedAssetService", () => {
         expect(data.catalogAssets).toHaveLength(1);
     });
 
+    it("stores a native-resolution terrain surface only when its 5×5 grid matches the image", async () => {
+        const png = createTestWokaPng({ width: 500, height: 500 });
+        const saved = await service.accept(
+            "owner-a",
+            "Loam",
+            png,
+            "terrain-surface",
+            { source: "generated" },
+            undefined,
+            { columns: 5, rows: 5, tilePixelSize: 100 },
+        );
+
+        expect(saved).toMatchObject({
+            kind: "terrain-surface",
+            width: 500,
+            height: 500,
+            surfaceGrid: { columns: 5, rows: 5, tilePixelSize: 100 },
+            url: "https://play.example.test/teapot/generated-assets/asset_3.png",
+        });
+        await expect(service.getPublicRaster(saved.id)).resolves.toMatchObject({ bytes: expect.any(Buffer) });
+        await expect(
+            service.accept("owner-a", "Broken surface", png, "terrain-surface", undefined, undefined, {
+                columns: 5,
+                rows: 5,
+                tilePixelSize: 90,
+            }),
+        ).rejects.toThrow("must match one square 5×5 logical grid");
+    });
+
     it("does not reconcile matching PNGs across owners or asset kinds", async () => {
         const png = createTestWokaPng();
 

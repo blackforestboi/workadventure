@@ -11,6 +11,7 @@ export type AssetGenerationTarget =
     | "woka-hat"
     | "woka-accessory"
     | "environment-object"
+    | "terrain-surface"
     | "tileset";
 
 export type AssetGenerationLifecycleState =

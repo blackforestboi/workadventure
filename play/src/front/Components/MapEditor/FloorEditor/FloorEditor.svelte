@@ -12,6 +12,7 @@
     import { resolveBrushLayer } from "../../../Phaser/Game/MapEditor/Tools/FloorEditorCatalog";
     import { normalizeTilesetRaster } from "../../../Services/AssetGeneration/TilesetRasterNormalizer";
     import { teapotTilesetApi, type TeapotTilesetView } from "../../../Services/TeapotTilesetApi";
+    import { teapotGeneratedAssetApi, type TeapotGeneratedAssetView } from "../../../Services/TeapotGeneratedAssetApi";
     import {
         IconBarrierBlock,
         IconCloudUpload,
@@ -26,6 +27,8 @@
     } from "../../Icons";
     import AssetGenerationPanel from "../../AssetGeneration/AssetGenerationPanel.svelte";
     import AnimatedAssetPreview from "../../AssetGeneration/AnimatedAssetPreview.svelte";
+    import TerrainSurfaceAssetEditor from "./TerrainSurfaceAssetEditor.svelte";
+    import type { ApprovedTerrainSurfaceAsset } from "./TerrainSurfaceAssetTypes";
     import {
         getActiveAuthoringPathTool,
         getActiveTerrainModeId,
@@ -40,10 +43,11 @@
     let assetBusy = $state(false);
     let assetError = $state("");
     let assetPanelOpen = $state(false);
-    let assetPanelMode: "upload" | "generate" | undefined = $state(undefined);
+    let assetPanelMode: "upload" | "generate" | "surface" | undefined = $state(undefined);
     let assetDropActive = $state(false);
     let searchTerm = $state("");
     let selectedFamilyId: string | undefined = $state(undefined);
+    let savedSurfaceAsset: TeapotGeneratedAssetView | undefined = $state(undefined);
     let singleTileAssets = $derived(
         savedTilesets.filter(
             (tileset) => (tileset.columns === 1 && tileset.rows === 1) || tileset.animation !== undefined,
@@ -66,6 +70,10 @@
 
     function selectBrush(layer: string, gid: number) {
         dispatchMapEditorFloorAction({ type: "select-brush", layer, gid });
+    }
+
+    function selectElevation(layer: string) {
+        dispatchMapEditorFloorAction({ type: "select-elevation", layer });
     }
 
     function selectPaletteBrush(layer: string, gid: number, layers: readonly { name: string }[]) {
@@ -121,7 +129,7 @@
     function selectLayer(
         layer: string,
         state: {
-            toolMode: "tile" | "shape";
+            toolMode: "tile" | "shape" | "elevation";
             selectedTerrainFamilyId?: string;
             selectedGid: number;
             tilesets: readonly MapEditorFloorTileset[];
@@ -184,6 +192,28 @@
             embedTileset(saved);
         } catch (error) {
             assetError = error instanceof Error ? error.message : "The terrain tile could not be saved.";
+            throw error;
+        } finally {
+            assetBusy = false;
+        }
+    }
+
+    async function saveSurfaceAsset(asset: ApprovedTerrainSurfaceAsset) {
+        assetBusy = true;
+        assetError = "";
+        try {
+            savedSurfaceAsset = await teapotGeneratedAssetApi.upload(asset.blob, assetName, "terrain-surface", {
+                source: asset.source,
+                providerId: asset.providerId,
+                modelId: asset.modelId,
+                surfaceGrid: {
+                    columns: asset.gridColumns,
+                    rows: asset.gridRows,
+                    tilePixelSize: asset.tilePixelSize,
+                },
+            });
+        } catch (error) {
+            assetError = error instanceof Error ? error.message : "The terrain surface could not be saved.";
             throw error;
         } finally {
             assetBusy = false;
@@ -270,7 +300,12 @@
     {:else}
         {@const state = $mapEditorFloorStateStore}
         {@const terrainModes = getTerrainModeOptions(state.layers)}
-        {@const activeTerrainModeId = getActiveTerrainModeId(terrainModes, state.selectedLayer, state.selectedGid)}
+        {@const activeTerrainModeId = getActiveTerrainModeId(
+            terrainModes,
+            state.selectedLayer,
+            state.selectedGid,
+            state.toolMode,
+        )}
         {@const activeAuthoringPathTool = getActiveAuthoringPathTool(terrainModes, state.selectedLayer)}
         {#if state.error}<p class="m-0 text-sm text-red-300" role="alert">{state.error}</p>{/if}
 
@@ -298,6 +333,10 @@
                                 return;
                             }
                             if (mode.layer === undefined) return;
+                            if (mode.id === "elevation") {
+                                selectElevation(mode.layer);
+                                return;
+                            }
                             if (isAuthoringPathMode(mode.id)) selectBrush(mode.layer, 1);
                             else selectLayer(mode.layer, state, state.layers);
                         }}
@@ -326,6 +365,8 @@
                                 <IconDoorExit />
                             {:else if mode.id === "start"}
                                 <IconFlag />
+                            {:else if mode.id === "elevation"}
+                                <span class="text-lg leading-none">▲</span>
                             {:else}
                                 <IconWall />
                             {/if}
@@ -362,13 +403,22 @@
             </div>
         {/if}
 
+        {#if activeTerrainModeId === "elevation"}
+            <p
+                class="m-0 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs leading-5 text-white/75"
+            >
+                Hold and drag to raise the map-wide surface; whichever floor is visible on top becomes the hill skin.
+                Command-drag lowers; Shift-drag uses a wide area brush. Maximum height is 20 half-tile steps.
+            </p>
+        {/if}
+
         {#if isTerrainAssetBrowserMode(activeTerrainModeId) && assetPanelOpen}
             <section
                 id="terrain-asset-panel"
                 class="max-h-[46%] shrink-0 overflow-y-auto rounded-xl border border-white/15 bg-black/25 p-3"
                 aria-label="Add terrain asset"
             >
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-3 gap-2">
                     <button
                         type="button"
                         class="flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-center {assetPanelMode ===
@@ -393,12 +443,24 @@
                         <IconSparkles class="text-2xl" aria-hidden="true" />
                         <span class="text-xs font-semibold">Generate with AI</span>
                     </button>
+                    <button
+                        type="button"
+                        class="flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-center {assetPanelMode ===
+                        'surface'
+                            ? 'border-secondary bg-secondary/15 ring-1 ring-secondary'
+                            : 'border-white/10 bg-black/20 hover:border-white/30 hover:bg-white/10'}"
+                        onclick={() => (assetPanelMode = "surface")}
+                        aria-pressed={assetPanelMode === "surface"}
+                    >
+                        <IconTexture class="text-2xl" aria-hidden="true" />
+                        <span class="text-xs font-semibold">Create surface</span>
+                    </button>
                 </div>
 
                 {#if assetPanelMode !== undefined}
                     <div class="mt-3 flex flex-col gap-3">
                         <label class="text-xs" for="tileset-name">
-                            Terrain tile name
+                            {assetPanelMode === "surface" ? "Terrain surface name" : "Terrain tile name"}
                             <input
                                 id="tileset-name"
                                 bind:value={assetName}
@@ -457,7 +519,7 @@
                                     </div>
                                 </div>
                             {/if}
-                        {:else}
+                        {:else if assetPanelMode === "generate"}
                             <AssetGenerationPanel
                                 target="tileset"
                                 title="Generate floor tiles"
@@ -466,6 +528,18 @@
                                 onAccept={({ blob, providerId, modelId, animation }) =>
                                     saveTileset(blob, { source: "generated", providerId, modelId, animation })}
                             />
+                        {:else}
+                            <TerrainSurfaceAssetEditor disabled={assetBusy} onApprove={saveSurfaceAsset} />
+                            {#if savedSurfaceAsset !== undefined}
+                                <div class="rounded-lg border border-emerald-300/30 bg-emerald-950/20 p-3 text-xs">
+                                    <strong class="text-emerald-100">Surface asset saved</strong>
+                                    <p class="mb-0 mt-1 text-white/65">
+                                        {savedSurfaceAsset.name} keeps a {savedSurfaceAsset.surfaceGrid
+                                            ?.columns}×{savedSurfaceAsset.surfaceGrid?.rows} logical grid and the approved
+                                        source resolution.
+                                    </p>
+                                </div>
+                            {/if}
                         {/if}
                     </div>
                 {/if}

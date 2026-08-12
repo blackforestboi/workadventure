@@ -38,7 +38,7 @@ export interface MapEditorFloorState {
     changedTiles: number;
     selectedLayer: string;
     selectedGid: number;
-    toolMode: "tile" | "shape";
+    toolMode: "tile" | "shape" | "elevation";
     selectedTerrainFamilyId?: string;
     hoveredTile?: { layer: string; x: number; y: number };
     error?: string;
@@ -47,6 +47,7 @@ export interface MapEditorFloorState {
 export type MapEditorFloorAction =
     | { id: string; type: "preview"; patch: TeapotTilePatch }
     | { id: string; type: "select-brush"; layer: string; gid: number }
+    | { id: string; type: "select-elevation"; layer: string }
     | {
           id: string;
           type: "select-library-brush";
@@ -71,6 +72,7 @@ export type MapEditorFloorAction =
 export type MapEditorFloorActionInput =
     | { type: "preview"; patch: TeapotTilePatch }
     | { type: "select-brush"; layer: string; gid: number }
+    | { type: "select-elevation"; layer: string }
     | {
           type: "select-library-brush";
           layer: string;

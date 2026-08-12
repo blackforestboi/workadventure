@@ -86,6 +86,7 @@ function message(regions: ModifyTerrainMessage["regions"]): ModifyTerrainMessage
         layerJson: "",
         removeLayer: false,
         beforeLayer: "",
+        elevationUpdates: [],
     };
 }
 
@@ -125,6 +126,21 @@ describe("persistTerrainMutation", () => {
         expect(getTileLayerGid(floorLayer(secondPersisted), 0, 0)).toBe(1);
         expect(getTileLayerGid(floorLayer(secondPersisted), 4, 3)).toBe(7);
         expect(secondPersisted.properties).toEqual(firstPersisted.properties);
+    });
+
+    it("persists sparse elevation independently of floor tiles", async () => {
+        await persistTerrainMutation(new WamFile(wam), new URL("http://maps.example.test/maps/map.wam"), {
+            ...message([]),
+            elevationUpdates: [{ layer: "floor", x: -3, y: -2, elevation: 2 }],
+        });
+
+        const persisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;
+        expect(getTileLayerGid(floorLayer(persisted), 0, 0)).toBe(1);
+        expect(persisted.properties).toContainEqual({
+            name: "teapot:elevation/v1",
+            type: "string",
+            value: '{"version":1,"cells":[{"layer":"floor","x":-3,"y":-2,"elevation":2}]}',
+        });
     });
 
     it("persists an atomic water underlay and surface cutout", async () => {

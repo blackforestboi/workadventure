@@ -3,6 +3,7 @@ import type { MapEditorFloorLayer } from "../../../Stores/MapEditorFloorStore";
 export const TERRAIN_MODE_DEFINITIONS = [
     { id: "pointer", label: "Pointer" },
     { id: "floor", label: "Floor" },
+    { id: "elevation", label: "Elevation" },
     { id: "eraser", label: "Eraser" },
     { id: "collision", label: "Collision 1" },
     { id: "exit", label: "Exit" },
@@ -30,6 +31,7 @@ export interface AuthoringPathTool {
 const LAYER_ALIASES: Readonly<Record<Exclude<TerrainModeId, "pointer" | "eraser">, ReadonlySet<string>>> = {
     collision: new Set(["collision", "collisions", "collision1", "collisions1"]),
     floor: new Set(["floor"]),
+    elevation: new Set(["floor"]),
     exit: new Set(["exit"]),
     start: new Set(["start", "start1"]),
     walls: new Set(["wall", "walls"]),
@@ -49,8 +51,10 @@ export function getActiveTerrainModeId(
     modes: readonly TerrainModeOption[],
     selectedLayer: string,
     selectedGid: number,
+    toolMode: "tile" | "shape" | "elevation" = "tile",
 ): TerrainModeId {
     if (selectedLayer === "") return "pointer";
+    if (toolMode === "elevation") return "elevation";
     const layerMode = modes.find(
         (mode) => mode.id !== "pointer" && mode.id !== "eraser" && mode.layer === selectedLayer,
     );

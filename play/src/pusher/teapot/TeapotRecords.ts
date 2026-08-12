@@ -7,7 +7,7 @@ import type {
 
 export type TeapotJsonValue = string | number | boolean | null | TeapotJsonValue[] | { [key: string]: TeapotJsonValue };
 
-export type TeapotAssetKind = "woka" | "woka-part" | "map-entity" | "tileset" | "reference";
+export type TeapotAssetKind = "woka" | "woka-part" | "map-entity" | "tileset" | "reference" | "terrain-surface";
 
 export interface TeapotAssetCatalog {
     id: string;

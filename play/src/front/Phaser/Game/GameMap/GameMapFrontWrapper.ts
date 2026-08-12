@@ -15,6 +15,7 @@ import {
     getMapTileBounds,
     getMapWorldBounds,
     getTileGridOffset,
+    getTileLayerGid,
     getTileLayerWorldOrigin,
     isAvatarSupportingTileLayerName,
     tileToLayerIndex,
@@ -1015,12 +1016,30 @@ export class GameMapFrontWrapper {
         this.rebuildVoidCollisionLayer();
     }
 
+    public synchronizeMapGeometryIfNeeded(source: ITiledMap): void {
+        const currentBounds = getMapTileBounds(this.gameMap.getMap());
+        const nextBounds = getMapTileBounds(source);
+        const currentOffset = getTileGridOffset(this.gameMap.getMap());
+        const nextOffset = getTileGridOffset(source);
+        if (
+            currentBounds.minX === nextBounds.minX &&
+            currentBounds.minY === nextBounds.minY &&
+            currentBounds.width === nextBounds.width &&
+            currentBounds.height === nextBounds.height &&
+            currentOffset.x === nextOffset.x &&
+            currentOffset.y === nextOffset.y
+        ) {
+            return;
+        }
+        this.synchronizeMapGeometry(source);
+    }
+
     public putTile(
         tile: string | number | null,
         x: number,
         y: number,
         layer: string,
-        options: { render?: boolean } = {},
+        options: { render?: boolean; deferRefresh?: boolean } = {},
     ): void {
         if (tile === null && isAvatarSupportingTileLayerName(layer) && this.isTileOccupiedByAvatar(x, y)) {
             console.warn(`Cannot delete the tile at (${x}, ${y}) while an avatar is standing on it.`);
@@ -1070,14 +1089,64 @@ export class GameMapFrontWrapper {
                     phaserTile.resetCollision();
                 }
             }
-            if (this.isGpuTilemapLayer(phaserLayer)) {
-                phaserLayer.generateLayerDataTexture();
+            if (!options.deferRefresh) {
+                if (this.isGpuTilemapLayer(phaserLayer)) phaserLayer.generateLayerDataTexture();
+                this.invalidateCollisionGrid({ modifiedLayer: phaserLayer });
+                this.refreshVoidCollisionCell(x, y);
             }
-            this.invalidateCollisionGrid({ modifiedLayer: phaserLayer });
-            this.refreshVoidCollisionCell(x, y);
         } else {
             console.error("The layer '" + layer + "' does not exist (or is not a tilelaye).");
         }
+    }
+
+    public refreshTileBatch(cells: readonly { layer: string; x: number; y: number }[], source: ITiledMap): void {
+        const touchedLayers = new Set<RenderableTilemapLayer>();
+        for (const cell of cells) {
+            const layer = this.findPhaserLayer(cell.layer);
+            if (layer !== undefined) touchedLayers.add(layer);
+        }
+        for (const layer of touchedLayers) {
+            if (this.isGpuTilemapLayer(layer)) layer.generateLayerDataTexture();
+            this.invalidateCollisionGrid({ modifiedLayer: layer });
+        }
+
+        const bounds = getMapTileBounds(this.gameMap.getMap());
+        const coordinates = new Set(cells.map(({ x, y }) => `${x},${y}`));
+        for (const coordinate of coordinates) {
+            const separator = coordinate.indexOf(",");
+            const tileX = Number(coordinate.slice(0, separator));
+            const tileY = Number(coordinate.slice(separator + 1));
+            const x = tileX - bounds.minX;
+            const y = tileY - bounds.minY;
+            if (x < 0 || y < 0 || x >= bounds.width || y >= bounds.height) continue;
+            this.setVoidCollisionCell(x, y, this.hasVisibleTileSupportAt(source.layers, tileX, tileY, ""));
+        }
+        this.voidCollisionLayer.setCollisionByProperty({ collides: true });
+        this.invalidateCollisionGrid({ modifiedLayer: this.voidCollisionLayer });
+    }
+
+    private hasVisibleTileSupportAt(
+        layers: readonly ITiledMapLayer[],
+        tileX: number,
+        tileY: number,
+        prefix: string,
+    ): boolean {
+        for (const layer of layers) {
+            const fullName = prefix + layer.name;
+            if (layer.type === "group") {
+                if (this.hasVisibleTileSupportAt(layer.layers, tileX, tileY, fullName + "/")) return true;
+                continue;
+            }
+            if (
+                layer.type === "tilelayer" &&
+                isAvatarSupportingTileLayerName(fullName) &&
+                (this.findPhaserLayer(fullName)?.visible ?? layer.visible) &&
+                getTileLayerGid(layer, tileX, tileY) !== 0
+            ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public containsOccupiedVisualTileDeletion(regions: readonly TeapotTileRegion[]): boolean {

@@ -14,6 +14,7 @@ describe("terrain edit protocol", () => {
                     layerJson: '{"name":"water"}',
                     removeLayer: false,
                     beforeLayer: "floor",
+                    elevationUpdates: [{ layer: "floor", x: -17, y: -23, elevation: 20 }],
                 },
             },
         }).finish();
@@ -26,6 +27,7 @@ describe("terrain edit protocol", () => {
             layerJson: '{"name":"water"}',
             removeLayer: false,
             beforeLayer: "floor",
+            elevationUpdates: [{ layer: "floor", x: -17, y: -23, elevation: 20 }],
         });
         expect("prependLeft" in decoded.message.modifyTerrainMessage).toBe(false);
         expect("prependTop" in decoded.message.modifyTerrainMessage).toBe(false);

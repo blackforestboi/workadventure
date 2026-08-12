@@ -11,11 +11,18 @@ const TeapotGeneratedAssetViewSchema = z.object({
     id: z.string(),
     name: z.string(),
     url: z.string(),
-    kind: z.enum(["map-entity", "reference"]),
+    kind: z.enum(["map-entity", "reference", "terrain-surface"]),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     animation: VisualAssetAnimation.optional(),
+    surfaceGrid: z
+        .object({
+            columns: z.literal(5),
+            rows: z.literal(5),
+            tilePixelSize: z.number().int().positive(),
+        })
+        .optional(),
     createdAt: z.string(),
 });
 const TeapotGeneratedAssetListSchema = z.object({ items: z.array(TeapotGeneratedAssetViewSchema) });
@@ -37,10 +44,11 @@ export class TeapotGeneratedAssetApi {
         name: string,
         kind: TeapotGeneratedAssetKind,
         provenance: {
-            source: "generated";
+            source: "generated" | "imported";
             providerId?: string;
             modelId?: string;
             animation?: VisualAssetAnimationValue;
+            surfaceGrid?: { columns: 5; rows: 5; tilePixelSize: number };
         },
         signal?: AbortSignal,
     ): Promise<TeapotGeneratedAssetView> {
@@ -52,6 +60,11 @@ export class TeapotGeneratedAssetApi {
         if (provenance.modelId !== undefined) url.searchParams.set("modelId", provenance.modelId);
         if (provenance.animation !== undefined) {
             url.searchParams.set("animation", JSON.stringify(provenance.animation));
+        }
+        if (provenance.surfaceGrid !== undefined) {
+            url.searchParams.set("gridColumns", String(provenance.surfaceGrid.columns));
+            url.searchParams.set("gridRows", String(provenance.surfaceGrid.rows));
+            url.searchParams.set("tilePixelSize", String(provenance.surfaceGrid.tilePixelSize));
         }
         return TeapotGeneratedAssetViewSchema.parse(
             await this.request(url, {

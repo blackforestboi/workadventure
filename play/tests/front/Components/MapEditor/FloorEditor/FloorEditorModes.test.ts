@@ -15,7 +15,7 @@ function layer(name: string) {
 }
 
 describe("getTerrainModeOptions", () => {
-    it("exposes the seven supported modes in their fixed display order", () => {
+    it("exposes the elevation mode beside floor painting", () => {
         const options = getTerrainModeOptions([
             layer("collision 1"),
             layer("collision 2"),
@@ -29,6 +29,7 @@ describe("getTerrainModeOptions", () => {
         expect(options).toEqual([
             { id: "pointer", label: "Pointer", layer: "" },
             { id: "floor", label: "Floor", layer: "floor" },
+            { id: "elevation", label: "Elevation", layer: "floor" },
             { id: "eraser", label: "Eraser", layer: "" },
             { id: "collision", label: "Collision 1", layer: "collision 1" },
             { id: "exit", label: "Exit", layer: "exit" },
@@ -48,6 +49,7 @@ describe("getTerrainModeOptions", () => {
 
         expect(options.map((option) => option.layer)).toEqual([
             "",
+            "floor",
             "floor",
             "",
             "collisions",
@@ -107,6 +109,7 @@ describe("getTerrainModeOptions", () => {
         expect(getActiveTerrainModeId(modes, "", 0)).toBe("pointer");
         expect(getActiveTerrainModeId(modes, "floor", 11)).toBe("floor");
         expect(getActiveTerrainModeId(modes, "floor", 0)).toBe("eraser");
+        expect(getActiveTerrainModeId(modes, "floor", 1, "elevation")).toBe("elevation");
         expect(getActiveTerrainModeId(modes, "collisions", 0)).toBe("collision");
         expect(getActiveTerrainModeId(modes, "walls", 12)).toBe("walls");
     });

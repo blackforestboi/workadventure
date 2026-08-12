@@ -2,6 +2,7 @@ import {
     applyTeapotTerrainMutation,
     createCenteredMap,
     createWaterUnderlayLayer,
+    getElevationAt,
     getTileLayerGid,
     TeapotTilePatch,
 } from "@workadventure/map-editor";
@@ -92,6 +93,21 @@ describe("createFloorEdit", () => {
             regions: [{ layer: "floor", x: -1, y: -1, width: 1, height: 1, gids: [1] }],
         });
         expect(createFloorEdit(map, patch)).toBeUndefined();
+    });
+
+    it("builds an inverse elevation mutation that restores the previous height", () => {
+        const map = createMap();
+        const edit = createFloorEdit(map, {
+            mapId: "https://example.com/map.tmj",
+            regions: [],
+            elevationUpdates: [{ layer: "floor", x: -1, y: -1, elevation: 2 }],
+        });
+
+        expect(edit).toBeDefined();
+        const raised = applyTeapotTerrainMutation(map, edit!.forward);
+        const restored = applyTeapotTerrainMutation(raised, edit!.backward);
+        expect(getElevationAt(raised, "floor", -1, -1)).toBe(2);
+        expect(getElevationAt(restored, "floor", -1, -1)).toBe(0);
     });
 
     it("records empty cells in negative space so expansion can be undone", () => {

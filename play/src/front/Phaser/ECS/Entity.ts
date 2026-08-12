@@ -62,6 +62,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
 
     private activatable!: boolean;
     private oldPosition: { x: number; y: number };
+    private elevationOffset = 0;
 
     private updatePropertyActivableTimeOut: NodeJS.Timeout | undefined;
 
@@ -183,9 +184,24 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
         return { x: this.x, y: this.y };
     }
 
+    /** Lifts the rendered asset without changing its authored position or collision coordinates. */
+    public setElevationOffset(offset: number): void {
+        if (this.elevationOffset === offset) return;
+        this.elevationOffset = offset;
+        const scaleY = Math.abs(this.scaleY);
+        this.setDisplayOrigin(0, scaleY === 0 ? 0 : offset / scaleY);
+        this.setDepth(this.y - offset + this.displayHeight + (this.prefab.depthOffset ?? 0));
+        (this.scene as GameScene).markDirty();
+    }
+
     public applyStoredDimensions(): void {
         if (this.entityData.width !== undefined && this.entityData.height !== undefined) {
             this.setDisplaySize(this.entityData.width, this.entityData.height);
+        }
+        if (this.elevationOffset !== 0) {
+            const offset = this.elevationOffset;
+            this.elevationOffset = 0;
+            this.setElevationOffset(offset);
         }
     }
 

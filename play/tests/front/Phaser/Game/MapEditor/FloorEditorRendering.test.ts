@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import gameMapFrontWrapperSource from "../../../../../src/front/Phaser/Game/GameMap/GameMapFrontWrapper.ts?raw";
+import elevationRendererSource from "../../../../../src/front/Phaser/Game/GameMap/ElevationRenderer.ts?raw";
 import gameSceneSource from "../../../../../src/front/Phaser/Game/GameScene.ts?raw";
 import floorEditorToolSource from "../../../../../src/front/Phaser/Game/MapEditor/Tools/FloorEditorTool.ts?raw";
 import {
@@ -88,7 +89,7 @@ describe("floor editor rendering", () => {
 
         expect(renderTileSource).toBeDefined();
         expect(renderTileSource).toMatch(
-            /if \(tileTexture !== undefined\) \{\s*gameMapFrontWrapper\.putTile\(null, x, y, layer\);\s*this\.renderOverlay/,
+            /if \(tileTexture !== undefined\) \{\s*gameMapFrontWrapper\.putTile\(null, x, y, layer, options\);\s*this\.renderOverlay/,
         );
     });
 
@@ -100,7 +101,7 @@ describe("floor editor rendering", () => {
         expect(renderTileSource).toBeDefined();
         expect(renderTileSource).toContain("const pathOverlayKind = getAuthoringPathOverlayKind(layer)");
         expect(renderTileSource).toMatch(
-            /gameMapFrontWrapper\.putTile\(gid === 0 \? null : gid, x, y, layer, \{\s*render: pathOverlayKind === "collision",\s*\}\)/,
+            /gameMapFrontWrapper\.putTile\(gid === 0 \? null : gid, x, y, layer, \{\s*render: pathOverlayKind === "collision",\s*deferRefresh: options\.deferRefresh,\s*\}\)/,
         );
         expect(renderTileSource!.indexOf("getAuthoringPathOverlayKind(layer)")).toBeLessThan(
             renderTileSource!.indexOf("!tileLayerCanRenderGid(phaserLayer, gid)"),
@@ -298,7 +299,7 @@ describe("floor editor rendering", () => {
         );
     });
 
-    it("uses signed world coordinates and synchronizes live geometry before rendering", () => {
+    it("uses signed world coordinates and batches live tile rendering", () => {
         const pointerSource = floorEditorToolSource.match(
             /private getTileAtPointer\([\s\S]*?\n {4}private paintTile/,
         )?.[0];
@@ -310,7 +311,24 @@ describe("floor editor rendering", () => {
         expect(pointerSource).not.toMatch(/x < 0|y < 0|x >= width|y >= height/);
         expect(pointerSource).toContain("worldToTileCoordinates(visibleMap, pointer.worldX, pointer.worldY)");
         expect(floorEditorToolSource).not.toContain("planTerrainExpansion");
-        expect(renderRegionsSource).toContain("wrapper.synchronizeMapGeometry(map)");
+        expect(renderRegionsSource).toContain("wrapper.synchronizeMapGeometryIfNeeded(map)");
+        expect(renderRegionsSource).toContain("deferRefresh: true");
+        expect(renderRegionsSource).toContain("wrapper.refreshTileBatch(renderedCells, map)");
+        expect(gameMapFrontWrapperSource).toContain("public refreshTileBatch(");
+        expect(gameMapFrontWrapperSource).toContain("this.hasVisibleTileSupportAt(source.layers");
+    });
+
+    it("renders elevation only over its sparse authored bounds", () => {
+        const acknowledgeSource = floorEditorToolSource.match(
+            /public acknowledgeTerrainMutation\(\)[\s\S]*?\n {4}public rejectTerrainMutation/,
+        )?.[0];
+
+        expect(elevationRendererSource).toContain("getElevationSurfaceBounds");
+        expect(elevationRendererSource).not.toContain("getMapTileBounds");
+        expect(elevationRendererSource).toContain("getElevationSurfaceMesh(map, ELEVATION_WORLD_LAYER, 4)");
+        expect(elevationRendererSource).toContain("this.map = map");
+        expect(acknowledgeSource).toBeDefined();
+        expect(acknowledgeSource).not.toContain("getElevationRenderer().render");
     });
 
     it("erases the topmost visible tile instead of staying locked to the previously selected layer", () => {
@@ -348,5 +366,68 @@ describe("floor editor rendering", () => {
         expect(finishShapeDragSource).toBeDefined();
         expect(finishShapeDragSource).toContain('brush.kind === "autotile"');
         expect(finishShapeDragSource).toContain("createTerrainTileRegion(start.layer, start, end, brush.gid)");
+    });
+
+    it("keeps elevation sculpting active and maps Command and Shift to brush modifiers", () => {
+        const updateSource = floorEditorToolSource.match(/public update\([\s\S]*?\n {4}public clear/)?.[0];
+        const pointerSource = floorEditorToolSource.match(
+            /private getTileAtPointer\([\s\S]*?\n {4}private paintTile/,
+        )?.[0];
+        const pointerDownSource = floorEditorToolSource.match(
+            /private handlePointerDown\([\s\S]*?\n {4}private handlePointerUp/,
+        )?.[0];
+        const pointerMoveSource = floorEditorToolSource.match(
+            /private handlePointerMove\([\s\S]*?\n {4}private handlePointerDown/,
+        )?.[0];
+
+        expect(updateSource).toContain("this.paintElevation(this.elevationPointerTile)");
+        expect(updateSource).toContain("ELEVATION_REPEAT_INTERVAL_MS");
+        expect(pointerDownSource).toContain("this.painting = true");
+        expect(pointerDownSource).toContain("getElevationDirection(pointer)");
+        expect(pointerDownSource).toContain("WIDE_ELEVATION_BRUSH_RADIUS");
+        expect(pointerMoveSource).toContain("this.elevationPointerTile = tile");
+        expect(pointerSource).toContain('toolMode === "elevation"');
+        expect(pointerSource).toContain("findTopmostErasableLayer");
+        expect(floorEditorToolSource).toContain("event?.metaKey === true");
+        expect(floorEditorToolSource).toContain("event?.shiftKey === true");
+        expect(floorEditorToolSource).toContain("ELEVATION_WORLD_LAYER");
+        expect(floorEditorToolSource).toContain("sculptElevation(source, ELEVATION_WORLD_LAYER");
+    });
+
+    it("preserves elevation mode across preview, saving, and acknowledgement state refreshes", () => {
+        const setStateSource = floorEditorToolSource.match(/private setState\([\s\S]*?\n {4}}\n}/)?.[0];
+
+        expect(setStateSource).toBeDefined();
+        expect(setStateSource).toContain('previous?.toolMode === "elevation"');
+        expect(setStateSource).toContain('? "elevation"');
+        expect(setStateSource).toMatch(/this\.selectedAutotile === undefined\s*\? "tile"\s*: "shape"/);
+    });
+
+    it("warps natural terrain with a persisted textured surface and lifts world assets", () => {
+        expect(elevationRendererSource).toContain("ELEVATION_WORLD_LAYER");
+        expect(elevationRendererSource).toContain("getElevationSurfaceMesh(map, ELEVATION_WORLD_LAYER, 4)");
+        expect(elevationRendererSource).toContain("const compositeSources = this.getCompositeSources()");
+        expect(elevationRendererSource).toContain("capture.draw(compositeSources");
+        expect(elevationRendererSource).toContain(".mesh2d(0, 0, capture.texture, vertices, indices)");
+        expect(elevationRendererSource).toContain("addToSameMapBand(referenceSource, mesh");
+        expect(elevationRendererSource).not.toContain("fillStyle(0x72d598");
+        expect(elevationRendererSource).not.toContain("setAlpha(0.72)");
+        expect(elevationRendererSource).toContain("this.scene.CurrentPlayer?.setElevationOffset");
+        expect(elevationRendererSource).toContain("this.scene.MapPlayersByKey.values()");
+        expect(elevationRendererSource).toContain("getEntitiesManager().getEntities().values()");
+        expect(gameSceneSource).toContain("this.elevationRenderer?.updateWorldObjects()");
+        expect(floorEditorToolSource).toContain("this.scene.getElevationRenderer().render(updated)");
+        expect(floorEditorToolSource).not.toContain("clearElevationOverlay");
+        expect(floorEditorToolSource).not.toContain("layerHasElevatableTerrain");
+        expect(floorEditorToolSource).toContain(
+            "isElevatableTerrainGid(source, getTileLayerGid(layer, tile.x, tile.y))",
+        );
+    });
+
+    it("composites water underlays into the floor before applying elevation", () => {
+        expect(elevationRendererSource).toContain("ELEVATION_COMPOSITE_LAYER_DATA_KEY");
+        expect(elevationRendererSource).toContain(".phaserLayers.filter");
+        expect(elevationRendererSource).toContain("capture.draw(compositeSources");
+        expect(floorEditorToolSource).toContain("overlay.setData(ELEVATION_COMPOSITE_LAYER_DATA_KEY");
     });
 });
