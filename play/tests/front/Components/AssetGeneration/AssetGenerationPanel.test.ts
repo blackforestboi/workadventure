@@ -18,7 +18,7 @@ describe("asset generation panel", () => {
     });
 
     it("generates immediately without showing an approval dialog", () => {
-        expect(assetGenerationPanelSource).toContain("void generate(selection);");
+        expect(assetGenerationPanelSource).toContain("generate(selection).catch");
         expect(assetGenerationPanelSource).toContain("titlePrompt: prompt");
         expect(assetGenerationPanelSource).not.toContain("Approve and generate");
         expect(assetGenerationPanelSource).not.toContain('aria-label="Approve paid generation"');
@@ -72,6 +72,17 @@ describe("asset generation panel", () => {
         );
     });
 
+    it("supports a guided native-resolution terrain surface without changing the shared flow", () => {
+        expect(assetGenerationPanelSource).toContain('generationTarget === "terrain-surface"');
+        expect(assetGenerationPanelSource).toContain("generationRules?: string;");
+        expect(assetGenerationPanelSource).toContain("presetReferences?: readonly AssetGenerationReference[];");
+        expect(assetGenerationPanelSource).toContain(
+            "references: [...presetReferences, ...references.forGeneration()]",
+        );
+        expect(assetGenerationPanelSource).toContain("!stagedWoka && allowAnimation");
+        expect(assetGenerationPanelSource).toContain(": acceptLabel");
+    });
+
     it("returns image editing to the up-to-date Custom asset list", () => {
         expect(entityUploadSource).toContain('selectCategoryStore.set({ kind: "special", tag: "custom" });');
         expect(entityUploadSource).toContain("closeForm={closeToCustomAssets}");
@@ -118,7 +129,9 @@ describe("asset generation panel", () => {
         expect(customEntityEditionFormSource).toContain('"Saved"');
         expect(customEntityEditionFormSource).toContain('variant={saveStatus === "saved" ? "success" : "secondary"}');
         expect(entityPropertiesEditorSource).toContain('"Saving..."');
-        expect(entityPropertiesEditorSource).toContain('variant={assetSaveStatus === "saved" ? "success" : "secondary"}');
+        expect(entityPropertiesEditorSource).toContain(
+            'variant={assetSaveStatus === "saved" ? "success" : "secondary"}',
+        );
     });
 
     it("adapts the compact uploader controls to an image and prompt", () => {

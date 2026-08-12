@@ -34,7 +34,7 @@ export interface WokaSpriteSheetStageInput {
     acceptedSeed: AssetGenerationReference;
 }
 
-export type WokaGenerationTarget = Exclude<AssetGenerationTarget, "environment-object" | "tileset">;
+export type WokaGenerationTarget = Exclude<AssetGenerationTarget, "environment-object" | "terrain-surface" | "tileset">;
 
 export interface WokaIdleFrameStage {
     stage: "idle-frame";

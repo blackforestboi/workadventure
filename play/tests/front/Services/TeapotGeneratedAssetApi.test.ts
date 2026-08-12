@@ -19,6 +19,13 @@ function json(payload: unknown, status = 200): Response {
     return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
 }
 
+function toUrl(input: RequestInfo | URL | undefined): URL {
+    if (input instanceof URL) return input;
+    if (typeof input === "string") return new URL(input);
+    if (input instanceof Request) return new URL(input.url);
+    throw new Error("Expected the API to issue a request");
+}
+
 describe("TeapotGeneratedAssetApi", () => {
     it("accepts a validated SHA-256 fingerprint in upload and list views", async () => {
         const animation = {
@@ -40,7 +47,7 @@ describe("TeapotGeneratedAssetApi", () => {
             }),
         ).resolves.toEqual({ ...view, animation });
         const uploadUrl = fetcher.mock.calls[0]?.[0];
-        expect(new URL(String(uploadUrl)).searchParams.get("animation")).toBe(JSON.stringify(animation));
+        expect(toUrl(uploadUrl).searchParams.get("animation")).toBe(JSON.stringify(animation));
         await expect(api.list("map-entity")).resolves.toEqual([{ ...view, animation }]);
     });
 
@@ -58,5 +65,29 @@ describe("TeapotGeneratedAssetApi", () => {
             }),
         ).rejects.toThrow();
         await expect(api.list("map-entity")).rejects.toThrow();
+    });
+
+    it("uploads a native-resolution terrain surface with a logical 5×5 grid", async () => {
+        const surface = {
+            ...view,
+            kind: "terrain-surface" as const,
+            name: "Loam",
+            width: 1000,
+            height: 1000,
+            surfaceGrid: { columns: 5 as const, rows: 5 as const, tilePixelSize: 200 },
+        };
+        const fetcher = vi.fn<Fetcher>().mockResolvedValueOnce(json(surface, 201));
+        const api = new TeapotGeneratedAssetApi("https://play.example.test/", () => "private-token", fetcher);
+
+        await expect(
+            api.upload(new Blob(["png"], { type: "image/png" }), "Loam", "terrain-surface", {
+                source: "generated",
+                surfaceGrid: surface.surfaceGrid,
+            }),
+        ).resolves.toEqual(surface);
+        const uploadUrl = toUrl(fetcher.mock.calls[0]?.[0]);
+        expect(uploadUrl.searchParams.get("gridColumns")).toBe("5");
+        expect(uploadUrl.searchParams.get("gridRows")).toBe("5");
+        expect(uploadUrl.searchParams.get("tilePixelSize")).toBe("200");
     });
 });

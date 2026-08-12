@@ -19,7 +19,13 @@ const ASSET_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_NAME_LENGTH = 80;
 
-export type TeapotGeneratedAssetKind = "map-entity" | "reference";
+export type TeapotGeneratedAssetKind = "map-entity" | "reference" | "terrain-surface";
+
+export type TeapotTerrainSurfaceGrid = {
+    columns: 5;
+    rows: 5;
+    tilePixelSize: number;
+};
 
 export interface TeapotGeneratedAssetView {
     id: string;
@@ -29,6 +35,7 @@ export interface TeapotGeneratedAssetView {
     width: number;
     height: number;
     animation?: VisualAssetAnimationValue;
+    surfaceGrid?: TeapotTerrainSurfaceGrid;
     sha256: string;
     createdAt: string;
 }
@@ -54,6 +61,7 @@ export class TeapotGeneratedAssetService {
         kind: TeapotGeneratedAssetKind,
         provenance?: TeapotJsonValue,
         animation?: VisualAssetAnimationValue,
+        surfaceGrid?: TeapotTerrainSurfaceGrid,
     ): Promise<TeapotGeneratedAssetView> {
         const name = requestedName.trim();
         if (name.length === 0 || name.length > MAX_NAME_LENGTH) {
@@ -66,6 +74,23 @@ export class TeapotGeneratedAssetService {
                 validated.height !== animation.frameHeight)
         ) {
             throw new TeapotWokaValidationError("Animation metadata must match the horizontal frame strip");
+        }
+        if (kind === "terrain-surface") {
+            if (
+                surfaceGrid === undefined ||
+                surfaceGrid.columns !== 5 ||
+                surfaceGrid.rows !== 5 ||
+                !Number.isInteger(surfaceGrid.tilePixelSize) ||
+                surfaceGrid.tilePixelSize <= 0 ||
+                validated.width !== surfaceGrid.tilePixelSize * surfaceGrid.columns ||
+                validated.height !== surfaceGrid.tilePixelSize * surfaceGrid.rows
+            ) {
+                throw new TeapotWokaValidationError(
+                    "Terrain surface dimensions must match one square 5×5 logical grid",
+                );
+            }
+        } else if (surfaceGrid !== undefined) {
+            throw new TeapotWokaValidationError("Surface grid metadata is only valid for terrain surfaces");
         }
         const owner = await this.resolveOwner(providerSubject);
         await this.authorization.assertCapability(owner.id, "asset.create");
@@ -82,8 +107,13 @@ export class TeapotGeneratedAssetService {
                 kind,
                 mediaType: "image/png",
                 // Generated reference outputs remain owner-private. Input reference images never reach this service.
-                published: kind === "map-entity",
-                catalogName: kind === "map-entity" ? "Generated map entities" : "Generated references",
+                published: kind !== "reference",
+                catalogName:
+                    kind === "map-entity"
+                        ? "Generated map entities"
+                        : kind === "terrain-surface"
+                          ? "Generated terrain surfaces"
+                          : "Generated references",
                 metadata: {
                     name,
                     sha256: validated.sha256,
@@ -91,6 +121,7 @@ export class TeapotGeneratedAssetService {
                     height: validated.height,
                     byteLength: validated.bytes.byteLength,
                     ...(animation === undefined ? {} : { animation }),
+                    ...(surfaceGrid === undefined ? {} : { surfaceGrid }),
                     ...(provenance === undefined ? {} : { provenance }),
                 },
             });
@@ -119,7 +150,7 @@ export class TeapotGeneratedAssetService {
         const asset = await this.repository.getAsset(assetId);
         if (
             asset === null ||
-            asset.kind !== "map-entity" ||
+            (asset.kind !== "map-entity" && asset.kind !== "terrain-surface") ||
             asset.mediaType !== "image/png" ||
             !asset.published ||
             asset.deletedAt !== null
@@ -158,17 +189,29 @@ export class TeapotGeneratedAssetService {
             id: asset.id,
             name: readString(asset.metadata, "name") ?? "Generated asset",
             url:
-                kind === "map-entity"
+                kind !== "reference"
                     ? `${this.publicPusherUrl}/teapot/generated-assets/${encodeURIComponent(asset.id)}.png`
                     : `${this.publicPusherUrl}/teapot/generated-assets/private/${encodeURIComponent(asset.id)}.png`,
             kind,
             width: readNumber(asset.metadata, "width"),
             height: readNumber(asset.metadata, "height"),
             ...readAnimation(asset.metadata),
+            ...readSurfaceGrid(asset.metadata),
             sha256: readSha256(asset.metadata),
             createdAt: asset.createdAt,
         };
     }
+}
+
+function readSurfaceGrid(metadata: TeapotJsonValue): { surfaceGrid?: TeapotTerrainSurfaceGrid } {
+    const value = readMetadata(metadata, "surfaceGrid");
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+    const columns = value.columns;
+    const rows = value.rows;
+    const tilePixelSize = value.tilePixelSize;
+    return columns === 5 && rows === 5 && typeof tilePixelSize === "number" && Number.isInteger(tilePixelSize)
+        ? { surfaceGrid: { columns, rows, tilePixelSize } }
+        : {};
 }
 
 function readAnimation(metadata: TeapotJsonValue): { animation?: VisualAssetAnimationValue } {
