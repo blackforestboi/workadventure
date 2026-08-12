@@ -171,11 +171,9 @@ export class Player extends Character {
     }
 
     private computeFollowMovement(): number[] {
-        // Find followed WOKA and abort following if we lost it
+        // A temporarily unavailable sprite is not an explicit unfollow. Pause automatic movement until it returns.
         const player = this.scene.MapPlayersByKey.get(get(followUsersStore)[0]);
         if (!player) {
-            this.scene.connection?.emitFollowAbort();
-            followStateStore.set("off");
             return [0, 0];
         }
 
