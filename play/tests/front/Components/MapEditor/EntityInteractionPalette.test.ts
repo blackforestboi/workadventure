@@ -14,6 +14,7 @@ describe("entity interaction palette", () => {
             "jitsiRoomProperty",
             "playAudio",
             "tooltipPropertyData",
+            "speakerMegaphone",
         ]) {
             expect(entityPropertiesEditorSource).toContain(`property="${property}"`);
         }
@@ -22,7 +23,6 @@ describe("entity interaction palette", () => {
             "personalAreaPropertyData",
             "restrictedRightsPropertyData",
             "silent",
-            "speakerMegaphone",
             "listenerMegaphone",
             "start",
             "matrixRoomPropertyData",

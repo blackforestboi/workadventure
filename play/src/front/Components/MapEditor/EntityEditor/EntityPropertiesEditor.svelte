@@ -375,6 +375,7 @@
                 property="tooltipPropertyData"
                 onclick={() => onAddProperty("tooltipPropertyData")}
             />
+            <AddPropertyButtonWrapper property="speakerMegaphone" onclick={() => onAddProperty("speakerMegaphone")} />
         </div>
         <div class="properties-buttons flex flex-row flex-wrap m-2">
             <AddPropertyButtonWrapper
