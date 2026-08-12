@@ -128,6 +128,8 @@
                     defaultSizeInTiles: customEditedEntity.defaultSizeInTiles,
                     defaultHeightInTiles: customEditedEntity.defaultHeightInTiles,
                     previewPadding: customEditedEntity.previewPadding,
+                    previewOffsetX: customEditedEntity.previewOffsetX,
+                    previewOffsetY: customEditedEntity.previewOffsetY,
                     color: "",
                     animation: customEditedEntity.animation,
                 },
@@ -226,7 +228,6 @@
     }
 
     onDestroy(() => {
-        savedAssetsController.abort();
         mapEditorEntityUploadDraftStoreUnsubscriber();
         generatedAssetsController.abort();
         if (uploadDraft === undefined && selectedAsset) {

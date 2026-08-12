@@ -367,7 +367,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
             choose: "Escolha um objeto",
         },
         title: "Coloque seu objeto",
-        editing: "Editando: {name}",
+        editing: "{name}",
         drop: "Solte seu arquivo em qualquer lugar",
         itemPicker: {
             searchPlaceholder: "Pesquisar",

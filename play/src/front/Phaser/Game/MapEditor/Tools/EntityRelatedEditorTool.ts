@@ -136,10 +136,10 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                 } else {
                     TexturesHelper.loadEntityTexture(this.scene, entityPrefab, entityPrefab.imagePath)
                         .then(() => {
+                            const pointer = this.scene.input.activePointer;
                             if (this.entityPrefabPreview) {
                                 this.entityPrefabPreview.setTexture(entityPrefab.imagePath);
                             } else {
-                                const pointer = this.scene.input.activePointer;
                                 this.entityPrefabPreview = this.scene.add.sprite(
                                     Math.floor(pointer.worldX),
                                     Math.floor(pointer.worldY),
@@ -155,6 +155,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                             );
                             preview.setDisplaySize(displaySize.width, displaySize.height);
                             TexturesHelper.playEntityAnimation(this.entityPrefabPreview, entityPrefab);
+                            this.onEntityPrefabPreviewReady(pointer);
                             this.scene.markDirty();
                         })
                         .catch(() => {
@@ -193,6 +194,11 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
             }
         });
     }
+
+    /**
+     * Lets tools initialize a newly loaded placement preview before it is first rendered.
+     */
+    protected onEntityPrefabPreviewReady(_pointer: Phaser.Input.Pointer): void {}
 
     protected cleanPreview(): void {
         this.entityPrefabPreview?.destroy();

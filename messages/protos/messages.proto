@@ -380,6 +380,8 @@ message UploadEntityMessage {
   optional double defaultSizeInTiles = 11;
   optional int32 previewPadding = 12;
   optional double defaultHeightInTiles = 13;
+  optional int32 previewOffsetX = 14;
+  optional int32 previewOffsetY = 15;
 }
 
 message UploadFileMessage {
@@ -401,6 +403,8 @@ message ModifyCustomEntityMessage {
   optional double defaultSizeInTiles = 7;
   optional int32 previewPadding = 8;
   optional double defaultHeightInTiles = 9;
+  optional int32 previewOffsetX = 10;
+  optional int32 previewOffsetY = 11;
 }
 
 message DeleteCustomEntityMessage {

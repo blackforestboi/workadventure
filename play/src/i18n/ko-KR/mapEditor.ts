@@ -363,7 +363,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
             choose: "오브젝트 선택",
         },
         title: "오브젝트 배치",
-        editing: "편집 중: {name}",
+        editing: "{name}",
         drop: "파일을 이곳에 드롭하세요",
         itemPicker: {
             searchPlaceholder: "검색",

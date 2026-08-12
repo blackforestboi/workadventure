@@ -365,7 +365,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
             choose: "Wubjeŕśo objekt",
         },
         title: "Waš objekt stajiś",
-        editing: "Wobźěłanje: {name}",
+        editing: "{name}",
         drop: "Pušććo swóju dataju góźi",
         itemPicker: {
             searchPlaceholder: "Pytowaś",

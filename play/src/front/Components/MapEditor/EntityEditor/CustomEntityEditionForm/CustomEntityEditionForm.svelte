@@ -12,7 +12,7 @@
     import { createEmptyCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
     import { getDefaultHeightInTiles, getOpaqueImageBounds } from "./OpaqueImageBounds";
     import { ENTITY_SIZE_TILE_OPTIONS, MAP_TILE_SIZE } from "../../../../Utils/EntityPrefabSize";
-    import { IconChevronLeft } from "@wa-icons";
+    import EntityEditorTabs from "../EntityEditorTabs.svelte";
 
     interface Props {
         customEntity: EntityPrefab;
@@ -20,9 +20,12 @@
         disabled?: boolean;
         saveLabel?: string;
         description?: string;
+        showHeader?: boolean;
+        onSaveReady?: (save: (() => Promise<void>) | undefined) => void;
+        onSaveStatusChange?: (status: "idle" | "saving" | "saved") => void;
         closeForm?: () => void;
         removeEntity?: (payload: { entityId: string }) => void;
-        applyEntityModifications?: (entity: EntityPrefab) => void;
+        applyEntityModifications?: (entity: EntityPrefab) => void | Promise<void>;
     }
 
     let {
@@ -31,6 +34,9 @@
         disabled = false,
         saveLabel,
         description,
+        showHeader = true,
+        onSaveReady,
+        onSaveStatusChange,
         closeForm = () => {},
         removeEntity = () => {},
         applyEntityModifications = () => {},
@@ -43,6 +49,9 @@
         depthOffset: depthOffsetCustomEntity,
         defaultSizeInTiles: defaultSizeInTilesCustomEntity,
         defaultHeightInTiles: defaultHeightInTilesCustomEntity,
+        previewPadding: initialPreviewPadding,
+        previewOffsetX: initialPreviewOffsetX,
+        previewOffsetY: initialPreviewOffsetY,
     } = $state((() => customEntity)());
     let inputTagOptions: InputTagOption[] | undefined = $state(tags.map((tag) => ({ value: tag, label: tag })));
     let collisionGrid = $state(customEntityCollisionGrid ? customEntityCollisionGrid.map((row) => [...row]) : []);
@@ -51,7 +60,18 @@
     let collisionGridWidth = $state(0);
     let collisionGridHeight = $state(0);
     let displayDepthCustomSelector = $state(false);
-    let previewPadding = $state(customEntity.previewPadding ?? 24);
+    let activeEditorTab = $state("positioning");
+    let saveStatus = $state<"idle" | "saving" | "saved">("idle");
+    let saveFeedbackTimeout: ReturnType<typeof setTimeout> | undefined;
+    let previewPadding = $state(initialPreviewPadding ?? 24);
+    let previewOffsetX = $state(initialPreviewOffsetX ?? 0);
+    let previewOffsetY = $state(initialPreviewOffsetY ?? 0);
+    let previewCanvas: HTMLDivElement | undefined = $state();
+    let isPreviewDragging = $state(false);
+    let previewDragStartX = 0;
+    let previewDragStartY = 0;
+    let previewOffsetStartX = 0;
+    let previewOffsetStartY = 0;
     let defaultSizeInTiles = $state(defaultSizeInTilesCustomEntity ?? 1);
     let defaultHeightInTiles = $state(defaultHeightInTilesCustomEntity ?? 1);
     let collisionGridWidthIndex = $state(
@@ -70,9 +90,8 @@
     const hasCollisionAreas = $derived(collisionGrid.some((row) => row.some((cell) => cell === 1)));
     const positivePreviewPadding = $derived(Math.max(0, previewPadding));
     const previewCropInset = $derived(Math.max(0, -previewPadding));
-    const collisionFrameWidth = $derived(Math.max(1, collisionGridWidth + previewPadding * 2));
-    const collisionFrameHeight = $derived(Math.max(1, collisionGridHeight + previewPadding * 2));
-    const collisionFrameOffset = $derived(-previewPadding);
+    const collisionFrameWidth = $derived(Math.max(1, ...collisionGrid.map((row) => row.length)) * MAP_TILE_SIZE);
+    const collisionFrameHeight = $derived(Math.max(1, collisionGrid.length) * MAP_TILE_SIZE);
 
     const depthOptions = {
         GROUND_LEVEL: "GroundLevel",
@@ -95,7 +114,23 @@
             defaultSizeInTiles,
             defaultHeightInTiles,
             previewPadding,
+            previewOffsetX,
+            previewOffsetY,
         };
+    }
+
+    async function save(): Promise<void> {
+        if (saveStatus === "saving") return;
+        saveFeedbackTimeout && clearTimeout(saveFeedbackTimeout);
+        saveStatus = "saving";
+        try {
+            await applyEntityModifications(getModifiedCustomEntity());
+            saveStatus = "saved";
+            saveFeedbackTimeout = setTimeout(() => (saveStatus = "idle"), 1600);
+        } catch (error) {
+            saveStatus = "idle";
+            console.error("The asset could not be saved.", error);
+        }
     }
 
     function generateCollisionGridIfNotExists(imageRef: HTMLImageElement) {
@@ -165,6 +200,35 @@
         resizeCollisionGridForFrame();
     }
 
+    function startPreviewDrag(event: PointerEvent) {
+        if (event.button !== 0 || (event.target instanceof Element && event.target.closest("[data-collision-grid]")))
+            return;
+        isPreviewDragging = true;
+        previewDragStartX = event.clientX;
+        previewDragStartY = event.clientY;
+        previewOffsetStartX = previewOffsetX;
+        previewOffsetStartY = previewOffsetY;
+        previewCanvas?.setPointerCapture(event.pointerId);
+    }
+
+    function movePreview(event: PointerEvent) {
+        if (!isPreviewDragging) return;
+        previewOffsetX = Math.max(
+            -512,
+            Math.min(512, Math.round(previewOffsetStartX + event.clientX - previewDragStartX)),
+        );
+        previewOffsetY = Math.max(
+            -512,
+            Math.min(512, Math.round(previewOffsetStartY + event.clientY - previewDragStartY)),
+        );
+    }
+
+    function stopPreviewDrag(event: PointerEvent) {
+        if (!isPreviewDragging) return;
+        isPreviewDragging = false;
+        previewCanvas?.releasePointerCapture(event.pointerId);
+    }
+
     function resizeCollisionGridForFrame() {
         if (collisionGridWidth <= 0 || collisionGridHeight <= 0) return;
         const columns = Math.max(1, Math.ceil(defaultSizeInTiles));
@@ -198,7 +262,17 @@
         updateDepthOffset(selectedDepthOption);
     });
 
-    onDestroy(() => imageResizeObserver?.disconnect());
+    $effect(() => {
+        onSaveReady?.(save);
+        return () => onSaveReady?.(undefined);
+    });
+
+    $effect(() => onSaveStatusChange?.(saveStatus));
+
+    onDestroy(() => {
+        imageResizeObserver?.disconnect();
+        saveFeedbackTimeout && clearTimeout(saveFeedbackTimeout);
+    });
 </script>
 
 <section
@@ -208,35 +282,44 @@
     {#if description !== undefined}
         <p id="image-editor-description" class="sr-only">{description}</p>
     {/if}
-    <header class="flex items-center justify-between gap-3 px-1 pb-3">
-        <button
-            type="button"
-            class="flex min-w-0 items-center gap-2 rounded-full p-2 text-left hover:bg-white/10"
-            aria-label={$LL.mapEditor.entityEditor.buttons.back()}
-            onclick={closeForm}
-        >
-            <IconChevronLeft />
-            <span class="truncate text-lg font-semibold">Edit image</span>
-        </button>
-        <Button
-            size="sm"
-            variant="secondary"
-            {disabled}
-            dataTestId="applyEntityModifications"
-            onclick={() => applyEntityModifications(getModifiedCustomEntity())}
-        >
-            {saveLabel ?? $LL.mapEditor.entityEditor.buttons.save()}
-        </Button>
-    </header>
+    {#if showHeader}
+        <header class="flex items-center justify-between gap-3 px-1 pb-3">
+            <h2 class="m-0 min-w-0 truncate text-lg font-semibold">{name}</h2>
+            <Button
+                size="sm"
+                variant="secondary"
+                appearance={saveStatus === "saving" ? "border" : "filled"}
+                class={saveStatus === "saving" ? "border-blue-400 bg-transparent text-blue-300" : ""}
+                disabled={disabled || saveStatus === "saving"}
+                dataTestId="applyEntityModifications"
+                onclick={save}
+            >
+                {saveStatus === "saving"
+                    ? "Saving…"
+                    : saveStatus === "saved"
+                      ? "Saved"
+                      : (saveLabel ?? $LL.mapEditor.entityEditor.buttons.save())}
+            </Button>
+        </header>
+    {/if}
 
     <div class="min-h-0 flex-1 overflow-auto">
         <div
-            class="relative flex min-h-[420px] w-full items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(-45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,rgba(255,255,255,.05)_75%),linear-gradient(-45deg,transparent_75%,rgba(255,255,255,.05)_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px]"
+            bind:this={previewCanvas}
+            role="application"
+            aria-label="Asset positioning canvas"
+            class:cursor-grabbing={isPreviewDragging}
+            class="relative flex min-h-[420px] w-full cursor-grab touch-none items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(-45deg,rgba(255,255,255,.05)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,rgba(255,255,255,.05)_75%),linear-gradient(-45deg,transparent_75%,rgba(255,255,255,.05)_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px]"
             style:padding={`${positivePreviewPadding}px`}
+            onpointerdown={startPreviewDrag}
+            onpointermove={movePreview}
+            onpointerup={stopPreviewDrag}
+            onpointercancel={stopPreviewDrag}
         >
             <div
                 class="relative inline-flex max-h-[560px] max-w-full items-center justify-center"
                 style:clip-path={previewCropInset > 0 ? `inset(${previewCropInset}px)` : undefined}
+                style:transform={`translate(${previewOffsetX}px, ${previewOffsetY}px)`}
             >
                 <EntityImage
                     classNames="max-h-[560px] max-w-full object-contain"
@@ -244,168 +327,191 @@
                     imageSource={customEntity.imagePath}
                     imageAlt={customEntity.name}
                 />
-                {#if collisionGridWidth > 0 && collisionGridHeight > 0}
+            </div>
+            {#if collisionGridWidth > 0 && collisionGridHeight > 0}
+                <div
+                    class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                    style:width={`${collisionGridWidth}px`}
+                    style:height={`${collisionGridHeight}px`}
+                >
                     <EntityEditionCollisionGrid
                         {collisionGrid}
                         {updateCollisionGrid}
                         collisionGridWidth={collisionFrameWidth}
                         collisionGridHeight={collisionFrameHeight}
-                        offsetX={collisionFrameOffset}
-                        offsetY={collisionFrameOffset}
                     />
-                {/if}
-            </div>
+                </div>
+            {/if}
         </div>
 
-        <div class="grid grid-cols-1 gap-6 py-4 md:grid-cols-2">
-            <section class="flex flex-col gap-4" aria-labelledby="metadata-heading">
-                <h3 id="metadata-heading" class="m-0 text-base font-semibold">Metadata</h3>
-                <div>
-                    <label class="mb-2 block" for="name"
-                        ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.imageName()}</b></label
-                    >
-                    <Input
-                        class="min-w-full rounded-md border border-solid border-contrast-400 bg-contrast px-2 py-2.5 text-[16px] text-white"
-                        bind:value={name}
-                        id="name"
-                        data-testid="name"
-                    />
-                </div>
-                <div>
-                    <label class="mb-2 block" for="tags"
-                        ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.tags()}</b></label
-                    >
-                    <InputTags
-                        bind:value={inputTagOptions}
-                        placeholder={$LL.mapEditor.entityEditor.customEntityEditorForm.writeTag()}
-                    />
-                </div>
-                <Select
-                    id="type"
-                    label={$LL.mapEditor.entityEditor.customEntityEditorForm.depth()}
-                    bind:value={selectedDepthOption}
-                >
-                    {#each Object.values(depthOptions) as depthOption (depthOption)}
-                        <option value={depthOption}>{getTranslationForDepthOption(depthOption)}</option>
-                    {/each}
-                </Select>
-                {#if displayDepthCustomSelector}
+        <EntityEditorTabs
+            tabs={[
+                { id: "positioning", label: "Positioning" },
+                { id: "style", label: "Style" },
+                { id: "metadata", label: "Metadata" },
+            ]}
+            bind:activeTab={activeEditorTab}
+            spacingClass="mt-4"
+        />
+
+        <div class="py-4">
+            {#if activeEditorTab === "metadata"}
+                <section class="flex flex-col gap-4" aria-label="Metadata">
                     <div>
-                        <label class="mb-2 block text-sm" for="depthOffset">Character overlap</label>
-                        <input
-                            id="depthOffset"
-                            class="w-full cursor-grab active:cursor-grabbing"
-                            bind:value={depthOffset}
-                            type="range"
-                            min="0"
-                            max={entityImageRef?.naturalHeight ?? 0}
+                        <label class="mb-2 block" for="name"
+                            ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.imageName()}</b></label
+                        >
+                        <Input
+                            class="min-w-full rounded-md border border-solid border-contrast-400 bg-contrast px-2 py-2.5 text-[16px] text-white"
+                            bind:value={name}
+                            id="name"
+                            data-testid="name"
                         />
-                        <div class="flex justify-between text-xs opacity-60">
-                            <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaAbove()}</span>
-                            <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaBelow()}</span>
+                    </div>
+                    <div>
+                        <label class="mb-2 block" for="tags"
+                            ><b>{$LL.mapEditor.entityEditor.customEntityEditorForm.tags()}</b></label
+                        >
+                        <InputTags
+                            bind:value={inputTagOptions}
+                            placeholder={$LL.mapEditor.entityEditor.customEntityEditorForm.writeTag()}
+                        />
+                    </div>
+                </section>
+            {:else if activeEditorTab === "style"}
+                <section class="flex flex-col gap-4" aria-label="Style">
+                    <Select
+                        id="type"
+                        label={$LL.mapEditor.entityEditor.customEntityEditorForm.depth()}
+                        bind:value={selectedDepthOption}
+                    >
+                        {#each Object.values(depthOptions) as depthOption (depthOption)}
+                            <option value={depthOption}>{getTranslationForDepthOption(depthOption)}</option>
+                        {/each}
+                    </Select>
+                    {#if displayDepthCustomSelector}
+                        <div>
+                            <label class="mb-2 block text-sm" for="depthOffset">Character overlap</label>
+                            <input
+                                id="depthOffset"
+                                class="w-full cursor-grab active:cursor-grabbing"
+                                bind:value={depthOffset}
+                                type="range"
+                                min="0"
+                                max={entityImageRef?.naturalHeight ?? 0}
+                            />
+                            <div class="flex justify-between text-xs opacity-60">
+                                <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaAbove()}</span>
+                                <span>{$LL.mapEditor.entityEditor.customEntityEditorForm.wokaBelow()}</span>
+                            </div>
+                        </div>
+                    {/if}
+                </section>
+            {:else}
+                <section class="flex flex-col gap-4" aria-label="Positioning">
+                    {#if hasCollisionAreas}
+                        <div>
+                            <Button
+                                size="xs"
+                                variant="light"
+                                appearance="border"
+                                {disabled}
+                                onclick={clearCollisionAreas}>Clear collision areas</Button
+                            >
+                        </div>
+                    {/if}
+                    <div>
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <label for="previewPadding">Padding</label>
+                            <span class="text-xs opacity-60">{previewPadding}px</span>
+                        </div>
+                        <input
+                            id="previewPadding"
+                            class="w-full cursor-grab active:cursor-grabbing"
+                            value={previewPadding}
+                            type="range"
+                            min="-64"
+                            max="64"
+                            step="4"
+                            oninput={updatePreviewPadding}
+                        />
+                        <div class="mt-1 flex justify-between text-[11px] opacity-50">
+                            <span>Crop</span>
+                            <span>Add space</span>
                         </div>
                     </div>
-                {/if}
-            </section>
-
-            <section class="flex flex-col gap-4" aria-labelledby="positioning-heading">
-                <h3 id="positioning-heading" class="m-0 text-base font-semibold">Positioning</h3>
-                {#if hasCollisionAreas}
                     <div>
-                        <Button size="xs" variant="light" appearance="border" {disabled} onclick={clearCollisionAreas}
-                            >Clear collision areas</Button
-                        >
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <label for="collisionGridWidth">Grid width</label>
+                            <span class="text-xs opacity-60">
+                                {defaultSizeInTiles}
+                                {defaultSizeInTiles === 1 ? "tile" : "tiles"} wide ·
+                                {defaultSizeInTiles * MAP_TILE_SIZE}px
+                            </span>
+                        </div>
+                        <input
+                            id="collisionGridWidth"
+                            class="w-full cursor-grab active:cursor-grabbing"
+                            type="range"
+                            min="0"
+                            max={ENTITY_SIZE_TILE_OPTIONS.length - 1}
+                            step="1"
+                            value={collisionGridWidthIndex}
+                            oninput={updateCollisionGridWidth}
+                        />
+                        <div class="mt-1 flex justify-between text-[11px] opacity-50">
+                            <span>0.5 tile</span>
+                            <span>100 tiles</span>
+                        </div>
                     </div>
-                {/if}
-                <div>
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <label for="previewPadding">Padding</label>
-                        <span class="text-xs opacity-60">{previewPadding}px</span>
+                    <div>
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <label for="collisionGridHeight">Grid height</label>
+                            <span class="text-xs opacity-60">
+                                {defaultHeightInTiles}
+                                {defaultHeightInTiles === 1 ? "tile" : "tiles"} tall ·
+                                {defaultHeightInTiles * MAP_TILE_SIZE}px
+                            </span>
+                        </div>
+                        <input
+                            id="collisionGridHeight"
+                            class="w-full cursor-grab active:cursor-grabbing"
+                            type="range"
+                            min="0"
+                            max={ENTITY_SIZE_TILE_OPTIONS.length - 1}
+                            step="1"
+                            value={collisionGridHeightIndex}
+                            oninput={updateCollisionGridHeight}
+                        />
+                        <div class="mt-1 flex justify-between text-[11px] opacity-50">
+                            <span>0.5 tile</span>
+                            <span>100 tiles</span>
+                        </div>
+                        <p class="mb-0 mt-2 text-xs opacity-60">
+                            The grid matches the asset's placed width and height.
+                        </p>
                     </div>
-                    <input
-                        id="previewPadding"
-                        class="w-full cursor-grab active:cursor-grabbing"
-                        value={previewPadding}
-                        type="range"
-                        min="-64"
-                        max="64"
-                        step="4"
-                        oninput={updatePreviewPadding}
-                    />
-                    <div class="mt-1 flex justify-between text-[11px] opacity-50">
-                        <span>Crop</span>
-                        <span>Add space</span>
+                    <div>
+                        <p class="m-0 text-xs opacity-70">
+                            Click grid cells on the image to mark areas players cannot cross.
+                        </p>
                     </div>
-                </div>
-                <div>
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <label for="collisionGridWidth">Grid width</label>
-                        <span class="text-xs opacity-60">
-                            {defaultSizeInTiles}
-                            {defaultSizeInTiles === 1 ? "tile" : "tiles"} wide ·
-                            {defaultSizeInTiles * MAP_TILE_SIZE}px
-                        </span>
-                    </div>
-                    <input
-                        id="collisionGridWidth"
-                        class="w-full cursor-grab active:cursor-grabbing"
-                        type="range"
-                        min="0"
-                        max={ENTITY_SIZE_TILE_OPTIONS.length - 1}
-                        step="1"
-                        value={collisionGridWidthIndex}
-                        oninput={updateCollisionGridWidth}
-                    />
-                    <div class="mt-1 flex justify-between text-[11px] opacity-50">
-                        <span>0.5 tile</span>
-                        <span>100 tiles</span>
-                    </div>
-                </div>
-                <div>
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <label for="collisionGridHeight">Grid height</label>
-                        <span class="text-xs opacity-60">
-                            {defaultHeightInTiles}
-                            {defaultHeightInTiles === 1 ? "tile" : "tiles"} tall ·
-                            {defaultHeightInTiles * MAP_TILE_SIZE}px
-                        </span>
-                    </div>
-                    <input
-                        id="collisionGridHeight"
-                        class="w-full cursor-grab active:cursor-grabbing"
-                        type="range"
-                        min="0"
-                        max={ENTITY_SIZE_TILE_OPTIONS.length - 1}
-                        step="1"
-                        value={collisionGridHeightIndex}
-                        oninput={updateCollisionGridHeight}
-                    />
-                    <div class="mt-1 flex justify-between text-[11px] opacity-50">
-                        <span>0.5 tile</span>
-                        <span>100 tiles</span>
-                    </div>
-                    <p class="mb-0 mt-2 text-xs opacity-60">The grid matches the asset's placed width and height.</p>
-                </div>
-                <div>
-                    <p class="m-0 text-xs opacity-70">
-                        Click grid cells on the image to mark areas players cannot cross.
-                    </p>
-                </div>
-                {#if !isUploadForm}
-                    <div class="mt-auto pt-2">
-                        <Button
-                            size="sm"
-                            variant="danger"
-                            appearance="border"
-                            {disabled}
-                            dataTestId="removeEntity"
-                            onclick={() => removeEntity({ entityId: customEntity.id })}
-                        >
-                            {$LL.mapEditor.entityEditor.buttons.delete()}
-                        </Button>
-                    </div>
-                {/if}
-            </section>
+                    {#if !isUploadForm}
+                        <div class="mt-auto pt-2">
+                            <Button
+                                size="sm"
+                                variant="danger"
+                                appearance="border"
+                                {disabled}
+                                dataTestId="removeEntity"
+                                onclick={() => removeEntity({ entityId: customEntity.id })}
+                            >
+                                {$LL.mapEditor.entityEditor.buttons.delete()}
+                            </Button>
+                        </div>
+                    {/if}
+                </section>
+            {/if}
         </div>
     </div>
 </section>

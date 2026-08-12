@@ -94,6 +94,12 @@ export class EntitiesCollectionsManager {
                                 direction: entity.direction,
                                 color: entity.color,
                                 collisionGrid: entity.collisionGrid,
+                                animation: entity.animation,
+                                defaultSizeInTiles: entity.defaultSizeInTiles,
+                                defaultHeightInTiles: entity.defaultHeightInTiles,
+                                previewPadding: entity.previewPadding,
+                                previewOffsetX: entity.previewOffsetX,
+                                previewOffsetY: entity.previewOffsetY,
                                 type: entity.type,
                             });
                             entity.tags.forEach((tag: string) => tagSet.add(tag));
@@ -166,42 +172,34 @@ export class EntitiesCollectionsManager {
         defaultHeightInTiles?: number,
         animation?: EntityPrefab["animation"],
         previewPadding?: number,
+        previewOffsetX?: number,
+        previewOffsetY?: number,
     ): void {
+        const updatePrefab = (entity: EntityPrefab): EntityPrefab => ({
+            ...entity,
+            name,
+            tags,
+            depthOffset,
+            collisionGrid,
+            defaultSizeInTiles: defaultSizeInTiles ?? entity.defaultSizeInTiles,
+            defaultHeightInTiles: defaultHeightInTiles ?? entity.defaultHeightInTiles,
+            animation: animation ?? entity.animation,
+            previewPadding: previewPadding ?? entity.previewPadding,
+            previewOffsetX: previewOffsetX ?? entity.previewOffsetX,
+            previewOffsetY: previewOffsetY ?? entity.previewOffsetY,
+        });
+        this.currentCollection.collection = this.currentCollection.collection.map((entity) =>
+            entity.id === id ? updatePrefab(entity) : entity,
+        );
         this.entitiesPrefabsStore.update((currentEntitiesPrefabs) => {
-            const indexOfCustomEntity = currentEntitiesPrefabs.findIndex((entityPrefab) => entityPrefab.id === id);
-            if (indexOfCustomEntity !== -1) {
-                currentEntitiesPrefabs[indexOfCustomEntity] = {
-                    ...currentEntitiesPrefabs[indexOfCustomEntity],
-                    name,
-                    tags,
-                    depthOffset,
-                    collisionGrid,
-                    defaultSizeInTiles:
-                        defaultSizeInTiles ?? currentEntitiesPrefabs[indexOfCustomEntity].defaultSizeInTiles,
-                    defaultHeightInTiles:
-                        defaultHeightInTiles ?? currentEntitiesPrefabs[indexOfCustomEntity].defaultHeightInTiles,
-                    animation: animation ?? currentEntitiesPrefabs[indexOfCustomEntity].animation,
-                    previewPadding: previewPadding ?? currentEntitiesPrefabs[indexOfCustomEntity].previewPadding,
-                };
-            }
-            return currentEntitiesPrefabs;
+            return currentEntitiesPrefabs.map((entity) => (entity.id === id ? updatePrefab(entity) : entity));
         });
         this.entitiesPrefabsMapPromise = new Promise<Map<string, EntityPrefab>>((resolve, reject) => {
             this.entitiesPrefabsMapPromise
                 .then((existingEntitiesPrefabsMap) => {
                     const entity = existingEntitiesPrefabsMap.get(id);
                     if (entity) {
-                        existingEntitiesPrefabsMap.set(id, {
-                            ...entity,
-                            name,
-                            tags,
-                            depthOffset,
-                            collisionGrid,
-                            defaultSizeInTiles: defaultSizeInTiles ?? entity.defaultSizeInTiles,
-                            defaultHeightInTiles: defaultHeightInTiles ?? entity.defaultHeightInTiles,
-                            animation: animation ?? entity.animation,
-                            previewPadding: previewPadding ?? entity.previewPadding,
-                        });
+                        existingEntitiesPrefabsMap.set(id, updatePrefab(entity));
                     }
                     resolve(existingEntitiesPrefabsMap);
                 })

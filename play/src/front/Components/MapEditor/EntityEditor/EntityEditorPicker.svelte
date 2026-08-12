@@ -129,6 +129,8 @@
                     defaultSizeInTiles: customEntity.defaultSizeInTiles,
                     defaultHeightInTiles: customEntity.defaultHeightInTiles,
                     previewPadding: customEntity.previewPadding,
+                    previewOffsetX: customEntity.previewOffsetX,
+                    previewOffsetY: customEntity.previewOffsetY,
                     color: customEntity.color,
                 },
             });
@@ -311,11 +313,14 @@
     let filteredEntityPrefabVariants = $derived(
         getEntitiesPrefabsVariantsFilteredByTag($entitiesPrefabsVariants, $selectCategoryStore, searchTerm),
     );
-    let hasVariantOptions = $derived(
-        pickedEntityVariant !== undefined &&
-            (pickedEntityVariant.colors.length > 1 ||
-                pickedEntityVariant.getEntityPrefabsPositions(selectedColor).length > 1),
-    );
+    let hasColorOptions = $derived.by(() => {
+        if (pickedEntityVariant === undefined) return false;
+        return pickedEntityVariant.colors.length > 1;
+    });
+    let hasPositionOptions = $derived.by(() => {
+        if (pickedEntityVariant === undefined) return false;
+        return pickedEntityVariant.getEntityPrefabsPositions(selectedColor).length > 1;
+    });
 
     onDestroy(() => {
         mapEditorSelectedEntityPrefabStoreUnsubscriber();
@@ -407,34 +412,42 @@
                     />
                 </div>
 
-                {#if pickedEntityVariant && pickedEntity && hasVariantOptions}
-                    <section class="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="m-0 truncate font-bold">{pickedEntityVariant.defaultPrefab.name}</p>
-                                <p class="m-0 text-xs opacity-60">Choose a color and view before editing the asset.</p>
+                {#if pickedEntityVariant && pickedEntity}
+                    {#if hasColorOptions || hasPositionOptions}
+                        <section class="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="m-0 truncate font-bold">{pickedEntityVariant.defaultPrefab.name}</p>
+                                    <p class="m-0 text-xs opacity-60">Preview and edit this asset.</p>
+                                </div>
+                                <ButtonClose
+                                    onclick={clearEntitySelection}
+                                    dataTestId="clearEntitySelection"
+                                    size="sm"
+                                    bgColor="bg-white/10"
+                                    hoverColor="bg-white/20"
+                                />
                             </div>
-                            <ButtonClose
-                                onclick={clearEntitySelection}
-                                dataTestId="clearEntitySelection"
-                                size="sm"
-                                bgColor="bg-white/10"
-                                hoverColor="bg-white/20"
-                            />
-                        </div>
-                        <div class="mt-2 flex flex-wrap items-end gap-4">
-                            <EntityVariantColorPicker
-                                colors={pickedEntityVariant.colors}
-                                {selectedColor}
-                                {onColorChange}
-                            />
-                            <EntityVariantPositionPicker
-                                entityPrefabsPositions={pickedEntityVariant.getEntityPrefabsPositions(selectedColor)}
-                                selectedEntity={pickedEntity}
-                                {onPickItem}
-                            />
-                        </div>
-                    </section>
+                            <div class="mt-2 flex flex-wrap items-end gap-4">
+                                {#if hasColorOptions}
+                                    <EntityVariantColorPicker
+                                        colors={pickedEntityVariant.colors}
+                                        {selectedColor}
+                                        {onColorChange}
+                                    />
+                                {/if}
+                                {#if hasPositionOptions}
+                                    <EntityVariantPositionPicker
+                                        entityPrefabsPositions={pickedEntityVariant.getEntityPrefabsPositions(
+                                            selectedColor,
+                                        )}
+                                        selectedEntity={pickedEntity}
+                                        {onPickItem}
+                                    />
+                                {/if}
+                            </div>
+                        </section>
+                    {/if}
 
                     {#if saveAsCustomError}
                         <div class="rounded-lg border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-100">
@@ -443,7 +456,7 @@
                     {/if}
 
                     <div class="min-h-[520px] flex-1">
-                        {#key pickedEntity.id}
+                        {#key pickedEntity}
                             <CustomEntityEditionForm
                                 customEntity={pickedEntity}
                                 isUploadForm={pickedEntity.type !== "Custom"}
@@ -459,12 +472,6 @@
                                 applyEntityModifications={saveEntity}
                             />
                         {/key}
-                    </div>
-                {:else}
-                    <div
-                        class="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed border-white/15 p-6 text-center text-sm opacity-60"
-                    >
-                        Select an asset above to preview it, edit its options, and add collision areas.
                     </div>
                 {/if}
             </div>

@@ -431,7 +431,14 @@ export class GameMapFrontWrapper {
             if (entityCollisionGrid === undefined) {
                 continue;
             }
-            this.modifyToCollisionsLayer(entity.x, entity.y, entity.name, entityCollisionGrid, false);
+            const collisionPosition = entity.getCollisionGridPosition();
+            this.modifyToCollisionsLayer(
+                collisionPosition.x,
+                collisionPosition.y,
+                entity.name,
+                entityCollisionGrid,
+                false,
+            );
         }
 
         this.invalidateCollisionGrid({ modifiedLayer: this.entitiesCollisionLayer });
@@ -1183,23 +1190,38 @@ export class GameMapFrontWrapper {
         oldTopLeftPos?: { x: number; y: number },
         ignoreCollisionGrid?: boolean,
     ): boolean {
+        const hasBlockedCollisionCell = collisionGrid?.some((row) => row.some((cell) => cell === 1)) ?? false;
+        const tileDimensions = this.getTileDimensions();
+        const collisionColumns = collisionGrid ? Math.max(1, ...collisionGrid.map((row) => row.length)) : 0;
+        const placementWidth = hasBlockedCollisionCell
+            ? collisionColumns * tileDimensions.width
+            : collisionGrid
+              ? 0
+              : width;
+        const placementHeight = hasBlockedCollisionCell
+            ? collisionGrid.length * tileDimensions.height
+            : collisionGrid
+              ? 0
+              : height;
         const canEntityBePlaced = this.canEntityBePlaced(
             topLeftPos,
-            width,
-            height,
-            collisionGrid,
+            placementWidth,
+            placementHeight,
+            hasBlockedCollisionCell ? collisionGrid : undefined,
             oldTopLeftPos,
             ignoreCollisionGrid,
         );
 
         const entityCenterCoordinates = {
-            x: Math.ceil(topLeftPos.x + width / 2),
-            y: Math.ceil(topLeftPos.y + height / 2),
+            x: Math.ceil(topLeftPos.x + placementWidth / 2),
+            y: Math.ceil(topLeftPos.y + placementHeight / 2),
         };
 
         return (
             canEntityBePlaced &&
-            this.scene.getEntityPermissions().canEdit(entityCenterCoordinates, width, height, !collisionGrid)
+            this.scene
+                .getEntityPermissions()
+                .canEdit(entityCenterCoordinates, placementWidth, placementHeight, !hasBlockedCollisionCell)
         );
     }
 

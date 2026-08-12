@@ -24,7 +24,7 @@
             <EntityItem
                 onselectentity={onSelectEntity}
                 entityVariant={entityPrefabVariant}
-                isActive={entityPrefabVariant.defaultPrefab.id === currentSelectedEntityId}
+                isActive={entityPrefabVariant.prefabIds.includes(currentSelectedEntityId ?? "")}
             />
         {/each}
     </div>

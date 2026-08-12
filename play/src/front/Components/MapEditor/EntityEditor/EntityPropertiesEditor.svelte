@@ -39,6 +39,8 @@
     import type { Entity } from "../../../Phaser/ECS/Entity";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
+    import Button from "../../UI/Button.svelte";
+    import EntityEditorTabs from "./EntityEditorTabs.svelte";
 
     const applicationManager = gameManager.getCurrentGameScene().applicationManager;
 
@@ -47,8 +49,10 @@
     let entityDescription = $state("");
     let entitySearchable = $state(false);
     let showDescriptionField = $state(false);
-    let selectedEntity: Entity | undefined = undefined;
-    let activeTab = $state<"actions" | "edit">("actions");
+    let selectedEntity = $state<Entity | undefined>(undefined);
+    let activeTab = $state("actions");
+    let saveAsset = $state<(() => Promise<void>) | undefined>(undefined);
+    let assetSaveStatus = $state<"idle" | "saving" | "saved">("idle");
 
     let selectedEntityUnsubscriber = mapEditorSelectedEntityStore.subscribe((currentEntity) => {
         if (currentEntity) {
@@ -361,36 +365,41 @@
             <IconArrowLeft font-size="12" class="cursor-pointer" />
             <span class="ml-1 cursor-pointer">{$LL.mapEditor.entityEditor.itemPicker.backToSelectObject()}</span>
         </p>
-        <div class="header-container">
+        <div class="header-container flex items-center justify-between gap-3">
             <h3 class="my-2 text-xl font-medium">
                 {$LL.mapEditor.entityEditor.editing({ name: $mapEditorSelectedEntityStore.getPrefab().name })}
             </h3>
-        </div>
-        <div class="mb-3 flex gap-2 border-b border-white/10">
-            <button
-                class:font-semibold={activeTab === "actions"}
-                class={`border-b-2 px-3 py-2 text-sm ${activeTab === "actions" ? "border-secondary" : "border-transparent opacity-60"}`}
-                onclick={() => (activeTab = "actions")}
-            >
-                Actions
-            </button>
-            {#if selectedEntity?.getPrefab().type === "Custom"}
-                <button
-                    class:font-semibold={activeTab === "edit"}
-                    class={`border-b-2 px-3 py-2 text-sm ${activeTab === "edit" ? "border-secondary" : "border-transparent opacity-60"}`}
-                    onclick={() => (activeTab = "edit")}
+            {#if activeTab === "edit" && selectedEntity?.getPrefab().type === "Custom"}
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    appearance={assetSaveStatus === "saving" ? "border" : "filled"}
+                    class={assetSaveStatus === "saving" ? "border-blue-400 bg-transparent text-blue-300" : ""}
+                    disabled={saveAsset === undefined || assetSaveStatus === "saving"}
+                    dataTestId="applyEntityModifications"
+                    onclick={() => void saveAsset?.()}
                 >
-                    Edit
-                </button>
+                    {assetSaveStatus === "saving" ? "Saving…" : assetSaveStatus === "saved" ? "Saved" : "Save asset"}
+                </Button>
             {/if}
         </div>
+        <EntityEditorTabs
+            tabs={selectedEntity?.getPrefab().type === "Custom"
+                ? [
+                      { id: "actions", label: "Actions" },
+                      { id: "edit", label: "Edit" },
+                  ]
+                : [{ id: "actions", label: "Actions" }]}
+            bind:activeTab
+        />
         {#if activeTab === "edit" && selectedEntity?.getPrefab().type === "Custom"}
             <CustomEntityEditionForm
                 customEntity={selectedEntity.getPrefab()}
-                closeForm={() => (activeTab = "actions")}
                 applyEntityModifications={saveCustomAsset}
-                saveLabel="Save asset"
                 description="Edit the image, placement size, and collision areas."
+                showHeader={false}
+                onSaveReady={(save) => (saveAsset = save)}
+                onSaveStatusChange={(status) => (assetSaveStatus = status)}
             />
         {:else}
             <div class="properties-buttons flex flex-row flex-wrap m-2">

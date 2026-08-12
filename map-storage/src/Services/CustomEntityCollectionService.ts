@@ -66,8 +66,18 @@ export class CustomEntityCollectionService {
     }
 
     public async modifyEntity(modifyCustomEntityMessage: ModifyCustomEntityMessage) {
-        const { id, name, tags, depthOffset, animation, defaultSizeInTiles, defaultHeightInTiles, previewPadding } =
-            modifyCustomEntityMessage;
+        const {
+            id,
+            name,
+            tags,
+            depthOffset,
+            animation,
+            defaultSizeInTiles,
+            defaultHeightInTiles,
+            previewPadding,
+            previewOffsetX,
+            previewOffsetY,
+        } = modifyCustomEntityMessage;
         let collisionGrid = undefined;
         if (modifyCustomEntityMessage.collisionGrid) {
             collisionGrid = CollisionGrid.parse(modifyCustomEntityMessage.collisionGrid);
@@ -88,6 +98,8 @@ export class CustomEntityCollectionService {
                     defaultSizeInTiles: defaultSizeInTiles ?? entityToModify.defaultSizeInTiles,
                     defaultHeightInTiles: defaultHeightInTiles ?? entityToModify.defaultHeightInTiles,
                     previewPadding: previewPadding ?? entityToModify.previewPadding,
+                    previewOffsetX: previewOffsetX ?? entityToModify.previewOffsetX,
+                    previewOffsetY: previewOffsetY ?? entityToModify.previewOffsetY,
                 };
                 await fileSystem.writeStringAsFile(
                     this.getEntityCollectionFileVirtualPath(),
