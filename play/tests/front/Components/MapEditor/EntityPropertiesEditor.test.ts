@@ -15,10 +15,17 @@ describe("entity properties editor", () => {
 
     it("keeps object actions and image editing in separate tabs", () => {
         expect(entityPropertiesEditorSource).toContain('let activeTab = $state<"actions" | "edit">("actions")');
-        expect(entityPropertiesEditorSource).toContain('{#if selectedEntity?.getPrefab().type === "Custom"}');
+        expect(entityPropertiesEditorSource).toContain('selectedAssetPrefab?.type === "Custom"');
         expect(entityPropertiesEditorSource).toContain("Actions");
         expect(entityPropertiesEditorSource).toContain("Edit");
         expect(entityPropertiesEditorSource).toContain("<CustomEntityEditionForm");
         expect(entityPropertiesEditorSource).toContain("applyEntityModifications={saveCustomAsset}");
+    });
+
+    it("hydrates the asset editor from the live catalog instead of the placed entity cache", () => {
+        expect(entityPropertiesEditorSource).toContain("getEntitiesPrefabsStore()");
+        expect(entityPropertiesEditorSource).toContain("entityPrefabs.find(");
+        expect(entityPropertiesEditorSource).toContain("customEntity={selectedAssetPrefab}");
+        expect(entityPropertiesEditorSource).not.toContain("customEntity={selectedEntity.getPrefab()}");
     });
 });

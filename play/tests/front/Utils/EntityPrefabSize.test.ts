@@ -42,7 +42,10 @@ describe("entity prefab default size", () => {
         expect(modifyCustomEntityCommandSource).toContain("updateEntitiesPrefabMetadata(id, {");
         expect(modifyCustomEntityCommandSource).toContain("defaultSizeInTiles");
         expect(modifyCustomEntityCommandSource).toContain("defaultHeightInTiles");
+        expect(modifyCustomEntityCommandSource).toContain("previewPadding");
         expect(entitiesManagerSource).toContain("entity.updatePrefabMetadata(metadata)");
+        expect(entitiesManagerSource).toContain('| "previewPadding"');
+        expect(entitySource).toContain('| "previewPadding"');
         expect(entitySource).toContain("this.entityData.width = displaySize.width");
         expect(entitySource).toContain("this.entityData.height = displaySize.height");
     });

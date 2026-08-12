@@ -100,9 +100,9 @@
         src={logo}
         alt="logo"
         class="main-logo inline mt-8 {gameManager.currentStartedRoom.loginSceneLogo
-            ? 'max-h-[200px] object-cover'
+            ? 'max-h-[240px] object-cover'
             : ''}"
-        style="width: 333px;"
+        style="width: min(520px, 85vw);"
     />
 </section>
 

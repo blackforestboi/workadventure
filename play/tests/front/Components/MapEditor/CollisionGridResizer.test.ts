@@ -73,10 +73,16 @@ describe("collision grid resizer", () => {
         expect(customEntityEditionFormSource).toContain("oninput={updateCollisionGridHeight}");
         expect(customEntityEditionFormSource).toContain("ENTITY_SIZE_TILE_OPTIONS");
         expect(customEntityEditionFormSource).toContain("defaultSizeInTiles * MAP_TILE_SIZE");
-        expect(customEntityEditionFormSource).toContain("defaultSizeInTiles * MAP_TILE_SIZE * previewScaleX");
-        expect(customEntityEditionFormSource).toContain("defaultHeightInTiles * MAP_TILE_SIZE * previewScaleY");
+        expect(customEntityEditionFormSource).toContain("getContainedCollisionFrame(");
+        expect(customEntityEditionFormSource).toContain("opaqueImageBounds");
+        expect(customEntityEditionFormSource).toContain("offsetX={collisionFrame.offsetX}");
+        expect(customEntityEditionFormSource).toContain("offsetY={collisionFrame.offsetY}");
         expect(customEntityEditionFormSource).toContain("getOpaqueImageBounds(");
-        expect(customEntityEditionFormSource).toContain("getDefaultHeightInTiles(bounds.width, bounds.height)");
+        expect(customEntityEditionFormSource).toContain("getDefaultGridSizeInTiles(bounds.width, bounds.height)");
+        expect(customEntityEditionFormSource).toContain("if (hasStoredGridSize) return;");
+        expect(customEntityEditionFormSource.indexOf("opaqueImageBounds = bounds;")).toBeLessThan(
+            customEntityEditionFormSource.indexOf("if (hasStoredGridSize) return;"),
+        );
         expect(customEntityEditionFormSource).not.toContain("collisionFrameOffset");
         expect(customEntityEditionFormSource).toContain("oninput={updatePreviewPadding}");
         expect(customEntityEditionFormSource).toContain("initialPreviewPadding ?? 24");
@@ -92,8 +98,10 @@ describe("collision grid resizer", () => {
         expect(customEntityEditionFormSource).not.toContain("Remove collision areas");
     });
 
-    it("keeps the authored collision frame independent from map tile dimensions", () => {
-        expect(collisionGridSource).not.toContain("Math.min(collisionGridWidth / columnCount");
+    it("keeps collision cells square within the authored collision frame", () => {
+        expect(collisionGridSource).toContain(
+            "Math.min(collisionGridWidth / columnCount, collisionGridHeight / rowCount)",
+        );
         expect(collisionGridSource).toContain("displayedGridWidth");
         expect(collisionGridSource).toContain("displayedGridHeight");
         expect(collisionGridSource).toContain("(collisionGridWidth - displayedGridWidth) / 2");

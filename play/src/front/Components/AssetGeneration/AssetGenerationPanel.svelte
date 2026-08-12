@@ -198,6 +198,7 @@
             if (generated === undefined) throw new Error("The provider returned no image.");
             const normalized = await normalizeGeneratedRaster(generated.blob, generation.outputSize, {
                 removeOpaqueEdgeBackground: true,
+                fitMapObjectToGrid: target === "environment-object" && generation.animation === undefined,
             });
             if (candidateUrl !== "") URL.revokeObjectURL(candidateUrl);
             candidate = normalized;

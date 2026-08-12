@@ -92,9 +92,16 @@ class App {
         this.app.use(cookieParser());
 
         // Global middlewares
+        const corsOrigin =
+            ALLOWED_CORS_ORIGIN === "*"
+                ? true
+                : ALLOWED_CORS_ORIGIN?.includes(",")
+                  ? ALLOWED_CORS_ORIGIN.split(",").map((origin) => origin.trim())
+                  : ALLOWED_CORS_ORIGIN;
+
         this.app.use(
             cors({
-                origin: ALLOWED_CORS_ORIGIN === "*" ? true : ALLOWED_CORS_ORIGIN,
+                origin: corsOrigin,
                 methods: ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
                 allowedHeaders: [
                     "Content-Type",

@@ -107,9 +107,9 @@
                         draggable="false"
                         src={logo}
                         alt=""
-                        class="h-auto w-[min(280px,75vw)] max-h-[72px] object-contain drop-shadow-md {gameManager
+                        class="h-auto w-[min(420px,85vw)] max-h-[110px] object-contain drop-shadow-md {gameManager
                             .currentStartedRoom.loginSceneLogo
-                            ? 'max-h-[100px]'
+                            ? 'max-h-[140px]'
                             : 'brightness-0 invert'}"
                     />
                     <p class="m-0 max-w-sm text-sm italic leading-snug text-white/90">

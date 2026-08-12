@@ -70,7 +70,7 @@
                     <img
                         src={errorScreen?.imageLogo ?? logoErrorSrc}
                         alt="Logo error"
-                        style="max-height:25vh; max-width:80%;"
+                        style="max-height:35vh; max-width:90%;"
                         draggable="false"
                     />
                 {/if}

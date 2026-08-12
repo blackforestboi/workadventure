@@ -114,8 +114,11 @@ describe("asset generation panel", () => {
         expect(customEntityEditionFormSource).toContain("showHeader?: boolean;");
         expect(customEntityEditionFormSource).toContain("{#if showHeader}");
         expect(customEntityEditionFormSource).toContain('saveStatus === "saving"');
-        expect(customEntityEditionFormSource).toContain('"Saving…"');
+        expect(customEntityEditionFormSource).toContain('"Saving..."');
         expect(customEntityEditionFormSource).toContain('"Saved"');
+        expect(customEntityEditionFormSource).toContain('variant={saveStatus === "saved" ? "success" : "secondary"}');
+        expect(entityPropertiesEditorSource).toContain('"Saving..."');
+        expect(entityPropertiesEditorSource).toContain('variant={assetSaveStatus === "saved" ? "success" : "secondary"}');
     });
 
     it("adapts the compact uploader controls to an image and prompt", () => {

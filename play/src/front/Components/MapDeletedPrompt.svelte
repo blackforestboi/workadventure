@@ -19,7 +19,7 @@
 >
     <div class="flex flex-col items-center" style="width: 90%;">
         <div class="logo">
-            <img src={BRANDING.assets.errorLogo} alt="Logo" style="max-height:25vh; max-width:80%;" draggable="false" />
+            <img src={BRANDING.assets.errorLogo} alt="Logo" style="max-height:35vh; max-width:90%;" draggable="false" />
         </div>
 
         <div class="icon">

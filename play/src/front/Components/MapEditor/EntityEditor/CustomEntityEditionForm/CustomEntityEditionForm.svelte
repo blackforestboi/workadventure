@@ -10,7 +10,12 @@
     import Button from "../../../UI/Button.svelte";
     import EntityEditionCollisionGrid from "./EntityEditionCollisionGrid.svelte";
     import { initializeCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
-    import { getDefaultHeightInTiles, getOpaqueImageBounds } from "./OpaqueImageBounds";
+    import {
+        getContainedCollisionFrame,
+        getDefaultGridSizeInTiles,
+        getOpaqueImageBounds,
+        type OpaqueImageBounds,
+    } from "./OpaqueImageBounds";
     import { ENTITY_SIZE_TILE_OPTIONS, MAP_TILE_SIZE } from "../../../../Utils/EntityPrefabSize";
     import EntityEditorTabs from "../EntityEditorTabs.svelte";
 
@@ -59,6 +64,7 @@
     let entityImageRef: HTMLImageElement | undefined = $state();
     let collisionGridWidth = $state(0);
     let collisionGridHeight = $state(0);
+    let opaqueImageBounds = $state<OpaqueImageBounds | undefined>();
     let displayDepthCustomSelector = $state(false);
     let activeEditorTab = $state("positioning");
     let saveStatus = $state<"idle" | "saving" | "saved">("idle");
@@ -94,8 +100,27 @@
     const previewScaleY = $derived(
         entityImageRef?.naturalHeight ? collisionGridHeight / entityImageRef.naturalHeight : 1,
     );
-    const collisionFrameWidth = $derived(defaultSizeInTiles * MAP_TILE_SIZE * previewScaleX);
-    const collisionFrameHeight = $derived(defaultHeightInTiles * MAP_TILE_SIZE * previewScaleY);
+    const collisionColumnCount = $derived(Math.max(1, ...collisionGrid.map((row) => row.length)));
+    const collisionRowCount = $derived(Math.max(1, collisionGrid.length));
+    const collisionFrame = $derived.by(() => {
+        if (opaqueImageBounds !== undefined) {
+            return getContainedCollisionFrame(
+                opaqueImageBounds,
+                previewScaleX,
+                previewScaleY,
+                collisionRowCount,
+                collisionColumnCount,
+            );
+        }
+        const width = defaultSizeInTiles * MAP_TILE_SIZE * previewScaleX;
+        const height = defaultHeightInTiles * MAP_TILE_SIZE * previewScaleY;
+        return {
+            width,
+            height,
+            offsetX: (collisionGridWidth - width) / 2,
+            offsetY: (collisionGridHeight - height) / 2,
+        };
+    });
 
     const depthOptions = {
         GROUND_LEVEL: "GroundLevel",
@@ -152,12 +177,9 @@
     }
 
     function detectTileFootprint(imageRef: HTMLImageElement) {
-        if (
-            defaultHeightInTilesCustomEntity !== undefined ||
-            imageRef.naturalWidth === 0 ||
-            imageRef.naturalHeight === 0
-        )
-            return;
+        if (imageRef.naturalWidth === 0 || imageRef.naturalHeight === 0) return;
+        const hasStoredGridSize =
+            defaultSizeInTilesCustomEntity !== undefined && defaultHeightInTilesCustomEntity !== undefined;
         try {
             const canvas = document.createElement("canvas");
             canvas.width = imageRef.naturalWidth;
@@ -171,7 +193,12 @@
                 canvas.height,
             );
             if (!bounds) return;
-            defaultHeightInTiles = getDefaultHeightInTiles(bounds.width, bounds.height);
+            opaqueImageBounds = bounds;
+            if (hasStoredGridSize) return;
+            const defaultGridSize = getDefaultGridSizeInTiles(bounds.width, bounds.height);
+            defaultSizeInTiles = defaultSizeInTilesCustomEntity ?? defaultGridSize.width;
+            defaultHeightInTiles = defaultHeightInTilesCustomEntity ?? defaultGridSize.height;
+            collisionGridWidthIndex = ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultSizeInTiles);
             collisionGridHeightIndex = ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultHeightInTiles);
         } catch {
             // A cross-origin image may not expose pixels. Keep the safe 1×1 fallback.
@@ -293,7 +320,7 @@
             <h2 class="m-0 min-w-0 truncate text-lg font-semibold">{name}</h2>
             <Button
                 size="sm"
-                variant="secondary"
+                variant={saveStatus === "saved" ? "success" : "secondary"}
                 appearance={saveStatus === "saving" ? "border" : "filled"}
                 class={saveStatus === "saving" ? "border-blue-400 bg-transparent text-blue-300" : ""}
                 disabled={disabled || saveStatus === "saving"}
@@ -301,7 +328,7 @@
                 onclick={save}
             >
                 {saveStatus === "saving"
-                    ? "Saving…"
+                    ? "Saving..."
                     : saveStatus === "saved"
                       ? "Saved"
                       : (saveLabel ?? $LL.mapEditor.entityEditor.buttons.save())}
@@ -343,8 +370,10 @@
                     <EntityEditionCollisionGrid
                         {collisionGrid}
                         {updateCollisionGrid}
-                        collisionGridWidth={collisionFrameWidth}
-                        collisionGridHeight={collisionFrameHeight}
+                        collisionGridWidth={collisionFrame.width}
+                        collisionGridHeight={collisionFrame.height}
+                        offsetX={collisionFrame.offsetX}
+                        offsetY={collisionFrame.offsetY}
                     />
                 </div>
             {/if}

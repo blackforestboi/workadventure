@@ -31,6 +31,7 @@ services:
           - "matrix.workadventure.localhost"
           - "pusher.workadventure.localhost"
           - "mcp.workadventure.localhost"
+          - "tpotworld.localhost"
 
   node-modules-init:
     image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
@@ -114,7 +115,7 @@ services:
       ENABLE_MAP_EDITOR: "$ENABLE_MAP_EDITOR"
       HOST: "0.0.0.0"
       NODE_ENV: development
-      ALLOWED_CORS_ORIGIN: "http://play.workadventure.localhost"
+      ALLOWED_CORS_ORIGIN: "http://play.workadventure.localhost,http://tpotworld.localhost"
       PUSHER_URL: http://play.workadventure.localhost
       FRONT_URL: http://play.workadventure.localhost
       BRAND_NAME: "${BRAND_NAME:-tpot.world}"
@@ -283,7 +284,7 @@ services:
 
       # Vite's HMR socket uses its own path so it can share the browser's
       # play.* origin without colliding with the game's /ws/ socket.
-      - "traefik.http.routers.play-vite-hmr.rule=Host(`play.workadventure.localhost`) && Path(`/__vite_hmr`)"
+      - "traefik.http.routers.play-vite-hmr.rule=Host(`play.workadventure.localhost`,`tpotworld.localhost`) && Path(`/__vite_hmr`)"
       - "traefik.http.routers.play-vite-hmr.priority=3"
       - "traefik.http.routers.play-vite-hmr.service=front"
 
@@ -297,7 +298,7 @@ services:
       - "traefik.http.routers.play.service=play"
       # Stable local entry point for the browser. The catch-all remains for
       # custom hosts, while this explicit rule survives proxy reloads.
-      - "traefik.http.routers.play-local.rule=Host(`play.workadventure.localhost`)"
+      - "traefik.http.routers.play-local.rule=Host(`play.workadventure.localhost`,`tpotworld.localhost`)"
       # Keep this below the dedicated /ws/ router (priority 2), otherwise
       # clients remain stuck on the connecting screen.
       - "traefik.http.routers.play-local.priority=1"

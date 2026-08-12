@@ -45,6 +45,10 @@ export class EntitiesCollectionsManager {
         return this.entitiesPrefabsVariantStore;
     }
 
+    public getEntitiesPrefabsStore(): Readable<EntityPrefab[]> {
+        return this.entitiesPrefabsStore;
+    }
+
     public async getEntityPrefab(collectionName: string, entityPrefabId: string): Promise<EntityPrefab | undefined> {
         const prefabsMap = await this.entitiesPrefabsMapPromise;
         return prefabsMap.get(entityPrefabId);

@@ -13,6 +13,7 @@ const brandingEnvironment = EnvironmentVariables.pick({
     BRAND_LOADING_LOGO_URL: true,
     BRAND_LOADING_BACKGROUND_URL: true,
 });
+const corsEnvironment = EnvironmentVariables.pick({ ALLOWED_CORS_ORIGIN: true });
 
 describe("BYPASS_PWA environment variable", () => {
     it("defaults to continuing in the browser", () => {
@@ -57,5 +58,15 @@ describe("branding environment variables", () => {
             BRAND_LOADING_LOGO_URL: "https://assets.example.test/loading.gif",
             BRAND_LOADING_BACKGROUND_URL: "/branding/background.webp",
         });
+    });
+});
+
+describe("ALLOWED_CORS_ORIGIN environment variable", () => {
+    it("accepts multiple comma-separated origins", () => {
+        expect(
+            corsEnvironment.parse({
+                ALLOWED_CORS_ORIGIN: "http://play.workadventure.localhost,http://tpotworld.localhost",
+            }).ALLOWED_CORS_ORIGIN,
+        ).toBe("http://play.workadventure.localhost,http://tpotworld.localhost");
     });
 });

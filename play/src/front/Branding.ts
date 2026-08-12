@@ -24,7 +24,7 @@ import {
 } from "./Enum/EnvironmentVariable";
 import defaultErrorImage from "./Components/UI/images/error.gif";
 import defaultLoadingBackground from "./Components/images/map-exemple.png";
-import defaultBrandLogo from "./Components/images/default-brand-logo.svg";
+import defaultBrandLogo from "./Components/images/tpot-world-ribbon.png";
 import defaultPwaBackground from "./Components/images/pwa-background-image.jpg";
 
 const DEFAULT_BRAND_WEBSITE_URL = "https://tpot.world";
@@ -64,7 +64,7 @@ export const BRANDING = Object.freeze({
         statusCharacter: BRAND_STATUS_CHARACTER_URL ?? "resources/characters/pipoya/Cat 01-1.png",
         statusFontImage: BRAND_STATUS_FONT_IMAGE_URL ?? "resources/fonts/arcade.png",
         statusFontData: BRAND_STATUS_FONT_DATA_URL ?? "resources/fonts/arcade.xml",
-        favicon: BRAND_FAVICON_URL ?? "/static/images/branding/default-icon.svg",
+        favicon: BRAND_FAVICON_URL ?? "/static/images/branding/tpotfavicon.png",
         manifestIcon: BRAND_MANIFEST_ICON_URL ?? "/static/images/branding/default-icon.svg",
         cardImage: BRAND_CARD_IMAGE_URL ?? "/static/images/branding/default-icon.svg",
     }),

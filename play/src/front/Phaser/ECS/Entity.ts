@@ -311,6 +311,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
                     | "defaultSizeInTiles"
                     | "defaultHeightInTiles"
                     | "depthOffset"
+                    | "previewPadding"
                     | "previewOffsetX"
                     | "previewOffsetY"
                 >

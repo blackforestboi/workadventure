@@ -206,6 +206,7 @@ export class EntitiesManager extends EventEmitter {
                     | "defaultSizeInTiles"
                     | "defaultHeightInTiles"
                     | "depthOffset"
+                    | "previewPadding"
                     | "previewOffsetX"
                     | "previewOffsetY"
                 >

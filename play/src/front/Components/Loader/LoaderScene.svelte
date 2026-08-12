@@ -23,7 +23,12 @@
             {/if}
             -->
             <div class="mb-4 w-full flex justify-center">
-                <img draggable="false" src={logo} class="max-w-[300px] max-h-[150px] px-4" alt="Logo loading screen" />
+                <img
+                    draggable="false"
+                    src={logo}
+                    class="max-w-[min(620px,90vw)] max-h-[220px] px-4"
+                    alt="Logo loading screen"
+                />
             </div>
             <div class="w-full h-3 bg-contrast py-[2px]">
                 <div

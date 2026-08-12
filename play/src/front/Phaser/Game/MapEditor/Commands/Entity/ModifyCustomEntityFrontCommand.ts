@@ -52,6 +52,7 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             depthOffset,
             defaultSizeInTiles,
             defaultHeightInTiles,
+            previewPadding,
             previewOffsetX,
             previewOffsetY,
             ...(animation === undefined ? {} : { animation }),

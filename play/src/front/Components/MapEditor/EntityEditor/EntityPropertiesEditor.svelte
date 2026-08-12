@@ -1,5 +1,10 @@
 <script lang="ts">
-    import type { EntityDataProperties, EntityDataPropertiesKeys, EntityDataProperty } from "@workadventure/map-editor";
+    import type {
+        EntityDataProperties,
+        EntityDataPropertiesKeys,
+        EntityDataProperty,
+        EntityPrefab,
+    } from "@workadventure/map-editor";
     import { PersonalAreaAccessClaimMode } from "@workadventure/map-editor";
     import { onDestroy } from "svelte";
     import type { ApplicationDefinitionInterface } from "@workadventure/messages";
@@ -38,11 +43,12 @@
     import RightsPropertyEditor from "../PropertyEditor/RightsPropertyEditor.svelte";
     import type { Entity } from "../../../Phaser/ECS/Entity";
     import { gameManager } from "../../../Phaser/Game/GameManager";
-    import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
     import Button from "../../UI/Button.svelte";
+    import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
     import EntityEditorTabs from "./EntityEditorTabs.svelte";
 
     const applicationManager = gameManager.getCurrentGameScene().applicationManager;
+    const entitiesCollectionsManager = gameManager.getCurrentGameScene().getEntitiesCollectionsManager();
 
     let properties: EntityDataProperties = $state([]);
     let entityName = $state("");
@@ -50,9 +56,27 @@
     let entitySearchable = $state(false);
     let showDescriptionField = $state(false);
     let selectedEntity = $state<Entity | undefined>(undefined);
-    let activeTab = $state("actions");
+    let selectedAssetPrefab = $state<EntityPrefab | undefined>(undefined);
+    let activeTab = $state<"actions" | "edit">("actions");
     let saveAsset = $state<(() => Promise<void>) | undefined>(undefined);
     let assetSaveStatus = $state<"idle" | "saving" | "saved">("idle");
+    let entityPrefabs: EntityPrefab[] = [];
+
+    function updateSelectedAssetPrefab() {
+        const prefabRef = selectedEntity?.getEntityData().prefabRef;
+        selectedAssetPrefab = prefabRef
+            ? entityPrefabs.find(
+                  (prefab) => prefab.id === prefabRef.id && prefab.collectionName === prefabRef.collectionName,
+              )
+            : undefined;
+    }
+
+    const entityPrefabsUnsubscriber = entitiesCollectionsManager
+        .getEntitiesPrefabsStore()
+        .subscribe((currentEntityPrefabs) => {
+            entityPrefabs = currentEntityPrefabs;
+            updateSelectedAssetPrefab();
+        });
 
     let selectedEntityUnsubscriber = mapEditorSelectedEntityStore.subscribe((currentEntity) => {
         if (currentEntity) {
@@ -72,13 +96,15 @@
                 entitySearchable = descriptionProperty.searchable ?? false;
             }
             selectedEntity = currentEntity;
+            updateSelectedAssetPrefab();
             activeTab = "actions";
         } else {
             selectedEntity = undefined;
+            selectedAssetPrefab = undefined;
         }
     });
 
-    function saveCustomAsset(prefab: ReturnType<Entity["getPrefab"]>) {
+    function saveCustomAsset(prefab: EntityPrefab) {
         if (prefab.type === "Custom") {
             mapEditorModifyCustomEntityEventStore.set($state.snapshot(prefab));
         }
@@ -341,6 +367,7 @@
 
     onDestroy(() => {
         selectedEntityUnsubscriber();
+        entityPrefabsUnsubscriber();
         selectedEntity?.removeEditColor();
     });
 
@@ -367,24 +394,26 @@
         </p>
         <div class="header-container flex items-center justify-between gap-3">
             <h3 class="my-2 text-xl font-medium">
-                {$LL.mapEditor.entityEditor.editing({ name: $mapEditorSelectedEntityStore.getPrefab().name })}
+                {$LL.mapEditor.entityEditor.editing({
+                    name: selectedAssetPrefab?.name ?? $mapEditorSelectedEntityStore.getPrefab().name,
+                })}
             </h3>
-            {#if activeTab === "edit" && selectedEntity?.getPrefab().type === "Custom"}
+            {#if activeTab === "edit" && selectedAssetPrefab?.type === "Custom"}
                 <Button
                     size="sm"
-                    variant="secondary"
+                    variant={assetSaveStatus === "saved" ? "success" : "secondary"}
                     appearance={assetSaveStatus === "saving" ? "border" : "filled"}
                     class={assetSaveStatus === "saving" ? "border-blue-400 bg-transparent text-blue-300" : ""}
                     disabled={saveAsset === undefined || assetSaveStatus === "saving"}
                     dataTestId="applyEntityModifications"
-                    onclick={() => void saveAsset?.()}
+                    onclick={() => saveAsset?.()}
                 >
-                    {assetSaveStatus === "saving" ? "Saving…" : assetSaveStatus === "saved" ? "Saved" : "Save asset"}
+                    {assetSaveStatus === "saving" ? "Saving..." : assetSaveStatus === "saved" ? "Saved" : "Save asset"}
                 </Button>
             {/if}
         </div>
         <EntityEditorTabs
-            tabs={selectedEntity?.getPrefab().type === "Custom"
+            tabs={selectedAssetPrefab?.type === "Custom"
                 ? [
                       { id: "actions", label: "Actions" },
                       { id: "edit", label: "Edit" },
@@ -392,15 +421,17 @@
                 : [{ id: "actions", label: "Actions" }]}
             bind:activeTab
         />
-        {#if activeTab === "edit" && selectedEntity?.getPrefab().type === "Custom"}
-            <CustomEntityEditionForm
-                customEntity={selectedEntity.getPrefab()}
-                applyEntityModifications={saveCustomAsset}
-                description="Edit the image, placement size, and collision areas."
-                showHeader={false}
-                onSaveReady={(save) => (saveAsset = save)}
-                onSaveStatusChange={(status) => (assetSaveStatus = status)}
-            />
+        {#if activeTab === "edit" && selectedAssetPrefab?.type === "Custom"}
+            {#key selectedAssetPrefab}
+                <CustomEntityEditionForm
+                    customEntity={selectedAssetPrefab}
+                    applyEntityModifications={saveCustomAsset}
+                    description="Edit the image, placement size, and collision areas."
+                    showHeader={false}
+                    onSaveReady={(save) => (saveAsset = save)}
+                    onSaveStatusChange={(status) => (assetSaveStatus = status)}
+                />
+            {/key}
         {:else}
             <div class="properties-buttons flex flex-row flex-wrap m-2">
                 <AddPropertyButtonWrapper

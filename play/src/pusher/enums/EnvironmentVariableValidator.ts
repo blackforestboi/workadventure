@@ -10,6 +10,20 @@ import {
     toNumber,
 } from "@workadventure/shared-utils/src/EnvironmentVariables/EnvironmentVariableUtils";
 
+const AllowedCorsOrigin = z.string().refine(
+    (value) =>
+        value === "*" ||
+        value.split(",").every((origin) => {
+            try {
+                new URL(origin.trim());
+                return true;
+            } catch {
+                return false;
+            }
+        }),
+    "Must be '*' or one or more comma-separated absolute URLs",
+);
+
 export const EnvironmentVariables = z.object({
     // Pusher related environment variables
     SECRET_KEY: z
@@ -61,12 +75,9 @@ export const EnvironmentVariables = z.object({
             "Maximum uWebSockets backpressure bytes accepted on admin websocket connections. Defaults to 1048576.",
         ),
     // Use "*" to allow any domain
-    ALLOWED_CORS_ORIGIN: z
-        .string()
-        .url()
-        .or(z.literal("*"))
-        .optional()
-        .describe("Allowed CORS origin for API requests. Use '*' to allow any domain"),
+    ALLOWED_CORS_ORIGIN: AllowedCorsOrigin.optional().describe(
+        "Allowed CORS origin(s) for API requests, comma-separated. Use '*' to allow any domain",
+    ),
     PUSHER_URL: AbsoluteOrRelativeUrl.optional().describe("Public URL of the pusher service"),
     FRONT_URL: AbsoluteOrRelativeUrl.optional().describe("Public URL of the frontend application"),
 
