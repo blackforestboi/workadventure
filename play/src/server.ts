@@ -16,6 +16,7 @@ import {
     SENTRY_TRACES_SAMPLE_RATE,
     SENTRY_ENVIRONMENT,
     PUSHER_WS_PORT,
+    BRAND_NAME,
 } from "./pusher/enums/EnvironmentVariable";
 import RoomApiServer from "./room-api/RoomApiServer";
 
@@ -54,10 +55,10 @@ if (SENTRY_DSN != undefined) {
     await Promise.race([
         app
             .listenWebServer(PUSHER_HTTP_PORT)
-            .then(() => console.info(`WorkAdventure Pusher web-server started on port ${PUSHER_HTTP_PORT}!`)),
+            .then(() => console.info(`${BRAND_NAME} Pusher web-server started on port ${PUSHER_HTTP_PORT}!`)),
         app
             .listenWebSocket(PUSHER_WS_PORT)
-            .then(() => console.info(`WorkAdventure Pusher web-socket server started on port ${PUSHER_WS_PORT}!`)),
+            .then(() => console.info(`${BRAND_NAME} Pusher web-socket server started on port ${PUSHER_WS_PORT}!`)),
         app.listenPrometheusPort(),
     ]);
 })().catch((e) => {

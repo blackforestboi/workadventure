@@ -42,14 +42,14 @@ test.describe("Browser Not Supported Page", () => {
         await expect(message).toBeVisible();
 
         // Verify the description is displayed
-        await expect(page.getByText(/Your browser is too old to run WorkAdventure/)).toBeVisible();
+        await expect(page.getByText(/Your browser is too old to run tpot\.world/)).toBeVisible();
 
         // Verify "What can you do?" section is displayed
         await expect(page.getByText("What can you do?")).toBeVisible();
 
         // Verify the options are displayed
         await expect(page.getByText(/Update.*to the latest version/, { exact: false })).toBeVisible();
-        await expect(page.getByText(/Leave WorkAdventure and use a different browser/)).toBeVisible();
+        await expect(page.getByText(/Leave tpot\.world and use a different browser/)).toBeVisible();
 
         // Verify both buttons are present and visible
         const updateButton = page.getByTestId("update-browser-button");

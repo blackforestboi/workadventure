@@ -15,7 +15,6 @@ import {
 } from "../Enum/EnvironmentVariable";
 import MapSubMenu from "../Components/ActionBar/MenuIcons/MapSubMenu.svelte";
 import ParticipantMenuItem from "../Components/ActionBar/MenuIcons/ParticipantMenuItem.svelte";
-import LoginMenuItem from "../Components/ActionBar/MenuIcons/LoginMenuItem.svelte";
 import InviteMenuItem from "../Components/ActionBar/MenuIcons/InviteMenuItem.svelte";
 import MapEditorMenuItem from "../Components/ActionBar/MenuIcons/MapEditorMenuItem.svelte";
 import CustomActionBarButton from "../Components/ActionBar/MenuIcons/CustomActionBarButton.svelte";
@@ -28,6 +27,8 @@ import { gameSceneStore } from "./GameSceneStore";
 import { modalIframeStore, modalVisibilityStore, showModalGlobalComminucationVisibilityStore } from "./ModalStore";
 import { getAdditionalMenuItemStore } from "./AdditionalItemsMenuStore";
 import { personalAreaDataStore } from "./PersonalDeskStore";
+import { inBbbStore, inJitsiStore, inLivekitStore, isSpeakerStore } from "./MediaStore";
+import { isInRemoteConversation } from "./StreamableCollectionStore";
 
 export const menuIconVisiblilityStore = writable(false);
 export const menuVisiblilityStore = writable(false);
@@ -353,16 +354,6 @@ const participantMenuItem: RightMenuItem<RightActionBarButtonProps> = {
     props: {},
 };
 
-const loginMenuItem: RightMenuItem<RightActionBarButtonProps> = {
-    id: "login",
-    fallsInBurgerMenuStore: writable(true),
-    component: LoginMenuItem,
-    props: {
-        first: true,
-        last: true,
-    },
-};
-
 const inviteMenuItem: RightMenuItem<RightActionBarButtonProps> = {
     id: "invite",
     fallsInBurgerMenuStore: writable(false),
@@ -374,18 +365,32 @@ const inviteMenuItem: RightMenuItem<RightActionBarButtonProps> = {
 };
 
 export const rightActionBarMenuItems: Readable<RightMenuItem<RightActionBarButtonProps>[]> = derived(
-    [additionalRightButtonsMenu, userIsConnected, inviteUserActivated],
-    ([$additionalButtonsMenu, $userIsConnected, $inviteUserActivated]) => {
+    [
+        additionalRightButtonsMenu,
+        inviteUserActivated,
+        inLivekitStore,
+        isSpeakerStore,
+        inBbbStore,
+        inJitsiStore,
+        isInRemoteConversation,
+    ],
+    ([
+        $additionalButtonsMenu,
+        $inviteUserActivated,
+        $inLivekitStore,
+        $isSpeakerStore,
+        $inBbbStore,
+        $inJitsiStore,
+        $isInRemoteConversation,
+    ]) => {
         const menuItems: RightMenuItem<RightActionBarButtonProps>[] = [...$additionalButtonsMenu.values()];
 
         if (showToolsMenu) {
             menuItems.push(mapsMenuItem);
         }
 
-        menuItems.push(participantMenuItem);
-
-        if (!$userIsConnected && ENABLE_OPENID) {
-            menuItems.push(loginMenuItem);
+        if ($inLivekitStore || $isSpeakerStore || $inBbbStore || $inJitsiStore || $isInRemoteConversation) {
+            menuItems.push(participantMenuItem);
         }
 
         menuItems.push(mapEditorMenuItem);

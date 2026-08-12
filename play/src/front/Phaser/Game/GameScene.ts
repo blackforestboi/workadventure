@@ -56,6 +56,7 @@ import {
     PUBLIC_MAP_STORAGE_PREFIX,
     WOKA_SPEED,
 } from "../../Enum/EnvironmentVariable";
+import { BRANDING } from "../../Branding";
 import { Room } from "../../Connection/Room";
 import { CharacterTextureError } from "../../Exception/CharacterTextureError";
 import { localUserStore } from "../../Connection/LocalUserStore";
@@ -694,7 +695,7 @@ export class GameScene extends DirtyScene {
             }
             if (!("image" in tileset)) {
                 throw new Error(
-                    `Tilesets made of a collection of images are not supported in WorkAdventure in the Tiled map "${this.mapUrlFile}".`,
+                    `Tilesets made of a collection of images are not supported in ${BRANDING.name} in the Tiled map "${this.mapUrlFile}".`,
                 );
             }
             const tilesetImageUrl = resolveTilesetImageUrl(tileset.image, this.mapUrlFile, window.location.origin);
@@ -4063,6 +4064,10 @@ ${escapedMessage}
             }
             //});
         }
+        this.physics.add.collider(
+            this.CurrentPlayer,
+            this.gameMapFrontWrapper.getEntitiesManager().getCollisionGroup(),
+        );
     }
 
     private createCurrentPlayer(startPosition: PositionInterface) {
@@ -4393,8 +4398,8 @@ ${escapedMessage}
                 type: "error",
                 code: "USER_BANNED",
                 title: "BANNED",
-                subtitle: "You were banned from WorkAdventure",
-                details: "If you want more information, you may contact us at: hello@workadventu.re",
+                subtitle: `You were banned from ${BRANDING.name}`,
+                details: `If you want more information, you may contact the ${BRANDING.name} administrators.`,
             }),
         );
 

@@ -90,8 +90,12 @@
     const hasCollisionAreas = $derived(collisionGrid.some((row) => row.some((cell) => cell === 1)));
     const positivePreviewPadding = $derived(Math.max(0, previewPadding));
     const previewCropInset = $derived(Math.max(0, -previewPadding));
-    const collisionFrameWidth = $derived(Math.max(1, ...collisionGrid.map((row) => row.length)) * MAP_TILE_SIZE);
-    const collisionFrameHeight = $derived(Math.max(1, collisionGrid.length) * MAP_TILE_SIZE);
+    const previewScaleX = $derived(entityImageRef?.naturalWidth ? collisionGridWidth / entityImageRef.naturalWidth : 1);
+    const previewScaleY = $derived(
+        entityImageRef?.naturalHeight ? collisionGridHeight / entityImageRef.naturalHeight : 1,
+    );
+    const collisionFrameWidth = $derived(defaultSizeInTiles * MAP_TILE_SIZE * previewScaleX);
+    const collisionFrameHeight = $derived(defaultHeightInTiles * MAP_TILE_SIZE * previewScaleY);
 
     const depthOptions = {
         GROUND_LEVEL: "GroundLevel",
@@ -215,11 +219,11 @@
         if (!isPreviewDragging) return;
         previewOffsetX = Math.max(
             -512,
-            Math.min(512, Math.round(previewOffsetStartX + event.clientX - previewDragStartX)),
+            Math.min(512, Math.round(previewOffsetStartX + (event.clientX - previewDragStartX) / previewScaleX)),
         );
         previewOffsetY = Math.max(
             -512,
-            Math.min(512, Math.round(previewOffsetStartY + event.clientY - previewDragStartY)),
+            Math.min(512, Math.round(previewOffsetStartY + (event.clientY - previewDragStartY) / previewScaleY)),
         );
     }
 
@@ -319,7 +323,7 @@
             <div
                 class="relative inline-flex max-h-[560px] max-w-full items-center justify-center"
                 style:clip-path={previewCropInset > 0 ? `inset(${previewCropInset}px)` : undefined}
-                style:transform={`translate(${previewOffsetX}px, ${previewOffsetY}px)`}
+                style:transform={`translate(${previewOffsetX * previewScaleX}px, ${previewOffsetY * previewScaleY}px)`}
             >
                 <EntityImage
                     classNames="max-h-[560px] max-w-full object-contain"

@@ -1,102 +1,47 @@
 import { describe, expect, it } from "vitest";
 import {
-    getCollisionGridOffset,
+    getEntityCollisionRectangles,
     getScaledCollisionGridFrame,
-    reverseEntityCollisionGrid,
-    scaleEntityCollisionGrid,
 } from "../../../../../src/front/Phaser/Game/MapEditor/Entities/EntityCollisionGrid";
 import entityResizeHandlesSource from "../../../../../src/front/Phaser/Game/MapEditor/Entities/EntityResizeHandles.ts?raw";
 import gameMapFrontWrapperSource from "../../../../../src/front/Phaser/Game/GameMap/GameMapFrontWrapper.ts?raw";
+import gameSceneSource from "../../../../../src/front/Phaser/Game/GameScene.ts?raw";
 import entityEditorToolSource from "../../../../../src/front/Phaser/Game/MapEditor/Tools/EntityEditorTool.ts?raw";
 import entitiesManagerSource from "../../../../../src/front/Phaser/Game/GameMap/EntitiesManager.ts?raw";
+import updateEntityFrontCommandSource from "../../../../../src/front/Phaser/Game/MapEditor/Commands/Entity/UpdateEntityFrontCommand.ts?raw";
 
 describe("EntityCollisionGrid", () => {
-    it("anchors the collision frame at the same point as the editor overlay", () => {
-        expect(getCollisionGridOffset([[1, 0]], 80, 56, 4, -2)).toEqual({ x: 12, y: 10 });
-    });
-
     it("scales the collision frame with a resized asset while preserving its relative offset", () => {
         expect(getScaledCollisionGridFrame([[1, 0]], 128, 96, 64, 48, 8, -4)).toEqual({
-            collisionGrid: [[1]],
-            offset: { x: 20, y: 14 },
+            collisionGrid: [[1, 0]],
+            offset: { x: 12, y: 18 },
+            width: 32,
+            height: 16,
         });
     });
 
-    it("keeps a collision mask unchanged at its source tile size", () => {
-        expect(
-            scaleEntityCollisionGrid(
-                [
-                    [0, 0],
-                    [1, 1],
-                ],
-                64,
-                64,
-            ),
-        ).toEqual([
-            [0, 0],
-            [1, 1],
-        ]);
-    });
-
-    it("expands painted areas when an entity is resized larger", () => {
-        expect(
-            scaleEntityCollisionGrid(
-                [
-                    [0, 0],
-                    [1, 0],
-                ],
-                128,
-                128,
-            ),
-        ).toEqual([
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [1, 1, 0, 0],
-            [1, 1, 0, 0],
-        ]);
-    });
-
-    it("keeps any painted source area covered by a smaller target cell", () => {
-        expect(
-            scaleEntityCollisionGrid(
-                [
-                    [0, 0, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 1],
-                ],
-                64,
-                64,
-            ),
-        ).toEqual([
-            [1, 0],
-            [0, 1],
-        ]);
-    });
-
-    it("reverses occupied cells when removing an entity from the collision layer", () => {
-        expect(
-            reverseEntityCollisionGrid([
-                [0, 1],
-                [1, 0],
-            ]),
-        ).toEqual([
-            [0, -1],
-            [-1, 0],
+    it("creates exact asset-local collision rectangles without map-tile rasterization", () => {
+        const frame = getScaledCollisionGridFrame([[1, 0]], 128, 96, 64, 48, 8, -4);
+        expect(getEntityCollisionRectangles(frame, { x: 10, y: 20 })).toEqual([
+            { x: 22, y: 38, width: 16, height: 16 },
         ]);
     });
 
     it("draws the selected-object outline as the collision grid tiles", () => {
-        expect(entityResizeHandlesSource).toContain("getCollisionGridPosition()");
+        expect(entityResizeHandlesSource).toContain("getCollisionFrameBounds()");
         expect(entityResizeHandlesSource).toContain("this.outline.lineBetween");
-        expect(entityResizeHandlesSource).toContain("width: Math.max(...collisionGrid.map((row) => row.length)) * 32");
-        expect(entityResizeHandlesSource).toContain("height: collisionGrid.length * 32");
+        expect(entityResizeHandlesSource).toContain("width: frame.width");
+        expect(entityResizeHandlesSource).toContain("height: frame.height");
     });
 
-    it("only blocks placement for painted collision cells", () => {
-        expect(gameMapFrontWrapperSource).toContain("hasBlockedCollisionCell");
-        expect(gameMapFrontWrapperSource).toContain("hasBlockedCollisionCell ? collisionGrid : undefined");
-        expect(gameMapFrontWrapperSource).toMatch(/collisionGrid\s*\? 0\s*:\s*width/);
+    it("keeps entity collision geometry out of the map tile collision layer", () => {
+        expect(gameMapFrontWrapperSource).not.toContain("__entitiesCollisionLayer");
+        expect(gameMapFrontWrapperSource).not.toContain("modifyToCollisionsLayer");
+        expect(entitiesManagerSource).toContain("collisionGroup");
+        expect(entitiesManagerSource).toContain("getCollisionRectangles()");
+        expect(gameSceneSource).toContain("getEntitiesManager().getCollisionGroup()");
+        expect(updateEntityFrontCommandSource).toContain("refreshEntityCollisionBodies(entity)");
+        expect(updateEntityFrontCommandSource).not.toContain("CollisionGrid");
     });
 
     it("keeps placing and dragging assets free from tile snapping", () => {

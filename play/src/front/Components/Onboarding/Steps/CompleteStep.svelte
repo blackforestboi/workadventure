@@ -3,6 +3,7 @@
     import LL from "../../../../i18n/i18n-svelte";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import { isMobileOnboarding } from "../../../Stores/OnboardingStore";
+    import { BRANDING } from "../../../Branding";
 
     interface Props {
         onnext?: () => void;
@@ -10,7 +11,7 @@
 
     const { onnext }: Props = $props();
 
-    const worldName = gameManager.getCurrentGameScene()?.room?.roomName ?? "WorkAdventure";
+    const worldName = gameManager.getCurrentGameScene()?.room?.roomName ?? BRANDING.name;
 
     function handleNext() {
         onnext?.();

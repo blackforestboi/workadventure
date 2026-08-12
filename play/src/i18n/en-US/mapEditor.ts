@@ -583,8 +583,7 @@ const mapEditor: BaseTranslation = {
                 success: "Room settings saved",
                 error: "Error while saving room settings",
             },
-            confirmSave:
-                "Confirm that you want to save the changes to the map. This will create a new version of the map, disconnect all players and reload the map for all players.",
+            confirmSave: "Confirm that you want to save the room settings.",
         },
     },
     explorer: {

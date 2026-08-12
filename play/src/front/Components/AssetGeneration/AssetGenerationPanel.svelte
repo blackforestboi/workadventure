@@ -24,6 +24,7 @@
         type RasterOutputSize,
     } from "../../Services/AssetGeneration/RasterOutputNormalizer";
     import { aiGenerationSettingsVisibilityStore } from "../../Stores/AiGenerationSettingsVisibilityStore";
+    import { BRANDING } from "../../Branding";
     import Button from "../UI/Button.svelte";
     import AnimatedAssetPreview from "./AnimatedAssetPreview.svelte";
 
@@ -380,7 +381,7 @@
             generationTarget === "tileset"
                 ? " Create exactly one seamless top-down 2D floor or terrain texture that fills the entire image. Do not include furniture, props, gutters, text, borders, perspective scenery, or multiple tiles."
                 : generationTarget.startsWith("woka-") || generationTarget === "complete-woka"
-                  ? " Use the WorkAdventure Woka sprite-sheet layout: four rows ordered down, left, right, up; three aligned frames per row; transparent background; no text, border, shadow, or scenery."
+                  ? ` Use the ${BRANDING.name} Woka sprite-sheet layout: four rows ordered down, left, right, up; three aligned frames per row; transparent background; no text, border, shadow, or scenery.`
                   : " Isolate the object on a transparent background, using a readable top-down 2D game perspective and no text or border.";
         const animationRule =
             animation === undefined

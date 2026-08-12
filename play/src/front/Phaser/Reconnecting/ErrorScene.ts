@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import { BRANDING } from "../../Branding";
 import { TextField } from "../Components/TextField";
 import { gameManager } from "../Game/GameManager";
 
@@ -36,14 +37,14 @@ export class ErrorScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image(Textures.icon, "static/images/favicons/favicon-32x32.png");
+        this.load.image(Textures.icon, BRANDING.assets.statusIcon);
         // Note: arcade.png from the Phaser 3 examples at: https://github.com/photonstorm/phaser3-examples/tree/master/public/assets/fonts/bitmap
         if (!this.cache.bitmapFont.has("main_font")) {
             // We put this inside a "if" because despite the cache, Phaser will make a query to the XML file. And if there is no connection (which
             // is not unlikely given the fact we are in an error scene), this will cause an error.
-            this.load.bitmapFont(Textures.mainFont, "resources/fonts/arcade.png", "resources/fonts/arcade.xml");
+            this.load.bitmapFont(Textures.mainFont, BRANDING.assets.statusFontImage, BRANDING.assets.statusFontData);
         }
-        this.load.spritesheet("cat", "resources/characters/pipoya/Cat 01-1.png", { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet("cat", BRANDING.assets.statusCharacter, { frameWidth: 32, frameHeight: 32 });
     }
 
     create() {

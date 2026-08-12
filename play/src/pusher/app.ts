@@ -31,6 +31,7 @@ import {
     TEAPOT_X_CLIENT_ID,
     TEAPOT_X_CLIENT_SECRET,
     TEAPOT_X_REDIRECT_URI,
+    BRAND_NAME,
 } from "./enums/EnvironmentVariable";
 import { PingController } from "./controllers/PingController";
 import { CompanionListController } from "./controllers/CompanionListController";
@@ -322,7 +323,7 @@ class App {
                 if (token) {
                     resolve();
                 } else {
-                    reject(new Error(`Error starting WorkAdventure Pusher on port ${port}!`));
+                    reject(new Error(`Error starting ${BRAND_NAME} Pusher on port ${port}!`));
                 }
             });
         });
@@ -338,7 +339,7 @@ class App {
                         reject(err);
                         return;
                     }
-                    console.info(`WorkAdventure Prometheus web-server started on port ${PROMETHEUS_PORT}!`);
+                    console.info(`${BRAND_NAME} Prometheus web-server started on port ${PROMETHEUS_PORT}!`);
                     resolve();
                 });
             }

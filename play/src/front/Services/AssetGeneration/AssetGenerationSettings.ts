@@ -2,6 +2,7 @@ import type { Readable, Writable } from "svelte/store";
 import { get, writable } from "svelte/store";
 
 import { localUserStore } from "../../Connection/LocalUserStore";
+import { BRAND_NAME } from "../../Enum/EnvironmentVariable";
 import {
     hostedAgentConnectionApi,
     type HostedAgentConnectionStart,
@@ -372,7 +373,7 @@ export class AssetGenerationSettingsController implements Readable<AssetGenerati
         this.hostedProvisioningOperationId = operationId;
         const applicationBearer = this.options.backend.getApplicationBearer();
         if (applicationBearer === null || applicationBearer.length === 0) {
-            throw new Error("The WorkAdventure session expired before the AI subscription connected.");
+            throw new Error(`The ${BRAND_NAME} session expired before the AI subscription connected.`);
         }
         await this.options.backend.connect(providerId, applicationBearer);
         await this.finishConnection(operationId, providerId);

@@ -19,6 +19,7 @@ import { bannerStore, requestVisitCardsStore } from "../Stores/GameStore";
 import { modalIframeStore, modalVisibilityStore } from "../Stores/ModalStore";
 import { connectionManager } from "../Connection/ConnectionManager";
 import { openLoginOverlay } from "../Stores/LoginOverlayStore";
+import { BRANDING } from "../Branding";
 
 import { gameManager } from "../Phaser/Game/GameManager";
 import type { OpenPopupEvent } from "./Events/OpenPopupEvent";
@@ -301,9 +302,9 @@ class IframeListener {
                         isIframeQueryWrapper(payload)
                     ) {
                         console.warn(
-                            "It seems an iFrame is trying to communicate with WorkAdventure but was not explicitly granted the permission to do so. " +
-                                "If you are looking to use the WorkAdventure Scripting API inside an iFrame, you should allow the " +
-                                'iFrame to communicate with WorkAdventure by checking the "Allow API" checkbox (if you are using the map editor) or using the "openWebsiteAllowApi" property in your map (if you are using Tiled), or passing "true" as a second' +
+                            `It seems an iFrame is trying to communicate with ${BRANDING.name} but was not explicitly granted the permission to do so. ` +
+                                `If you are looking to use the ${BRANDING.name} Scripting API inside an iFrame, you should allow the ` +
+                                `iFrame to communicate with ${BRANDING.name} by checking the "Allow API" checkbox (if you are using the map editor) or using the "openWebsiteAllowApi" property in your map (if you are using Tiled), or passing "true" as a second` +
                                 "parameter to WA.nav.openCoWebSite() (if you are using the scripting API).",
                         );
                     }

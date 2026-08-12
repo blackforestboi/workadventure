@@ -1,10 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { LL } from "../../../i18n/i18n-svelte";
-    import logoImg from "../images/logo.svg";
-    import bgMap from "../images/map-exemple.png";
-    import poweredByWorkAdventureImg from "../images/Powered_By_WorkAdventure_Big.png";
-    import pwaDefaultBackground from "../images/pwa-background-image.jpg";
+    import { BRANDING } from "../../Branding";
     import { gameManager } from "../../Phaser/Game/GameManager";
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import {
@@ -18,8 +15,8 @@
     import Button from "../UI/Button.svelte";
     import { IconApps, IconAppWindow, IconHistory } from "@wa-icons";
 
-    let logo = $state(logoImg);
-    let sceneBg = $state(bgMap);
+    let logo = $state(BRANDING.assets.loginLogo);
+    let sceneBg = $state(BRANDING.assets.loadingBackground);
 
     let neverShowAgain = $state(false);
     let unsubscribePwa: (() => void) | undefined;
@@ -95,7 +92,12 @@
             <!-- Header: banner + logo + italic pitch -->
             <div class="hidden relative min-h-[200px] md:block">
                 <div class="absolute inset-0 bg-cover bg-center" aria-hidden="true">
-                    <img draggable="false" src={pwaDefaultBackground} alt="" class="h-full w-full object-cover" />
+                    <img
+                        draggable="false"
+                        src={BRANDING.assets.pwaBackground}
+                        alt=""
+                        class="h-full w-full object-cover"
+                    />
                 </div>
                 <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
                 <div
@@ -244,9 +246,14 @@
             </div>
         </div>
 
-        {#if logo !== logoImg && gameManager.currentStartedRoom.showPoweredBy !== false}
+        {#if gameManager.currentStartedRoom.loginSceneLogo && gameManager.currentStartedRoom.showPoweredBy !== false}
             <section class="flex justify-center pb-2">
-                <img draggable="false" src={poweredByWorkAdventureImg} alt="Powered by WorkAdventure" class="h-14" />
+                <img
+                    draggable="false"
+                    src={BRANDING.assets.poweredByLogo}
+                    alt={`Powered by ${BRANDING.name}`}
+                    class="h-14"
+                />
             </section>
         {/if}
     </div>

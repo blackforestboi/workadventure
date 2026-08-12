@@ -21,7 +21,7 @@ const store = writable<PwaInstallUiState>(initial);
 function syncFromWindow(): void {
     store.update((state) => ({
         ...state,
-        deferredPrompt: typeof window !== "undefined" ? (window.__workadventureDeferredPwaPrompt ?? null) : null,
+        deferredPrompt: typeof window !== "undefined" ? (window.__appDeferredPwaPrompt ?? null) : null,
         isIos: detectIos(),
     }));
 }
@@ -35,11 +35,11 @@ export function initPwaInstallUiListeners(): () => void {
     syncFromWindow();
     const onBeforeInstall = (e: Event) => {
         e.preventDefault();
-        window.__workadventureDeferredPwaPrompt = e as BeforeInstallPromptEvent;
+        window.__appDeferredPwaPrompt = e as BeforeInstallPromptEvent;
         syncFromWindow();
     };
     const onAppInstalled = () => {
-        window.__workadventureDeferredPwaPrompt = null;
+        window.__appDeferredPwaPrompt = null;
         pwaInstallProfileMenuEligibleStore.set(false);
         syncFromWindow();
     };
@@ -63,7 +63,7 @@ export async function installPwaFromStore(): Promise<void> {
         console.log("outcome", outcome);
         analyticsClient.pwaInstallOutcome(outcome);
         if (outcome === "accepted") {
-            window.__workadventureDeferredPwaPrompt = null;
+            window.__appDeferredPwaPrompt = null;
             pwaInstallProfileMenuEligibleStore.set(false);
             store.update((s) => ({ ...s, deferredPrompt: null }));
         }

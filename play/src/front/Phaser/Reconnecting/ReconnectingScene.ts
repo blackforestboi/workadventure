@@ -3,6 +3,7 @@ import { get } from "svelte/store";
 import { TextField } from "../Components/TextField";
 import { LL } from "../../../i18n/i18n-svelte";
 import { gameManager } from "../Game/GameManager";
+import { BRANDING } from "../../Branding";
 
 import Image = Phaser.GameObjects.Image;
 
@@ -23,10 +24,14 @@ export class ReconnectingScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image(ReconnectingTextures.icon);
+        this.load.image(ReconnectingTextures.icon, BRANDING.assets.statusIcon);
         // Note: arcade.png from the Phaser 3 examples at: https://github.com/photonstorm/phaser3-examples/tree/master/public/assets/fonts/bitmap
-        this.load.bitmapFont(ReconnectingTextures.mainFont, "resources/fonts/arcade.png", "resources/fonts/arcade.xml");
-        this.load.spritesheet("cat", "resources/characters/pipoya/Cat 01-1.png", { frameWidth: 32, frameHeight: 32 });
+        this.load.bitmapFont(
+            ReconnectingTextures.mainFont,
+            BRANDING.assets.statusFontImage,
+            BRANDING.assets.statusFontData,
+        );
+        this.load.spritesheet("cat", BRANDING.assets.statusCharacter, { frameWidth: 32, frameHeight: 32 });
     }
 
     create() {

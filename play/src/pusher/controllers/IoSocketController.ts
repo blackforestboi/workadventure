@@ -22,6 +22,10 @@ import {
     START_ROOM_URL,
     TEAPOT_X_CLIENT_ID,
     TEAPOT_X_REDIRECT_URI,
+    BRAND_ERROR_IMAGE_URL,
+    BRAND_ERROR_LOGO_URL,
+    BRAND_LOGO_URL,
+    BRAND_NAME,
 } from "../enums/EnvironmentVariable";
 import type { AdminSocketData } from "../models/Websocket/AdminSocketData";
 import type { AdminMessageInterface } from "../models/Websocket/Admin/AdminMessages";
@@ -315,10 +319,10 @@ export class IoSocketController {
                                 type: "retry",
                                 title: "Please refresh",
                                 subtitle: "New version available",
-                                image: "/resources/icons/new_version.png",
-                                imageLogo: "/static/images/logo.png",
+                                image: BRAND_ERROR_IMAGE_URL || "/resources/icons/new_version.png",
+                                imageLogo: BRAND_ERROR_LOGO_URL || BRAND_LOGO_URL || "/static/images/logo.png",
                                 code: "NEW_VERSION",
-                                details: "A new version of WorkAdventure is available. Please refresh your window",
+                                details: `A new version of ${BRAND_NAME} is available. Please refresh your window`,
                                 canRetryManual: true,
                                 buttonTitle: "Refresh",
                                 timeToRetry: 999999,

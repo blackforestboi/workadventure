@@ -6,7 +6,7 @@
 
     interface Props {
         entityPrefabVariants: EntityVariant[];
-        onSelectEntity: (entityVariant: EntityVariant) => void;
+        onSelectEntity: (entityVariant: EntityVariant, image?: HTMLImageElement) => void;
         currentSelectedEntityId: string | undefined;
     }
 
@@ -19,7 +19,7 @@
         <p>{$LL.mapEditor.entityEditor.noImage()}</p>
     </div>
 {:else}
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(64px,3.6em))] gap-2 justify-center">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(64px,3.6em))] gap-2 p-1 justify-center">
         {#each entityPrefabVariants as entityPrefabVariant (entityPrefabVariant.defaultPrefab.id)}
             <EntityItem
                 onselectentity={onSelectEntity}

@@ -1,7 +1,9 @@
+import { BRANDING } from "../Branding";
+
 export const defaultOptions = {
-    icon: "/static/images/logo-WA-min.png",
-    image: "/static/images/logo-WA-min.png",
-    badge: "/static/images/logo-WA-min.png",
+    icon: BRANDING.assets.statusIcon,
+    image: BRANDING.assets.statusIcon,
+    badge: BRANDING.assets.statusIcon,
 };
 
 export interface NotificationWA {

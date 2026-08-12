@@ -24,6 +24,28 @@ export const PUSHER_ADMIN_WS_MAX_BACKPRESSURE_BYTES = 1024 * 1024;
 export const ALLOWED_CORS_ORIGIN: string | undefined = undefined;
 export const PUSHER_URL = "http://pusher.test";
 export const FRONT_URL = "http://front.test";
+export const BRAND_NAME = "tpot.world";
+export const BRAND_SHORT_NAME = "tpot";
+export const BRAND_DESCRIPTION = "Organize your online world in tpot.world.";
+export const BRAND_AUTHOR = "tpot.world team";
+export const BRAND_PROVIDER = "tpot.world";
+export const BRAND_THEME_COLOR = "#1B2A41";
+export const BRAND_WEBSITE_URL: string | undefined = undefined;
+export const BRAND_LOGO_URL: string | undefined = undefined;
+export const BRAND_LOADING_LOGO_URL: string | undefined = undefined;
+export const BRAND_LOGIN_LOGO_URL: string | undefined = undefined;
+export const BRAND_ERROR_LOGO_URL: string | undefined = undefined;
+export const BRAND_ERROR_IMAGE_URL: string | undefined = undefined;
+export const BRAND_LOADING_BACKGROUND_URL: string | undefined = undefined;
+export const BRAND_PWA_BACKGROUND_URL: string | undefined = undefined;
+export const BRAND_POWERED_BY_LOGO_URL: string | undefined = undefined;
+export const BRAND_STATUS_ICON_URL: string | undefined = undefined;
+export const BRAND_STATUS_CHARACTER_URL: string | undefined = undefined;
+export const BRAND_STATUS_FONT_IMAGE_URL: string | undefined = undefined;
+export const BRAND_STATUS_FONT_DATA_URL: string | undefined = undefined;
+export const BRAND_FAVICON_URL: string | undefined = undefined;
+export const BRAND_MANIFEST_ICON_URL: string | undefined = undefined;
+export const BRAND_CARD_IMAGE_URL: string | undefined = undefined;
 export const PUBLIC_MAP_STORAGE_URL = "";
 export const INTERNAL_MAP_STORAGE_URL: string | undefined = undefined;
 export const REDIS_HOST: string | undefined = undefined;
@@ -114,6 +136,28 @@ export const FRONT_ENVIRONMENT_VARIABLES: FrontConfigurationInterface = {
     DEBUG_MODE: false,
     PUSHER_URL,
     FRONT_URL,
+    BRAND_NAME,
+    BRAND_SHORT_NAME,
+    BRAND_DESCRIPTION,
+    BRAND_AUTHOR,
+    BRAND_PROVIDER,
+    BRAND_THEME_COLOR,
+    BRAND_WEBSITE_URL,
+    BRAND_LOGO_URL,
+    BRAND_LOADING_LOGO_URL,
+    BRAND_LOGIN_LOGO_URL,
+    BRAND_ERROR_LOGO_URL,
+    BRAND_ERROR_IMAGE_URL,
+    BRAND_LOADING_BACKGROUND_URL,
+    BRAND_PWA_BACKGROUND_URL,
+    BRAND_POWERED_BY_LOGO_URL,
+    BRAND_STATUS_ICON_URL,
+    BRAND_STATUS_CHARACTER_URL,
+    BRAND_STATUS_FONT_IMAGE_URL,
+    BRAND_STATUS_FONT_DATA_URL,
+    BRAND_FAVICON_URL,
+    BRAND_MANIFEST_ICON_URL,
+    BRAND_CARD_IMAGE_URL,
     ADMIN_URL,
     UPLOADER_URL: "http://uploader.test",
     ICON_URL: "http://icon.test",

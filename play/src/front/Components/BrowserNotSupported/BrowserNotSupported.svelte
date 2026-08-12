@@ -1,8 +1,8 @@
 <script lang="ts">
     import { getBrowserInfo, getBrowserDisplayName } from "../../Utils/BrowserCompatibility";
     import { LL } from "../../../i18n/i18n-svelte";
+    import { BRANDING } from "../../Branding";
     import Button from "../UI/Button.svelte";
-    import bgMap from "../images/map-exemple.png";
 
     let browserInfo = getBrowserInfo();
     let browserName = getBrowserDisplayName();
@@ -25,7 +25,7 @@
     <!-- Background image layer (like PictureInPicture) -->
     <div
         class="fixed z-[9998] top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat opacity-20 bg-black"
-        style="background-image: url({bgMap});"
+        style="background-image: url({BRANDING.assets.loadingBackground});"
     ></div>
     <!-- Background color overlay -->
     <div class="fixed z-[9998] top-0 left-0 w-full h-full backdrop-blur-md opacity-70"></div>

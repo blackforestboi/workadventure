@@ -28,7 +28,7 @@ import { EditorToolName } from "../MapEditorModeManager";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { mapEditorActivated } from "../../../../Stores/MenuStore";
 import { hasPointerDragged } from "../PanGesture";
-import { getCollisionGridOffset } from "../Entities/EntityCollisionGrid";
+import { getEntityCollisionRectangles, getScaledCollisionGridFrame } from "../Entities/EntityCollisionGrid";
 import { EntityRelatedEditorTool } from "./EntityRelatedEditorTool";
 
 import Key = Phaser.Input.Keyboard.Key;
@@ -195,7 +195,6 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                     new ModifyCustomEntityFrontCommand(
                         modifyCustomEntityMessage,
                         this.scene.getEntitiesCollectionsManager(),
-                        this.scene.getGameMapFrontWrapper(),
                         this.entitiesManager,
                     ),
                 );
@@ -284,7 +283,6 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                             new ModifyCustomEntityFrontCommand(
                                 modifyCustomEntityMessage,
                                 this.scene.getEntitiesCollectionsManager(),
-                                this.scene.getGameMapFrontWrapper(),
                                 this.entitiesManager,
                             ),
                         );
@@ -548,21 +546,25 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         if (!this.entityPrefabPreview || !this.entityPrefab) {
             return false;
         }
-        const collisionOffset = getCollisionGridOffset(
+        const sourceColumns = Math.max(1, ...(this.entityPrefab.collisionGrid?.map((row) => row.length) ?? []));
+        const sourceRows = Math.max(1, this.entityPrefab.collisionGrid?.length ?? 0);
+        const frame = getScaledCollisionGridFrame(
             this.entityPrefab.collisionGrid,
+            this.entityPrefabPreview.width,
+            this.entityPrefabPreview.height,
             this.entityPrefabPreview.displayWidth,
             this.entityPrefabPreview.displayHeight,
             this.entityPrefab.previewOffsetX,
             this.entityPrefab.previewOffsetY,
+            (this.entityPrefab.defaultSizeInTiles ?? sourceColumns) * 32,
+            (this.entityPrefab.defaultHeightInTiles ?? sourceRows) * 32,
         );
+        const position = this.entityPrefabPreview.getTopLeft();
         return gameMapFrontWrapper.canEntityBePlacedOnMap(
-            {
-                x: this.entityPrefabPreview.getTopLeft().x + collisionOffset.x,
-                y: this.entityPrefabPreview.getTopLeft().y + collisionOffset.y,
-            },
+            position,
             this.entityPrefabPreview.displayWidth,
             this.entityPrefabPreview.displayHeight,
-            this.entityPrefab.collisionGrid,
+            getEntityCollisionRectangles(frame, position),
             undefined,
             this.shiftKey?.isDown,
         );

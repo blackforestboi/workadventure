@@ -6,6 +6,7 @@
     import { v4 as uuidv4 } from "uuid";
     import { LL } from "../../../../i18n/i18n-svelte";
     import { gameManager } from "../../../Phaser/Game/GameManager";
+    import { TexturesHelper } from "../../../Phaser/Helpers/TexturesHelper";
     import type { EntityVariant } from "../../../Phaser/Game/MapEditor/Entities/EntityVariant";
     import type { CategoryTag, SelectableTag } from "../../../Stores/MapEditorStore";
     import {
@@ -141,22 +142,36 @@
         }
     }
 
-    function onPickItem(entityPrefab: EntityPrefab) {
+    function selectEntityPrefab(entityPrefab: EntityPrefab, image?: HTMLImageElement) {
+        if (image) {
+            TexturesHelper.cacheEntityTextureFromImage(gameManager.getCurrentGameScene(), entityPrefab, image);
+        }
         mapEditorSelectedEntityPrefabStore.set($state.snapshot(entityPrefab));
     }
 
-    function onPickEntityVariant(entityVariant: EntityVariant) {
+    function onPickItem(entityPrefab: EntityPrefab, image?: HTMLImageElement) {
+        selectEntityPrefab(entityPrefab, image);
+    }
+
+    function onPickEntityVariant(entityVariant: EntityVariant, image?: HTMLImageElement) {
         showUpload = false;
         saveAsCustomError = undefined;
         pickedEntity = entityVariant.defaultPrefab;
         pickedEntityVariant = entityVariant;
+        if (image) {
+            TexturesHelper.cacheEntityTextureFromImage(gameManager.getCurrentGameScene(), pickedEntity, image);
+        }
         onColorChange(pickedEntity.color);
     }
 
     function onColorChange(color: string) {
         selectedColor = color;
         pickedEntity = pickedEntityVariant?.getEntityPrefabsPositions(color)[0];
-        mapEditorSelectedEntityPrefabStore.set(pickedEntity ? $state.snapshot(pickedEntity) : undefined);
+        if (pickedEntity) {
+            selectEntityPrefab(pickedEntity);
+        } else {
+            mapEditorSelectedEntityPrefabStore.set(undefined);
+        }
     }
 
     function onSelectedTag(tag: CategoryTag) {

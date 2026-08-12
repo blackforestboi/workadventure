@@ -3,14 +3,12 @@ import type { ModifyCustomEntityMessage } from "@workadventure/messages";
 import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import type { FrontCommand } from "../FrontCommand";
 import type { EntitiesCollectionsManager } from "../../EntitiesCollectionsManager";
-import type { GameMapFrontWrapper } from "../../../GameMap/GameMapFrontWrapper";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 
 export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand implements FrontCommand {
     constructor(
         modifyCustomEntityMessage: ModifyCustomEntityMessage,
         private entitiesCollectionManager: EntitiesCollectionsManager,
-        private gameFrontWrapper: GameMapFrontWrapper,
         private entitiesManager: EntitiesManager,
     ) {
         super(modifyCustomEntityMessage);
@@ -58,7 +56,6 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             previewOffsetY,
             ...(animation === undefined ? {} : { animation }),
         });
-        this.gameFrontWrapper.recomputeEntitiesCollisionGrid();
         return super.execute();
     }
 

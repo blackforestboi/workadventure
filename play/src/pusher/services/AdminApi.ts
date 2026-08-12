@@ -32,6 +32,7 @@ import {
     ADMIN_API_URL,
     OPID_PROFILE_SCREEN_PROVIDER,
     ADMIN_URL,
+    BRAND_NAME,
 } from "../enums/EnvironmentVariable";
 import { IceServer as IceServerSchema } from "./IceServer";
 import type { AdminInterface } from "./AdminInterface";
@@ -98,8 +99,7 @@ export const isFetchMemberDataByUuidSuccessResponse = z.object({
         description: "This data represents the companion texture that will be use.",
     }),
     messages: extendApi(z.array(AdminLoginMessage), {
-        description:
-            "Sets messages that will be displayed when the user logs in to the WA room. These messages are used for ban or ban warning.",
+        description: `Sets messages that will be displayed when the user logs in to the ${BRAND_NAME} room. These messages are used for ban or ban warning.`,
     }),
     /*anonymous: extendApi(z.boolean().optional(), {
         description: "Defines whether it is possible to login as anonymous on a WorkAdventure room.",

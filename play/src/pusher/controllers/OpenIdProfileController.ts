@@ -1,7 +1,7 @@
 import { z } from "zod";
 import Debug from "debug";
 import { openIDClient } from "../services/OpenIDClient";
-import { OPID_CLIENT_ISSUER } from "../enums/EnvironmentVariable";
+import { BRAND_LOGO_URL, OPID_CLIENT_ISSUER } from "../enums/EnvironmentVariable";
 import { validateQuery } from "../services/QueryValidator";
 import { BaseHttpController } from "./BaseHttpController";
 
@@ -61,7 +61,7 @@ export class OpenIdProfileController extends BaseHttpController {
                     <body>
                         <div class="container">
                             <section>
-                                <img src="${pictureUrl ? pictureUrl : "/static/images/logo-WA-min.png"}">
+                                <img src="${pictureUrl ? pictureUrl : BRAND_LOGO_URL || "/static/images/logo.png"}">
                             </section>
                             <section>
                                 Profile validated by domain: <span style="font-weight: bold">${domain}</span>

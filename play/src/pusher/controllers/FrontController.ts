@@ -15,6 +15,9 @@ import {
     LOGROCKET_ID,
     AUTOLOGIN_URL,
     GOOGLE_DRIVE_PICKER_CLIENT_ID,
+    BRAND_MANIFEST_ICON_URL,
+    BRAND_NAME,
+    BRAND_WEBSITE_URL,
 } from "../enums/EnvironmentVariable";
 import { validateQuery } from "../services/QueryValidator";
 import { BaseHttpController } from "./BaseHttpController";
@@ -213,9 +216,12 @@ export class FrontController extends BaseHttpController {
             debug(`FrontController => [${req.method}] ${req.originalUrl} — IP: ${req.ip} — Time: ${Date.now()}`);
             res.json({
                 domain: process.env.PUSHER_URL,
-                name: process.env.SERVER_NAME || "WorkAdventure Server",
-                motd: process.env.SERVER_MOTD || "A WorkAdventure Server",
-                icon: process.env.SERVER_ICON || process.env.PUSHER_URL + "/static/images/favicons/icon-512x512.png",
+                name: process.env.SERVER_NAME || `${BRAND_NAME} Server`,
+                motd: process.env.SERVER_MOTD || `A ${BRAND_NAME} Server`,
+                icon:
+                    process.env.SERVER_ICON ||
+                    BRAND_MANIFEST_ICON_URL ||
+                    process.env.PUSHER_URL + "/static/images/favicons/icon-512x512.png",
                 version: version + (process.env.NODE_ENV !== "production" ? "-dev" : ""),
             });
             return;
@@ -334,7 +340,7 @@ export class FrontController extends BaseHttpController {
                     url: "/",
                     icons: [
                         {
-                            src: "/static/images/favicons/android-icon-192x192.png",
+                            src: BRAND_MANIFEST_ICON_URL || "/static/images/favicons/android-icon-192x192.png",
                             sizes: "192x192",
                             type: "image/png",
                         },
@@ -343,16 +349,14 @@ export class FrontController extends BaseHttpController {
             ],
             description: metaTagsData.description,
             screenshots: [],
-            related_applications: [
-                {
-                    platform: "web",
-                    url: "https://workadventu.re",
-                },
-                {
-                    platform: "play",
-                    url: "https://play.workadventu.re",
-                },
-            ],
+            related_applications: BRAND_WEBSITE_URL
+                ? [
+                      {
+                          platform: "web",
+                          url: BRAND_WEBSITE_URL,
+                      },
+                  ]
+                : [],
         };
 
         res.contentType("application/manifest+json").json(manifest);

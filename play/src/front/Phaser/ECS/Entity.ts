@@ -26,8 +26,9 @@ import { SpeechDomElement } from "../Entity/SpeechDomElement";
 import LL from "../../../i18n/i18n-svelte";
 import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
 import {
+    getEntityCollisionRectangles,
     getScaledCollisionGridFrame,
-    reverseEntityCollisionGrid,
+    type EntityCollisionRectangle,
 } from "../Game/MapEditor/Entities/EntityCollisionGrid";
 import { getEntityDisplaySize } from "../../Utils/EntityPrefabSize";
 import { Room } from "../../Connection/Room";
@@ -263,16 +264,30 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
         actionsMenuStore.clear();
     }
 
-    public getCollisionGrid(): number[][] | undefined {
-        return this.getCollisionGridFrame().collisionGrid;
+    public getCollisionRectangles(): EntityCollisionRectangle[] {
+        return getEntityCollisionRectangles(this.getCollisionGridFrame(), this.getPosition());
     }
 
-    public getCollisionGridPosition(): { x: number; y: number } {
-        const { offset } = this.getCollisionGridFrame();
-        return { x: this.x + offset.x, y: this.y + offset.y };
+    public getCollisionFrameBounds(): {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        collisionGrid: number[][] | undefined;
+    } {
+        const frame = this.getCollisionGridFrame();
+        return {
+            x: this.x + frame.offset.x,
+            y: this.y + frame.offset.y,
+            width: frame.width,
+            height: frame.height,
+            collisionGrid: frame.collisionGrid,
+        };
     }
 
     private getCollisionGridFrame(): ReturnType<typeof getScaledCollisionGridFrame> {
+        const sourceColumns = Math.max(1, ...(this.prefab.collisionGrid?.map((row) => row.length) ?? []));
+        const sourceRows = Math.max(1, this.prefab.collisionGrid?.length ?? 0);
         return getScaledCollisionGridFrame(
             this.prefab.collisionGrid,
             this.width,
@@ -281,11 +296,9 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
             this.displayHeight,
             this.prefab.previewOffsetX,
             this.prefab.previewOffsetY,
+            (this.prefab.defaultSizeInTiles ?? sourceColumns) * 32,
+            (this.prefab.defaultHeightInTiles ?? sourceRows) * 32,
         );
-    }
-
-    public getReversedCollisionGrid(): number[][] | undefined {
-        return reverseEntityCollisionGrid(this.getCollisionGrid());
     }
 
     public updatePrefabMetadata(

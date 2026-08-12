@@ -6,7 +6,7 @@
     import microphoneOffImg from "../images/mic.svg";
     import cameraOffImg from "../images/cam.svg";
     import jistiImg from "../images/jitsi.png";
-    import waImg from "../images/icon-workadventure-white.png";
+    import { BRANDING } from "../../Branding";
     import AreaToolImg from "../images/icon-tool-area.png";
     import megaphoneImg from "./images/megaphone.svg";
     import recordingStopImg from "./images/recording-stop.svg";
@@ -41,7 +41,7 @@
     transition:fly={{ x: 210, duration: 500 }}
 >
     <img
-        src={notification.icon ? (icons.get(notification.icon) ?? notification.icon) : waImg}
+        src={notification.icon ? (icons.get(notification.icon) ?? notification.icon) : BRANDING.assets.logo}
         alt="Audio playing"
         class="bg-white/10 rounded-md h-12"
         draggable="false"

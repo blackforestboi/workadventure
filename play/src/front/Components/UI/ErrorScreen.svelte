@@ -4,15 +4,14 @@
     import { errorScreenStore } from "../../Stores/ErrorScreenStore";
     import { gameManager } from "../../Phaser/Game/GameManager";
     import { connectionManager } from "../../Connection/ConnectionManager";
+    import { BRANDING } from "../../Branding";
 
     import LL from "../../../i18n/i18n-svelte";
     import { userIsConnected } from "../../Stores/MenuStore";
 
-    import logoImg from "../images/logo-min-white.png";
     import LoaderIcon from "../Icons/LoaderIcon.svelte";
     import type { Room } from "../../Connection/Room";
     import Button from "./Button.svelte";
-    import errorGif from "./images/error.gif";
     import { IconRefresh } from "@wa-icons";
 
     let errorScreen = $errorScreenStore;
@@ -24,7 +23,7 @@
         startRoom = undefined;
     }
 
-    let logoErrorSrc = $derived(startRoom?.loginSceneLogo ?? logoImg);
+    let logoErrorSrc = $derived(startRoom?.loginSceneLogo ?? BRANDING.assets.errorLogo);
 
     function click() {
         if (errorScreen?.type === "unauthorized") connectionManager.logout();
@@ -78,7 +77,7 @@
             </div>
             <div class="icon">
                 <img
-                    src={errorScreen?.image ?? startRoom?.errorSceneLogo ?? errorGif}
+                    src={errorScreen?.image ?? startRoom?.errorSceneLogo ?? BRANDING.assets.errorImage}
                     alt="Error"
                     style="height:125px; max-width:100%;"
                     draggable="false"

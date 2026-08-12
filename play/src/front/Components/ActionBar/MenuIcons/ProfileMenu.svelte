@@ -12,6 +12,12 @@
     import Woka from "../../Woka/WokaFromUserId.svelte";
     import ProfileMenuContent from "./ProfileMenuContent.svelte";
 
+    interface Props {
+        joinedWithLogin?: boolean;
+    }
+
+    let { joinedWithLogin = false }: Props = $props();
+
     const PROFILE_MENU_Z_INDEX = 1100;
 
     let userName = gameManager.getPlayerName() || "";
@@ -68,7 +74,9 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div data-testid="action-user" class="flex items-center transition-all pointer-events-auto">
     <div
-        class="group bg-contrast/80 backdrop-blur rounded-lg h-16 @sm/actions:h-14 @xl/actions:h-16 p-2 cursor-pointer"
+        class="group bg-contrast/80 backdrop-blur h-16 @sm/actions:h-14 @xl/actions:h-16 p-2 cursor-pointer {joinedWithLogin
+            ? 'rounded-e-lg'
+            : 'rounded-lg'}"
         class:profile-menu-force-burger={forceBurgerMode}
         bind:this={triggerElement}
         onclick={(event) => {

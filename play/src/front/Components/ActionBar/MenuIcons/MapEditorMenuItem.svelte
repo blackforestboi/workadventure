@@ -30,7 +30,7 @@
     function requireLogin(): boolean {
         if (!localUserStore.isLogged()) {
             analyticsClient.login();
-            window.dispatchEvent(new CustomEvent("workadventure:open-login-overlay"));
+        window.dispatchEvent(new CustomEvent("app:open-login-overlay"));
             return false;
         }
         return true;

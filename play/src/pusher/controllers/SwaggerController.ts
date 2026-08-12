@@ -3,7 +3,7 @@ import path from "path";
 import swaggerJsdoc from "swagger-jsdoc";
 import { load as cheerioLoad } from "cheerio";
 import Debug from "debug";
-import { ADMIN_URL } from "../enums/EnvironmentVariable";
+import { ADMIN_URL, BRAND_NAME, BRAND_WEBSITE_URL } from "../enums/EnvironmentVariable";
 import SwaggerGenerator from "../services/SwaggerGenerator";
 import { BaseHttpController } from "./BaseHttpController";
 
@@ -17,7 +17,7 @@ export class SwaggerController extends BaseHttpController {
                 swaggerDefinition: {
                     openapi: "3.0.0",
                     info: {
-                        title: "WorkAdventure Pusher",
+                        title: `${BRAND_NAME} Pusher`,
                         version: "1.0.0",
                     },
                 },
@@ -34,13 +34,11 @@ export class SwaggerController extends BaseHttpController {
                     swagger: "2.0",
                     //openapi: "3.0.0",
                     info: {
-                        title: "WorkAdventure Pusher",
+                        title: `${BRAND_NAME} Pusher`,
                         version: "1.0.0",
-                        description:
-                            "This is a documentation about the endpoints called by the pusher. \n You can find out more about WorkAdventure on [github](https://github.com/thecodingmachine/workadventure).",
-                        contact: {
-                            email: "hello@workadventu.re",
-                        },
+                        description: `This is documentation for the endpoints called by the ${BRAND_NAME} pusher.${
+                            BRAND_WEBSITE_URL ? ` Visit ${BRAND_WEBSITE_URL} for more information.` : ""
+                        }`,
                     },
                     tags: [
                         {

@@ -249,10 +249,10 @@
     <body id="body" style="margin: 0; background-color: rgb(27, 42, 65)" class="text-white">
         <script>
             (function () {
-                window.__workadventureDeferredPwaPrompt = null;
+                window.__appDeferredPwaPrompt = null;
                 window.addEventListener("beforeinstallprompt", function (e) {
                     e.preventDefault();
-                    window.__workadventureDeferredPwaPrompt = e;
+                    window.__appDeferredPwaPrompt = e;
                 });
             })();
         </script>

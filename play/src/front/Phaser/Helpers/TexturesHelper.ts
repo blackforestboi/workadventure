@@ -90,6 +90,30 @@ export class TexturesHelper {
         return this.loadEntityTexture(scene, { imagePath: key }, url);
     }
 
+    /**
+     * Reuses an image already decoded by the asset picker instead of making the placement preview
+     * wait for the Phaser loader to fetch and decode the same resource again.
+     */
+    public static cacheEntityTextureFromImage(
+        scene: Phaser.Scene,
+        prefab: Pick<EntityPrefab, "imagePath" | "animation">,
+        image: HTMLImageElement,
+    ): void {
+        const key = prefab.imagePath;
+        if (scene.textures.exists(key) || image.naturalWidth === 0) {
+            return;
+        }
+
+        if (!isVisualAssetAnimationStatic(prefab.animation) && prefab.animation !== undefined) {
+            scene.textures.addSpriteSheet(key, image, {
+                frameWidth: prefab.animation.frameWidth,
+                frameHeight: prefab.animation.frameHeight,
+            });
+        } else {
+            scene.textures.addImage(key, image);
+        }
+    }
+
     public static async loadEntityTexture(
         scene: Phaser.Scene,
         prefab: Pick<EntityPrefab, "imagePath" | "animation">,

@@ -54,7 +54,8 @@ describe("collision grid resizer", () => {
         expect(customEntityEditionFormSource).toContain("oninput={updateCollisionGridHeight}");
         expect(customEntityEditionFormSource).toContain("ENTITY_SIZE_TILE_OPTIONS");
         expect(customEntityEditionFormSource).toContain("defaultSizeInTiles * MAP_TILE_SIZE");
-        expect(customEntityEditionFormSource).toContain("collisionGrid.map((row) => row.length)) * MAP_TILE_SIZE");
+        expect(customEntityEditionFormSource).toContain("defaultSizeInTiles * MAP_TILE_SIZE * previewScaleX");
+        expect(customEntityEditionFormSource).toContain("defaultHeightInTiles * MAP_TILE_SIZE * previewScaleY");
         expect(customEntityEditionFormSource).toContain("getOpaqueImageBounds(");
         expect(customEntityEditionFormSource).toContain("getDefaultHeightInTiles(bounds.width, bounds.height)");
         expect(customEntityEditionFormSource).not.toContain("collisionFrameOffset");
@@ -72,10 +73,8 @@ describe("collision grid resizer", () => {
         expect(customEntityEditionFormSource).not.toContain("Remove collision areas");
     });
 
-    it("keeps collision cells square for every grid width and height", () => {
-        expect(collisionGridSource).toContain(
-            "Math.min(collisionGridWidth / columnCount, collisionGridHeight / rowCount)",
-        );
+    it("keeps the authored collision frame independent from map tile dimensions", () => {
+        expect(collisionGridSource).not.toContain("Math.min(collisionGridWidth / columnCount");
         expect(collisionGridSource).toContain("displayedGridWidth");
         expect(collisionGridSource).toContain("displayedGridHeight");
         expect(collisionGridSource).toContain("(collisionGridWidth - displayedGridWidth) / 2");

@@ -20,8 +20,8 @@
     import { myCameraStore, myMicrophoneStore } from "../../Stores/MyMediaStore";
     import { localUserStore } from "../../Connection/LocalUserStore";
     import { gameManager } from "../../Phaser/Game/GameManager";
+    import { BRANDING } from "../../Branding";
 
-    import bgMap from "../images/map-exemple.png";
     import Button from "../UI/Button.svelte";
     import HorizontalSoundMeterWidget from "./HorizontalSoundMeterWidget.svelte";
     import SelectMicrophone from "./SelectMicrophone.svelte";
@@ -303,7 +303,10 @@
         </div>
     </section>
 </form>
-<div class="fixed start-0 top-0 w-dvw h-dvh bg-cover z-10" style="background-image: url('{bgMap}');"></div>
+<div
+    class="fixed start-0 top-0 w-dvw h-dvh bg-cover z-10"
+    style="background-image: url('{BRANDING.assets.loadingBackground}');"
+></div>
 <div class="fixed start-0 top-0 w-dvw h-dvh bg-contrast/80 z-20" style="background-color: '{bgColor}';"></div>
 
 <style>

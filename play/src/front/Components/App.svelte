@@ -14,6 +14,8 @@
         SENTRY_RELEASE,
         SENTRY_TRACES_SAMPLE_RATE,
     } from "../Enum/EnvironmentVariable";
+    import { BRANDING } from "../Branding";
+    import { installBrandingRuntime } from "../BrandingRuntime";
     import { HdpiManager } from "../Phaser/Services/HdpiManager";
     import { EntryScene } from "../Phaser/Login/EntryScene";
     import { LoginScene } from "../Phaser/Login/LoginScene";
@@ -46,8 +48,10 @@
     let canvas: HTMLCanvasElement;
     let handleCanvasClick: () => void;
     let browserNotSupported = $state(false);
+    let uninstallBrandingRuntime: (() => void) | undefined;
 
     onMount(() => {
+        uninstallBrandingRuntime = installBrandingRuntime();
         // Check browser compatibility before initializing the app
         if (!isStructuredCloneSupported()) {
             browserNotSupported = true;
@@ -148,7 +152,7 @@
 
         const config: Phaser.Types.Core.GameConfig = {
             type: mode,
-            title: "WorkAdventure",
+            title: BRANDING.name,
             scale: {
                 parent: gameDiv,
                 width: gameSize.width,
@@ -263,6 +267,7 @@
     });
 
     onDestroy(() => {
+        uninstallBrandingRuntime?.();
         canvasSizeUnsubscriber?.();
         if (canvas && handleCanvasClick) {
             canvas.removeEventListener("click", handleCanvasClick);

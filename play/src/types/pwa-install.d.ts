@@ -10,7 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 declare global {
     interface Window {
-        __workadventureDeferredPwaPrompt: BeforeInstallPromptEvent | null;
+        __appDeferredPwaPrompt: BeforeInstallPromptEvent | null;
     }
 }
 

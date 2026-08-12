@@ -10,7 +10,8 @@
         proximityMeetingStore,
     } from "../../Stores/MyMediaStore";
     import type { RightMenuItem } from "../../Stores/MenuStore";
-    import { mediaSettingsOpenStore, rightActionBarMenuItems } from "../../Stores/MenuStore";
+    import { mediaSettingsOpenStore, rightActionBarMenuItems, userIsConnected } from "../../Stores/MenuStore";
+    import { ENABLE_OPENID } from "../../Enum/EnvironmentVariable";
     import { IconChevronUp } from "../Icons";
     import { hideActionBarStoreBecauseOfChatBar } from "../../Chat/ChatSidebarWidthStore";
     import { screenSharingAvailableStore } from "../../Stores/ScreenSharingStore";
@@ -23,6 +24,7 @@
     import UserListMenuItem from "./MenuIcons/UserListMenuItem.svelte";
     import ResponsiveActionBar from "./ResponsiveActionBar.svelte";
     import ProfileMenu from "./MenuIcons/ProfileMenu.svelte";
+    import LoginMenuItem from "./MenuIcons/LoginMenuItem.svelte";
     import VisibilityChecker from "./VisibilityChecker.svelte";
     import ContextualMenuItems from "./MenuIcons/ContextualMenuItems.svelte";
     import CloseChatMenuItem from "./MenuIcons/CloseChatMenuItem.svelte";
@@ -155,8 +157,11 @@
                         {/if}
                     </div>
 
-                    <div class="flex justify-end gap-1 md:gap-2 xl:gap-4">
-                        <ProfileMenu />
+                    <div class="flex justify-end gap-0">
+                        {#if !$userIsConnected && ENABLE_OPENID}
+                            <LoginMenuItem first={true} last={false} />
+                        {/if}
+                        <ProfileMenu joinedWithLogin={!$userIsConnected && ENABLE_OPENID} />
                     </div>
                 </div>
             {/snippet}

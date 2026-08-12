@@ -20,11 +20,15 @@ import { Entity, EntityEvent } from "../../ECS/Entity";
 import { TexturesHelper } from "../../Helpers/TexturesHelper";
 import type { GameScene } from "../GameScene";
 import { EditorToolName } from "../MapEditor/MapEditorModeManager";
+import { collisionRectanglesOverlap, type EntityCollisionRectangle } from "../MapEditor/Entities/EntityCollisionGrid";
 import type { GameMapFrontWrapper } from "./GameMapFrontWrapper";
 
 import EventEmitter = Phaser.Events.EventEmitter;
 import Key = Phaser.Input.Keyboard.Key;
 import Pointer = Phaser.Input.Pointer;
+import StaticBody = Phaser.Physics.Arcade.StaticBody;
+import StaticGroup = Phaser.Physics.Arcade.StaticGroup;
+import Zone = Phaser.GameObjects.Zone;
 
 export const CopyEntityEventData = z.object({
     position: z.object({
@@ -66,6 +70,8 @@ export class EntitiesManager extends EventEmitter {
 
     private entities: Map<string, Entity>;
     private activatableEntities: Entity[];
+    private readonly collisionGroup: StaticGroup;
+    private readonly collisionZones = new Map<string, Zone[]>();
 
     private properties: Map<string, string | boolean | number>;
     private actionsMenuStoreUnsubscriber: Unsubscriber;
@@ -84,6 +90,7 @@ export class EntitiesManager extends EventEmitter {
         this.ctrlKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
         this.entities = new Map<string, Entity>();
         this.activatableEntities = [];
+        this.collisionGroup = this.scene.physics.add.staticGroup();
         this.properties = new Map<string, string | boolean | number>();
 
         // clear properties immediately on every ActionsMenu change
@@ -110,7 +117,6 @@ export class EntitiesManager extends EventEmitter {
         data: WAMEntityData,
         imagePathPrefix?: string,
         interactive?: boolean,
-        withGridUpdate?: boolean,
     ): Promise<Entity> {
         const prefab = await this.scene
             .getEntitiesCollectionsManager()
@@ -133,6 +139,7 @@ export class EntitiesManager extends EventEmitter {
                     TexturesHelper.playEntityAnimation(entity, prefab);
                     entity.applyStoredDimensions();
                     entity.setDepth(entity.y + entity.displayHeight + (entity.getPrefab().depthOffset ?? 0));
+                    this.refreshEntityCollisionBodies(entity);
                 }
             })
             .catch((e) => console.error(e));
@@ -143,18 +150,6 @@ export class EntitiesManager extends EventEmitter {
         }
 
         this.bindEntityEventHandlers(entity);
-
-        const colGrid = entity.getCollisionGrid();
-        if (colGrid) {
-            const collisionPosition = entity.getCollisionGridPosition();
-            this.gameMapFrontWrapper.modifyToCollisionsLayer(
-                collisionPosition.x,
-                collisionPosition.y,
-                "0",
-                colGrid,
-                withGridUpdate,
-            );
-        }
 
         this.entities.set(entityId, entity);
 
@@ -188,11 +183,7 @@ export class EntitiesManager extends EventEmitter {
             }
         }
 
-        const colGrid = entity.getReversedCollisionGrid();
-        if (colGrid) {
-            const collisionPosition = entity.getCollisionGridPosition();
-            this.gameMapFrontWrapper.modifyToCollisionsLayer(collisionPosition.x, collisionPosition.y, "0", colGrid);
-        }
+        this.removeEntityCollisionBodies(id);
         entity.destroy();
         this.scene.markDirty();
 
@@ -225,8 +216,58 @@ export class EntitiesManager extends EventEmitter {
             const entityPrefab = entity.getPrefab();
             if (entityPrefab.id === modifiedEntityPrefabId) {
                 entity.updatePrefabMetadata(metadata);
+                this.refreshEntityCollisionBodies(entity);
             }
         }
+    }
+
+    public getCollisionGroup(): StaticGroup {
+        return this.collisionGroup;
+    }
+
+    public refreshEntityCollisionBodies(entity: Entity): void {
+        this.removeEntityCollisionBodies(entity.entityId);
+        const zones = entity.getCollisionRectangles().map((rectangle) => {
+            const zone = this.scene.add.zone(
+                rectangle.x + rectangle.width / 2,
+                rectangle.y + rectangle.height / 2,
+                rectangle.width,
+                rectangle.height,
+            );
+            this.collisionGroup.add(zone);
+            const body = zone.body;
+            if (body instanceof StaticBody) {
+                body.updateFromGameObject();
+            }
+            return zone;
+        });
+        if (zones.length > 0) {
+            this.collisionZones.set(entity.entityId, zones);
+        }
+    }
+
+    public overlapsEntityCollision(
+        rectangles: readonly EntityCollisionRectangle[],
+        excludedEntityId?: string,
+    ): boolean {
+        for (const entity of this.entities.values()) {
+            if (entity.entityId === excludedEntityId) continue;
+            for (const candidate of entity.getCollisionRectangles()) {
+                if (rectangles.some((rectangle) => collisionRectanglesOverlap(rectangle, candidate))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private removeEntityCollisionBodies(entityId: string): void {
+        const zones = this.collisionZones.get(entityId);
+        if (!zones) return;
+        for (const zone of zones) {
+            zone.destroy();
+        }
+        this.collisionZones.delete(entityId);
     }
 
     public getProperties(): Map<string, string | boolean | number> {
@@ -341,11 +382,11 @@ export class EntitiesManager extends EventEmitter {
                     !this.scene
                         .getGameMapFrontWrapper()
                         .canEntityBePlacedOnMap(
-                            entity.getCollisionGridPosition(),
+                            entity.getPosition(),
                             entity.displayWidth,
                             entity.displayHeight,
-                            entity.getCollisionGrid(),
-                            this.getOldCollisionGridPosition(entity),
+                            entity.getCollisionRectangles(),
+                            entity.entityId,
                             this.shiftKey?.isDown,
                         )
                 ) {
@@ -449,11 +490,11 @@ export class EntitiesManager extends EventEmitter {
             !this.scene
                 .getGameMapFrontWrapper()
                 .canEntityBePlacedOnMap(
-                    entity.getCollisionGridPosition(),
+                    entity.getPosition(),
                     entity.displayWidth,
                     entity.displayHeight,
-                    entity.getCollisionGrid(),
-                    this.getOldCollisionGridPosition(entity),
+                    entity.getCollisionRectangles(),
+                    entity.entityId,
                     this.shiftKey?.isDown,
                 )
         ) {
@@ -466,15 +507,6 @@ export class EntitiesManager extends EventEmitter {
             }
         }
         this.scene.markDirty();
-    }
-
-    private getOldCollisionGridPosition(entity: Entity): { x: number; y: number } {
-        const previousPosition = entity.getOldPosition();
-        const collisionPosition = entity.getCollisionGridPosition();
-        return {
-            x: previousPosition.x + collisionPosition.x - entity.x,
-            y: previousPosition.y + collisionPosition.y - entity.y,
-        };
     }
 
     private isEntityEditorToolActive(): boolean {
@@ -538,5 +570,8 @@ export class EntitiesManager extends EventEmitter {
 
     public close() {
         this.actionsMenuStoreUnsubscriber();
+        this.collisionZones.clear();
+        this.collisionGroup.clear(true, true);
+        this.collisionGroup.destroy();
     }
 }

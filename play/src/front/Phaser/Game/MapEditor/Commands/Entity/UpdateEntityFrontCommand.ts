@@ -1,7 +1,6 @@
 import type { WamFile, WAMEntityData, WAMFileFormat } from "@workadventure/map-editor";
 import { UpdateEntityCommand } from "@workadventure/map-editor";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
-import type { Entity } from "../../../../ECS/Entity";
 import type { GameScene } from "../../../GameScene";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
 import type { RoomConnection } from "../../../../../Connection/RoomConnection";
@@ -64,34 +63,13 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
         if (!entity) {
             return;
         }
-        const oldCollisionPosition = entity.getCollisionGridPosition();
-        const oldCollisionGrid = entity.getCollisionGrid();
         entity?.updateEntity(config);
         // If the entity is activable, and not in the activatable entities array of the entity manager,
         // we add it to the array
         if (entity.isActivatable() && !this.entitiesManager.getActivatableEntities().includes(entity)) {
             this.entitiesManager.getActivatableEntities().push(entity);
         }
-        this.updateCollisionGrid(entity, oldCollisionPosition.x, oldCollisionPosition.y, oldCollisionGrid);
+        this.entitiesManager.refreshEntityCollisionBodies(entity);
         this.scene.markDirty();
-    }
-
-    private updateCollisionGrid(
-        entity: Entity,
-        oldX: number,
-        oldY: number,
-        oldCollisionGrid: number[][] | undefined,
-    ): void {
-        const reversedGrid = oldCollisionGrid?.map((row) => row.map((value) => (value === 1 ? -1 : value)));
-        const grid = entity.getCollisionGrid();
-        if (reversedGrid) {
-            this.scene.getGameMapFrontWrapper().modifyToCollisionsLayer(oldX, oldY, "0", reversedGrid);
-        }
-        if (grid) {
-            const collisionPosition = entity.getCollisionGridPosition();
-            this.scene
-                .getGameMapFrontWrapper()
-                .modifyToCollisionsLayer(collisionPosition.x, collisionPosition.y, "0", grid);
-        }
     }
 }

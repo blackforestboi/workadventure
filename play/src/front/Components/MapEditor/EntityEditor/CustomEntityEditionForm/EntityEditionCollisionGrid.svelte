@@ -18,9 +18,8 @@
     }: Props = $props();
     let columnCount = $derived(Math.max(1, ...collisionGrid.map((row) => row.length)));
     let rowCount = $derived(Math.max(1, collisionGrid.length));
-    let cellSize = $derived(Math.min(collisionGridWidth / columnCount, collisionGridHeight / rowCount));
-    let displayedGridWidth = $derived(cellSize * columnCount);
-    let displayedGridHeight = $derived(cellSize * rowCount);
+    let displayedGridWidth = $derived(collisionGridWidth);
+    let displayedGridHeight = $derived(collisionGridHeight);
 </script>
 
 <div

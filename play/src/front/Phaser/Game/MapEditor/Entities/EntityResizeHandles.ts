@@ -14,6 +14,7 @@ export class EntityResizeHandles {
     private readonly handles = new Map<Corner, Phaser.GameObjects.Rectangle>();
     private readonly shiftKey: Phaser.Input.Keyboard.Key | undefined;
     private dragStart: Bounds | undefined;
+    private dragStartFrame: Bounds | undefined;
     private currentBounds: Bounds | undefined;
 
     constructor(
@@ -34,7 +35,7 @@ export class EntityResizeHandles {
         const depth = this.entity.depth + 10;
         this.outline.clear().lineStyle(2, 0x53d8fb, 0.95).strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
 
-        const collisionGrid = this.entity.getCollisionGrid();
+        const collisionGrid = this.entity.getCollisionFrameBounds().collisionGrid;
         if (collisionGrid?.length && collisionGrid[0]?.length) {
             const columns = Math.max(...collisionGrid.map((row) => row.length));
             const tileWidth = bounds.width / columns;
@@ -70,20 +71,36 @@ export class EntityResizeHandles {
         this.scene.input.setDraggable(handle);
         handle.on(Phaser.Input.Events.DRAG_START, () => {
             this.dragStart = this.getBounds();
+            this.dragStartFrame = this.getOutlineBounds();
             this.currentBounds = this.dragStart;
             this.entity.beginEditorResize(this.dragStart);
         });
         handle.on(Phaser.Input.Events.DRAG, (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-            if (this.dragStart === undefined) return;
-            const bounds = resizeBoundsFromCorner(this.dragStart, corner, dragX, dragY, !this.shiftKey?.isDown);
-            this.currentBounds = bounds;
-            this.entity.previewEditorBounds(bounds);
+            if (this.dragStart === undefined || this.dragStartFrame === undefined) return;
+            const frameBounds = resizeBoundsFromCorner(
+                this.dragStartFrame,
+                corner,
+                dragX,
+                dragY,
+                !this.shiftKey?.isDown,
+            );
+            const scaleX = frameBounds.width / this.dragStartFrame.width;
+            const scaleY = frameBounds.height / this.dragStartFrame.height;
+            const entityBounds = {
+                x: frameBounds.x + (this.dragStart.x - this.dragStartFrame.x) * scaleX,
+                y: frameBounds.y + (this.dragStart.y - this.dragStartFrame.y) * scaleY,
+                width: this.dragStart.width * scaleX,
+                height: this.dragStart.height * scaleY,
+            };
+            this.currentBounds = entityBounds;
+            this.entity.previewEditorBounds(entityBounds);
             this.update();
             this.scene.markDirty();
         });
         handle.on(Phaser.Input.Events.DRAG_END, () => {
             if (this.currentBounds !== undefined) this.entity.commitEditorBounds(this.currentBounds);
             this.dragStart = undefined;
+            this.dragStartFrame = undefined;
             this.currentBounds = undefined;
             this.scene.markDirty();
         });
@@ -104,16 +121,15 @@ export class EntityResizeHandles {
     }
 
     private getOutlineBounds(): Bounds {
-        const collisionGrid = this.entity.getCollisionGrid();
-        if (!collisionGrid?.length || !collisionGrid[0]?.length) {
+        const frame = this.entity.getCollisionFrameBounds();
+        if (!frame.collisionGrid?.length || !frame.collisionGrid[0]?.length) {
             return this.getBounds();
         }
-        const position = this.entity.getCollisionGridPosition();
         return {
-            x: position.x,
-            y: position.y,
-            width: Math.max(...collisionGrid.map((row) => row.length)) * 32,
-            height: collisionGrid.length * 32,
+            x: frame.x,
+            y: frame.y,
+            width: frame.width,
+            height: frame.height,
         };
     }
 }

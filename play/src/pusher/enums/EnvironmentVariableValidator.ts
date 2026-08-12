@@ -69,6 +69,108 @@ export const EnvironmentVariables = z.object({
         .describe("Allowed CORS origin for API requests. Use '*' to allow any domain"),
     PUSHER_URL: AbsoluteOrRelativeUrl.optional().describe("Public URL of the pusher service"),
     FRONT_URL: AbsoluteOrRelativeUrl.optional().describe("Public URL of the frontend application"),
+
+    // Runtime branding and replaceable frontend assets
+    BRAND_NAME: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .default("tpot.world")
+        .describe("Displayed product name. Defaults to tpot.world"),
+    BRAND_SHORT_NAME: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .default("tpot")
+        .describe("Short displayed product name used by app metadata. Defaults to tpot"),
+    BRAND_DESCRIPTION: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .default("Organize your online world in tpot.world.")
+        .describe("Default application description used by metadata"),
+    BRAND_AUTHOR: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .default("tpot.world team")
+        .describe("Default metadata author"),
+    BRAND_PROVIDER: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .default("tpot.world")
+        .describe("Default metadata provider"),
+    BRAND_THEME_COLOR: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .default("#1B2A41")
+        .describe("Default browser theme color"),
+    BRAND_WEBSITE_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Optional public website URL used by app metadata"),
+    BRAND_LOGO_URL: z.string().optional().transform(emptyStringToUndefined).describe("Default application logo URL"),
+    BRAND_LOADING_LOGO_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Loading screen logo or animation URL"),
+    BRAND_LOGIN_LOGO_URL: z.string().optional().transform(emptyStringToUndefined).describe("Login screen logo URL"),
+    BRAND_ERROR_LOGO_URL: z.string().optional().transform(emptyStringToUndefined).describe("Error screen logo URL"),
+    BRAND_ERROR_IMAGE_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Error screen illustration or animation URL"),
+    BRAND_LOADING_BACKGROUND_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Loading and login background image URL"),
+    BRAND_PWA_BACKGROUND_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("PWA install screen background image URL"),
+    BRAND_POWERED_BY_LOGO_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Optional powered-by logo URL"),
+    BRAND_STATUS_ICON_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Reconnect/error scene icon URL"),
+    BRAND_STATUS_CHARACTER_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Reconnect/error scene character spritesheet URL"),
+    BRAND_STATUS_FONT_IMAGE_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Reconnect/error scene bitmap font image URL"),
+    BRAND_STATUS_FONT_DATA_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Reconnect/error scene bitmap font data URL"),
+    BRAND_FAVICON_URL: z.string().optional().transform(emptyStringToUndefined).describe("Application favicon URL"),
+    BRAND_MANIFEST_ICON_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Application manifest icon URL"),
+    BRAND_CARD_IMAGE_URL: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Social sharing card image URL"),
     MAP_STORAGE_API_TOKEN: z.string().describe("API token for authenticating with the map-storage service"),
     REDIS_HOST: z.string().optional().transform(emptyStringToUndefined).describe("Redis server hostname or IP address"),
     REDIS_PORT: PositiveIntAsString.optional()

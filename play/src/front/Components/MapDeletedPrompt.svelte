@@ -2,8 +2,7 @@
     import { fly } from "svelte/transition";
     import { LL } from "../../i18n/i18n-svelte";
     import { gameManager } from "../Phaser/Game/GameManager";
-    import logoImg from "./images/logo-min-white.png";
-    import errorGif from "./UI/images/error.gif";
+    import { BRANDING } from "../Branding";
 
     function getBackgroundColor() {
         if (!gameManager.currentStartedRoom) return undefined;
@@ -20,12 +19,12 @@
 >
     <div class="flex flex-col items-center" style="width: 90%;">
         <div class="logo">
-            <img src={logoImg} alt="Logo" style="max-height:25vh; max-width:80%;" draggable="false" />
+            <img src={BRANDING.assets.errorLogo} alt="Logo" style="max-height:25vh; max-width:80%;" draggable="false" />
         </div>
 
         <div class="icon">
             <img
-                src={gameManager?.currentStartedRoom?.errorSceneLogo ?? errorGif}
+                src={gameManager?.currentStartedRoom?.errorSceneLogo ?? BRANDING.assets.errorImage}
                 alt="Map deleted"
                 style="height:125px; max-width:100%;"
                 draggable="false"

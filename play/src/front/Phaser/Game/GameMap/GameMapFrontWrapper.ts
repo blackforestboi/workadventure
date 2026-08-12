@@ -38,6 +38,7 @@ import type { Entity } from "../../ECS/Entity";
 import type { ITiledPlace } from "../GameMapPropertiesListener";
 import type { DepthGameObject, GameRenderLayers, MapRenderBand } from "../GameRenderLayers";
 import type { GameScene } from "../GameScene";
+import { collisionRectanglesOverlap, type EntityCollisionRectangle } from "../MapEditor/Entities/EntityCollisionGrid";
 import { EntitiesManager } from "./EntitiesManager";
 import { AreasManager } from "./AreasManager";
 import { replacePhaserTileProperties } from "./TilePropertySync";
@@ -58,6 +59,7 @@ import Tilemap = Phaser.Tilemaps.Tilemap;
 import Tile = Phaser.Tilemaps.Tile;
 import Tileset = Phaser.Tilemaps.Tileset;
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer;
+import ArcadeBody = Phaser.Physics.Arcade.Body;
 
 type RenderableTilemapLayer = TilemapLayer | TilemapGPULayer;
 type TileAnimationData = {
@@ -131,10 +133,6 @@ export class GameMapFrontWrapper {
 
     public collisionGrid: number[][];
     /**
-     * A layer containing collide tiles mapping the collision zones of entities put with the map editor
-     */
-    private entitiesCollisionLayer: TilemapLayer;
-    /**
      * A layer containing collide tiles mapping the collision zones of restricted areas put with the map editor
      */
     private areasCollisionLayer: TilemapLayer;
@@ -173,9 +171,9 @@ export class GameMapFrontWrapper {
     private mapChangedSubject = new Subject<number[][]>();
 
     /**
-     * HACK: We need to make sure we are using an existing Tile index in order to place it inside entitieCollisionLayer.
+     * HACK: We need an existing tile index when populating synthetic tile collision layers.
      * This is needed since 3.60.0. For some reason, index of -1 value is no longer working properly with default collision system
-     * for tiles. To make it work as intended, we also need to make entitiesCollisionLayer invisible.
+     * for tiles.
      */
     private readonly existingTileIndex;
 
@@ -248,19 +246,7 @@ export class GameMapFrontWrapper {
             });
 
         this.collisionGrid = [];
-        // NOTE: We cannot really proceed without it
-        const phaserBlankCollisionsLayer = phaserMap.createBlankLayer("__entitiesCollisionLayer", terrains);
-        if (!phaserBlankCollisionsLayer) {
-            throw new Error("Could not create entities collision layer");
-        }
-        this.entitiesCollisionLayer = phaserBlankCollisionsLayer;
         const mapBounds = getMapWorldBounds(this.gameMap.getMap());
-        this.entitiesCollisionLayer.setPosition(mapBounds.x, mapBounds.y);
-        this.entitiesCollisionLayer.setCollisionByProperty({ collides: true }).setVisible(false);
-        this.gameRenderLayers.addMapLayer(this.entitiesCollisionLayer, "background", localDepth.background++);
-
-        this.phaserLayers.push(this.entitiesCollisionLayer);
-
         const phaserBlankCollisionsLayer2 = phaserMap.createBlankLayer("__areasCollisionLayer", terrains);
         if (!phaserBlankCollisionsLayer2) {
             throw new Error("Could not create areas collision layer");
@@ -405,7 +391,7 @@ export class GameMapFrontWrapper {
         for (const [entityId, entityData] of Object.entries(
             this.gameMap.getWamFile()?.getGameMapEntities().getEntities() ?? {},
         )) {
-            addEntityPromises.push(this.entitiesManager.addEntity(entityId, entityData, undefined, undefined, false));
+            addEntityPromises.push(this.entitiesManager.addEntity(entityId, entityData));
             // We need to AWAIT for all entities to be created.
             // OTHERWISE, delete commands might pass FIRST!
         }
@@ -416,32 +402,8 @@ export class GameMapFrontWrapper {
                     console.error(result.reason);
                 }
             });
-            this.invalidateCollisionGrid({ modifiedLayer: this.entitiesCollisionLayer });
             this.initializedPromise.resolve();
         });
-    }
-
-    public recomputeEntitiesCollisionGrid() {
-        const entities = this.entitiesManager.getEntities();
-
-        this.entitiesCollisionLayer.fill(-1);
-
-        for (const entity of entities.values()) {
-            const entityCollisionGrid = entity.getCollisionGrid();
-            if (entityCollisionGrid === undefined) {
-                continue;
-            }
-            const collisionPosition = entity.getCollisionGridPosition();
-            this.modifyToCollisionsLayer(
-                collisionPosition.x,
-                collisionPosition.y,
-                entity.name,
-                entityCollisionGrid,
-                false,
-            );
-        }
-
-        this.invalidateCollisionGrid({ modifiedLayer: this.entitiesCollisionLayer });
     }
 
     public recomputeAreasCollisionGrid() {
@@ -619,48 +581,6 @@ export class GameMapFrontWrapper {
         return getTileSupportGrid({ ...map, layers: applyRuntimeVisibility(map.layers, "") });
     }
 
-    /**
-     *
-     * @param x Top left of the starting position in world coordinates
-     * @param y Top left of the starting position in world coordinates
-     * @param name The key to differentiate between different collisionGrid modificators
-     * @param collisionGrid Collisions map representing tiles
-     * @returns
-     */
-    public modifyToCollisionsLayer(
-        x: number,
-        y: number,
-        name: string,
-        collisionGrid: number[][],
-        withGridUpdate = true,
-    ): void {
-        const coords = this.entitiesCollisionLayer.worldToTileXY(x, y, true);
-        for (let y = 0; y < collisionGrid.length; y += 1) {
-            for (let x = 0; x < collisionGrid[y].length; x += 1) {
-                // add tiles
-                if (collisionGrid[y][x] === 1) {
-                    const tile = this.entitiesCollisionLayer.putTileAt(
-                        this.existingTileIndex,
-                        coords.x + x,
-                        coords.y + y,
-                    );
-                    if (tile !== null) {
-                        tile.properties["collides"] = true;
-                    }
-                    continue;
-                }
-                // remove tiles
-                if (collisionGrid[y][x] === -1) {
-                    this.entitiesCollisionLayer.removeTileAt(coords.x + x, coords.y + y, false);
-                }
-            }
-        }
-        this.entitiesCollisionLayer.setCollisionByProperty({ collides: true });
-        if (withGridUpdate) {
-            this.invalidateCollisionGrid({ modifiedLayer: this.entitiesCollisionLayer });
-        }
-    }
-
     private registerCollisionArea(area: AreaData): void {
         const start = this.areasCollisionLayer.worldToTileXY(area.x, area.y, true);
         const end = this.areasCollisionLayer.worldToTileXY(area.x + area.width, area.y + area.height, false);
@@ -756,9 +676,7 @@ export class GameMapFrontWrapper {
             }
             collisionLayers.push({
                 kind:
-                    layer === this.entitiesCollisionLayer ||
-                    layer === this.areasCollisionLayer ||
-                    layer === this.voidCollisionLayer
+                    layer === this.areasCollisionLayer || layer === this.voidCollisionLayer
                         ? "dynamic-collision"
                         : isAuthoringCollision
                           ? "authoring-collision"
@@ -1186,111 +1104,85 @@ export class GameMapFrontWrapper {
         topLeftPos: { x: number; y: number },
         width: number,
         height: number,
-        collisionGrid?: number[][],
-        oldTopLeftPos?: { x: number; y: number },
+        collisionRectangles: readonly EntityCollisionRectangle[] = [],
+        excludedEntityId?: string,
         ignoreCollisionGrid?: boolean,
     ): boolean {
-        const hasBlockedCollisionCell = collisionGrid?.some((row) => row.some((cell) => cell === 1)) ?? false;
-        const tileDimensions = this.getTileDimensions();
-        const collisionColumns = collisionGrid ? Math.max(1, ...collisionGrid.map((row) => row.length)) : 0;
-        const placementWidth = hasBlockedCollisionCell
-            ? collisionColumns * tileDimensions.width
-            : collisionGrid
-              ? 0
-              : width;
-        const placementHeight = hasBlockedCollisionCell
-            ? collisionGrid.length * tileDimensions.height
-            : collisionGrid
-              ? 0
-              : height;
-        const canEntityBePlaced = this.canEntityBePlaced(
-            topLeftPos,
-            placementWidth,
-            placementHeight,
-            hasBlockedCollisionCell ? collisionGrid : undefined,
-            oldTopLeftPos,
-            ignoreCollisionGrid,
-        );
-
-        const entityCenterCoordinates = {
-            x: Math.ceil(topLeftPos.x + placementWidth / 2),
-            y: Math.ceil(topLeftPos.y + placementHeight / 2),
-        };
-
-        return (
-            canEntityBePlaced &&
-            this.scene
-                .getEntityPermissions()
-                .canEdit(entityCenterCoordinates, placementWidth, placementHeight, !hasBlockedCollisionCell)
-        );
-    }
-
-    private canEntityBePlaced(
-        topLeftPos: { x: number; y: number },
-        width: number,
-        height: number,
-        collisionGrid?: number[][],
-        oldTopLeftPos?: { x: number; y: number },
-        ignoreCollisionGrid?: boolean,
-    ): boolean {
-        const isOutOfBounds = this.scene
-            .getGameMapFrontWrapper()
-            .isOutOfMapBounds(topLeftPos.x, topLeftPos.y, width, height);
-        if (isOutOfBounds) {
+        const placementBounds = this.getEntityPlacementBounds(topLeftPos, width, height, collisionRectangles);
+        if (
+            this.isOutOfMapBounds(placementBounds.x, placementBounds.y, placementBounds.width, placementBounds.height)
+        ) {
             return false;
         }
 
-        // no collision grid means we can place it anywhere on the map
-        if (!collisionGrid) {
-            return true;
-        }
-
-        // prevent entity's old position from blocking it when repositioning
-        const positionsToIgnore: Map<string, number> = new Map<string, number>();
-        const tileDim = this.scene.getGameMapFrontWrapper().getTileDimensions();
-        if (oldTopLeftPos) {
-            for (let y = 0; y < collisionGrid.length; y += 1) {
-                for (let x = 0; x < collisionGrid[y].length; x += 1) {
-                    if (collisionGrid[y][x] === 1) {
-                        const { x: xIndex, y: yIndex } = this.gameMap.getTileIndexAt(
-                            oldTopLeftPos.x + x * tileDim.width,
-                            oldTopLeftPos.y + y * tileDim.height,
-                        );
-                        positionsToIgnore.set(`x:${xIndex}y:${yIndex}`, 1);
-                    }
-                }
+        if (collisionRectangles.length > 0) {
+            if (this.overlapsPlayerCollision(collisionRectangles)) {
+                return false;
             }
-        }
-        for (let y = 0; y < collisionGrid.length; y += 1) {
-            for (let x = 0; x < collisionGrid[y].length; x += 1) {
-                // this tile in collisionGrid is non-collidible. We can skip calculations for it
-                if (collisionGrid[y][x] === 0) {
-                    continue;
-                }
-                const { x: xIndex, y: yIndex } = this.gameMap.getTileIndexAt(
-                    topLeftPos.x + x * tileDim.width,
-                    topLeftPos.y + y * tileDim.height,
-                );
-                // current position is being blocked by entity's old position. We can ignore that
-                // NOTE: Is it possible for position to be blocked by 2 different things?
-                if (positionsToIgnore.has(`x:${xIndex}y:${yIndex}`)) {
-                    continue;
-                }
-                if (
-                    !this.scene
-                        .getGameMapFrontWrapper()
-                        .isSpaceAvailable(
-                            topLeftPos.x + x * tileDim.width,
-                            topLeftPos.y + y * tileDim.height,
-                            ignoreCollisionGrid,
-                        )
-                ) {
-                    return false;
-                }
+            if (
+                !ignoreCollisionGrid &&
+                (collisionRectangles.some((rectangle) => this.overlapsMapCollision(rectangle)) ||
+                    this.entitiesManager.overlapsEntityCollision(collisionRectangles, excludedEntityId))
+            ) {
+                return false;
             }
         }
 
-        return true;
+        const entityCenterCoordinates = {
+            x: Math.ceil(placementBounds.x + placementBounds.width / 2),
+            y: Math.ceil(placementBounds.y + placementBounds.height / 2),
+        };
+
+        return this.scene
+            .getEntityPermissions()
+            .canEdit(
+                entityCenterCoordinates,
+                placementBounds.width,
+                placementBounds.height,
+                collisionRectangles.length === 0,
+            );
+    }
+
+    private getEntityPlacementBounds(
+        topLeftPos: { x: number; y: number },
+        width: number,
+        height: number,
+        collisionRectangles: readonly EntityCollisionRectangle[],
+    ): EntityCollisionRectangle {
+        if (collisionRectangles.length === 0) {
+            return { x: topLeftPos.x, y: topLeftPos.y, width, height };
+        }
+        const left = Math.min(...collisionRectangles.map((rectangle) => rectangle.x));
+        const top = Math.min(...collisionRectangles.map((rectangle) => rectangle.y));
+        const right = Math.max(...collisionRectangles.map((rectangle) => rectangle.x + rectangle.width));
+        const bottom = Math.max(...collisionRectangles.map((rectangle) => rectangle.y + rectangle.height));
+        return { x: left, y: top, width: right - left, height: bottom - top };
+    }
+
+    private overlapsMapCollision(rectangle: EntityCollisionRectangle): boolean {
+        this.ensureCollisionGridUpToDate(false);
+        const origin = this.gameMap.getMapBounds();
+        const tileDimensions = this.getTileDimensions();
+        const startX = Math.floor((rectangle.x - origin.x) / tileDimensions.width);
+        const startY = Math.floor((rectangle.y - origin.y) / tileDimensions.height);
+        const endX = Math.ceil((rectangle.x + rectangle.width - origin.x) / tileDimensions.width) - 1;
+        const endY = Math.ceil((rectangle.y + rectangle.height - origin.y) / tileDimensions.height) - 1;
+        for (let y = startY; y <= endY; y += 1) {
+            for (let x = startX; x <= endX; x += 1) {
+                if (this.collisionGrid[y]?.[x] !== 0) return true;
+            }
+        }
+        return false;
+    }
+
+    private overlapsPlayerCollision(rectangles: readonly EntityCollisionRectangle[]): boolean {
+        const players = [...this.scene.MapPlayersByKey.values(), this.scene.CurrentPlayer];
+        return players.some((player) => {
+            const body = player.body;
+            if (!(body instanceof ArcadeBody)) return false;
+            const playerRectangle = { x: body.x, y: body.y, width: body.width, height: body.height };
+            return rectangles.some((rectangle) => collisionRectanglesOverlap(rectangle, playerRectangle));
+        });
     }
 
     public isSpaceAvailable(topLeftX: number, topLeftY: number, ignoreCollisionGrid?: boolean): boolean {

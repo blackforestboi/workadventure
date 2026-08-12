@@ -8,16 +8,15 @@ import {
 } from "@workadventure/messages";
 import { isAxiosError } from "axios";
 
-import logoImg from "../Components/images/logo-min-white.png";
-import errorGif from "../Components/UI/images/error.gif";
+import { BRANDING } from "../Branding";
 import { ApiError } from "./Errors/ApiError";
 
 const errorLogo = new Image();
-errorLogo.src = logoImg;
+errorLogo.src = BRANDING.assets.errorLogo;
 export const errorLogoStore = readable<HTMLImageElement>(errorLogo);
 
 const errorImage = new Image();
-errorImage.src = errorGif;
+errorImage.src = BRANDING.assets.errorImage;
 export const errorImageStore = readable<HTMLImageElement>(errorImage);
 
 /**
@@ -101,8 +100,8 @@ function createErrorScreenStore() {
             if (typeof error === "string" || error instanceof String) {
                 set(
                     ErrorScreenMessage.fromPartial({
-                        image: "/resources/icons/new_version.png",
-                        imageLogo: "/static/images/logo.png",
+                        image: BRANDING.assets.errorImage,
+                        imageLogo: BRANDING.assets.errorLogo,
                         type: "error",
                         code: "INTERNAL_ERROR",
                         title: "An error occurred",

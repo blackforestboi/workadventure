@@ -1,12 +1,11 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
+    import { BRANDING } from "../../Branding";
     import { loaderProgressStore } from "../../Stores/LoaderStore";
     import { gameManager } from "../../Phaser/Game/GameManager";
-    import bgMap from "../images/map-exemple.png";
-    import defaultLoader from "../images/Workadventure.gif";
 
-    const logo = gameManager.currentStartedRoom.loadingLogo ?? defaultLoader;
-    const sceneBg = gameManager.currentStartedRoom.backgroundSceneImage ?? bgMap;
+    const logo = gameManager.currentStartedRoom.loadingLogo ?? BRANDING.assets.loadingLogo;
+    const sceneBg = gameManager.currentStartedRoom.backgroundSceneImage ?? BRANDING.assets.loadingBackground;
     const bgColor = gameManager.currentStartedRoom.backgroundColor ?? "#1B2A41";
     const primary = gameManager.currentStartedRoom.primaryColor ?? "#4056F6";
 </script>

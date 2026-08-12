@@ -7,7 +7,9 @@ import entityRelatedEditorToolSource from "../../../../src/front/Phaser/Game/Map
 describe("entity asset selection", () => {
     it("outlines the asset card for any armed prefab in its variant", () => {
         expect(entitiesGridSource).toContain('entityPrefabVariant.prefabIds.includes(currentSelectedEntityId ?? "")');
-        expect(entityItemSource).toContain('isActive ? "border-solid border-yellow-400 rounded-2xl" : ""');
+        expect(entityItemSource).toContain(
+            'isActive ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-[#24344d]" : ""',
+        );
     });
 
     it("removes the outlined state when Escape clears the armed prefab", () => {

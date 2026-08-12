@@ -3,9 +3,7 @@
     import type { LoginScene } from "../../Phaser/Login/LoginScene";
     import { LoginSceneName } from "../../Phaser/Login/LoginScene";
     import { MAX_USERNAME_LENGTH } from "../../Enum/EnvironmentVariable";
-    import logoImg from "../images/logo.svg";
-    import poweredByWorkAdventureImg from "../images/Powered_By_WorkAdventure_Big.png";
-    import bgMap from "../images/map-exemple.png";
+    import { BRANDING } from "../../Branding";
     import { gameManager } from "../../Phaser/Game/GameManager";
     import { LL, locale } from "../../../i18n/i18n-svelte";
     import { NameNotValidError, NameTooLongError } from "../../Exception/NameError";
@@ -23,10 +21,10 @@
     let startValidating = $state(false);
     let errorName = $state("");
 
-    let logo = gameManager.currentStartedRoom.loginSceneLogo ?? logoImg;
+    let logo = gameManager.currentStartedRoom.loginSceneLogo ?? BRANDING.assets.loginLogo;
     let legals = gameManager.currentStartedRoom?.legals ?? {};
 
-    const sceneBg = gameManager.currentStartedRoom.backgroundSceneImage ?? bgMap;
+    const sceneBg = gameManager.currentStartedRoom.backgroundSceneImage ?? BRANDING.assets.loadingBackground;
 
     let legalStrings: string[] = [];
     if (legals?.termsOfUseUrl) {
@@ -167,9 +165,14 @@
             </section>
         {/if}
     </div>
-    {#if logo !== logoImg && gameManager.currentStartedRoom.showPoweredBy !== false}
+    {#if gameManager.currentStartedRoom.loginSceneLogo && gameManager.currentStartedRoom.showPoweredBy !== false}
         <section class="text-right flex powered-by justify-center items-end">
-            <img draggable="false" src={poweredByWorkAdventureImg} alt="Powered by WorkAdventure" class="h-14" />
+            <img
+                draggable="false"
+                src={BRANDING.assets.poweredByLogo}
+                alt={`Powered by ${BRANDING.name}`}
+                class="h-14"
+            />
         </section>
     {/if}
 </form>

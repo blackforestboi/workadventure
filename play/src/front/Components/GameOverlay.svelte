@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { BRANDING } from "../Branding";
     import type { Game } from "../Phaser/Game/Game";
     import { errorStore } from "../Stores/ErrorStore";
     import { errorScreenStore } from "../Stores/ErrorScreenStore";
@@ -32,8 +33,6 @@
     import MapDeletedPrompt from "./MapDeletedPrompt.svelte";
     import LoaderScene from "./Loader/LoaderScene.svelte";
     import EnableCameraScene from "./EnableCamera/EnableCameraScene.svelte";
-    import bgMap from "./images/map-exemple.png";
-    import defaultLoader from "./images/Workadventure.gif";
     import GlobalCommunicationModal from "./Modal/GlobalCommunicationModal.svelte";
     import Calendar from "./Calendar/Calendar.svelte";
     import TodoList from "./TodoList/TodoList.svelte";
@@ -53,14 +52,14 @@
     let { game }: Props = $props();
 
     onMount(() => {
-        window.addEventListener("workadventure:open-login-overlay", openLoginOverlay);
-        return () => window.removeEventListener("workadventure:open-login-overlay", openLoginOverlay);
+        window.addEventListener("app:open-login-overlay", openLoginOverlay);
+        return () => window.removeEventListener("app:open-login-overlay", openLoginOverlay);
     });
 </script>
 
 <!-- Preload image loader TODO HUGO : Better way ? -->
-<link rel="preload" as="image" href={bgMap} />
-<link rel="preload" as="image" href={defaultLoader} />
+<link rel="preload" as="image" href={BRANDING.assets.loadingBackground} />
+<link rel="preload" as="image" href={BRANDING.assets.loadingLogo} />
 
 {#if $loaderVisibleStore}
     <div class="bg-contrast">

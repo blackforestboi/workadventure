@@ -6,6 +6,7 @@ import { createClient, IndexedDBCryptoStore, IndexedDBStore } from "matrix-js-sd
 import type { SecretStorageKeyDescriptionAesV1 } from "matrix-js-sdk/lib/secret-storage";
 import { VerificationMethod } from "matrix-js-sdk/lib/types";
 import type { LocalUser } from "../../../Connection/LocalUser";
+import { BRAND_NAME } from "../../../Enum/EnvironmentVariable";
 import AccessSecretStorageDialog from "./AccessSecretStorageDialog.svelte";
 import { matrixSecurity } from "./MatrixSecurity";
 import { customMatrixLogger } from "./CustomMatrixLogger";
@@ -215,7 +216,7 @@ export class MatrixClientWrapper implements MatrixClientWrapperInterface {
             const { user_id, access_token, refresh_token, expires_in_ms, device_id } = await client.loginRequest({
                 type: "m.login.token",
                 token: loginToken,
-                initial_device_display_name: "WorkAdventure",
+                initial_device_display_name: BRAND_NAME,
             });
 
             this.localUserStore.setMatrixUserId(user_id);

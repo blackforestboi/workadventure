@@ -9,33 +9,43 @@ import type {
 } from "@workadventure/messages";
 import { isMapDetailsData, isRoomRedirect } from "@workadventure/messages";
 import type { AxiosResponse } from "axios";
-import { ADMIN_API_URL } from "../enums/EnvironmentVariable";
+import {
+    ADMIN_API_URL,
+    BRAND_AUTHOR,
+    BRAND_CARD_IMAGE_URL,
+    BRAND_DESCRIPTION,
+    BRAND_FAVICON_URL,
+    BRAND_MANIFEST_ICON_URL,
+    BRAND_NAME,
+    BRAND_PROVIDER,
+    BRAND_SHORT_NAME,
+    BRAND_THEME_COLOR,
+} from "../enums/EnvironmentVariable";
 import { adminService } from "./AdminService";
 
 export const MetaTagsDefaultValue: RequiredMetaTagsData = {
-    title: "WorkAdventure",
-    description:
-        "Organize your online event in WorkAdventure to recreate spontaneous social interactions. Connect, collaborate and have fun with your teammates and attendees.",
-    author: "WorkAdventure team",
-    provider: "WorkAdventure",
+    title: BRAND_NAME,
+    description: BRAND_DESCRIPTION,
+    author: BRAND_AUTHOR,
+    provider: BRAND_PROVIDER,
     favIcons: [
         {
             rel: "icon",
             sizes: "512x512",
-            src: "/static/images/favicons/favicon-512x512.svg",
+            src: BRAND_FAVICON_URL || "/static/images/favicons/favicon-512x512.svg",
         },
     ],
     manifestIcons: [
         {
-            src: "/static/images/favicons/icon-512x512.png",
+            src: BRAND_MANIFEST_ICON_URL || "/static/images/favicons/icon-512x512.png",
             sizes: "512x512",
             type: "image/png",
         },
     ],
-    appName: "WorkAdventure",
-    shortAppName: "WA",
-    themeColor: "#1B2A41",
-    cardImage: "https://workadventu.re/images/general/logo-og.png",
+    appName: BRAND_NAME,
+    shortAppName: BRAND_SHORT_NAME,
+    themeColor: BRAND_THEME_COLOR,
+    cardImage: BRAND_CARD_IMAGE_URL || "/static/images/favicons/icon-512x512.png",
 };
 
 export class MetaTagsBuilder {

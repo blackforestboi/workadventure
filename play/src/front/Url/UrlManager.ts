@@ -1,5 +1,6 @@
 import type { Room } from "../Connection/Room";
 import { localUserStore } from "../Connection/LocalUserStore";
+import { BRANDING } from "../Branding";
 
 export enum GameConnexionTypes {
     room = 1,
@@ -48,7 +49,7 @@ class UrlManager {
         localUserStore.setLastRoomUrl(room.href).catch((e) => console.error(e));
         const hash = window.location.hash;
         const search = room.search.toString();
-        history.pushState({}, "WorkAdventure", room.id + (search ? "?" + search : "") + hash);
+        history.pushState({}, BRANDING.name, room.id + (search ? "?" + search : "") + hash);
     }
 
     public getStartPositionNameFromUrl(): string | undefined {
