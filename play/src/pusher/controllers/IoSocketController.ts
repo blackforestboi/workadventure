@@ -42,6 +42,7 @@ import type { PusherWebSocket } from "../services/PusherWebSocket";
 import { getTeapotDataServices } from "../teapot/TeapotDataRuntime";
 import { TeapotWorldAdmissionGate } from "../teapot/TeapotWorldAdmissionGate";
 import { teapotWamRevisionCoordinator } from "../teapot/TeapotWamRevisionCoordinator";
+import { hasTemporaryRootGuestAccess } from "../teapot/TemporaryRootEditorAccess";
 
 type PendingAnswerMessage = Omit<AnswerMessage, "answer"> & { answer?: AnswerMessage["answer"] };
 
@@ -335,8 +336,20 @@ export class IoSocketController {
                               : query.characterTextureIds;
 
                     const tokenData = token ? await jwtTokenManager.verifyJWTToken(token) : null;
+                    const temporaryRootGuestAccess = hasTemporaryRootGuestAccess({
+                        roomId,
+                        startRoomUrl: START_ROOM_URL,
+                        mapEditorAllowAllUsers: MAP_EDITOR_ALLOW_ALL_USERS,
+                        isAnonymous: tokenData === null,
+                    });
 
-                    if (TEAPOT_X_CLIENT_ID && TEAPOT_X_REDIRECT_URI && FRONT_URL && tokenData?.authProvider !== "x") {
+                    if (
+                        TEAPOT_X_CLIENT_ID &&
+                        TEAPOT_X_REDIRECT_URI &&
+                        FRONT_URL &&
+                        tokenData?.authProvider !== "x" &&
+                        !temporaryRootGuestAccess
+                    ) {
                         reject({
                             rejected: true,
                             reason: "error",
@@ -474,12 +487,7 @@ export class IoSocketController {
                     }
 
                     const legacyCanEdit = userData.canEdit ?? false;
-                    const roomUrl = new URL(roomId);
-                    const startRoomUrl = new URL(START_ROOM_URL, roomUrl.origin);
-                    const temporaryRootEditor =
-                        !isLogged &&
-                        MAP_EDITOR_ALLOW_ALL_USERS &&
-                        roomUrl.pathname === startRoomUrl.pathname;
+                    const temporaryRootEditor = !isLogged && temporaryRootGuestAccess;
                     const legacyCanAdmin = memberTags.includes("admin");
                     try {
                         const roomAccess = await teapotWamRevisionCoordinator.resolveJoinAccess({
