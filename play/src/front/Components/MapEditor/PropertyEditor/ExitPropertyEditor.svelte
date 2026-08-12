@@ -8,6 +8,7 @@
     import { LL } from "../../../../i18n/i18n-svelte";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import Select from "../../Input/Select.svelte";
+    import Input from "../../Input/Input.svelte";
     import { IconDoorOut } from "../../Icons";
     import PropertyEditorBase from "./PropertyEditorBase.svelte";
 
@@ -145,6 +146,16 @@
                     </Select>
                 </div>
             {/if}
+            <div>
+                <Input
+                    id="exitPassword"
+                    label="Password (optional)"
+                    placeholder="Require a password before using this exit"
+                    type="password"
+                    bind:value={property.password}
+                    onchange={onValueChange}
+                />
+            </div>
         </span>
     {/snippet}
 </PropertyEditorBase>

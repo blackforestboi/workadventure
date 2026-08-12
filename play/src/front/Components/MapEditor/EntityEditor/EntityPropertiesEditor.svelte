@@ -355,21 +355,9 @@
         </p>
         <div class="properties-buttons flex flex-row flex-wrap m-2">
             <AddPropertyButtonWrapper
-                property="personalAreaPropertyData"
-                onclick={() => onAddProperty("personalAreaPropertyData")}
-            />
-            <AddPropertyButtonWrapper
-                property="restrictedRightsPropertyData"
-                onclick={() => onAddProperty("restrictedRightsPropertyData")}
-            />
-            <AddPropertyButtonWrapper property="silent" onclick={() => onAddProperty("silent")} />
-            <AddPropertyButtonWrapper
                 property="livekitRoomProperty"
                 onclick={() => onAddProperty("livekitRoomProperty")}
             />
-            <AddPropertyButtonWrapper property="speakerMegaphone" onclick={() => onAddProperty("speakerMegaphone")} />
-            <AddPropertyButtonWrapper property="listenerMegaphone" onclick={() => onAddProperty("listenerMegaphone")} />
-            <AddPropertyButtonWrapper property="start" onclick={() => onAddProperty("start")} />
             <AddPropertyButtonWrapper property="exit" onclick={() => onAddProperty("exit")} />
             <AddPropertyButtonWrapper
                 property="jitsiRoomProperty"
@@ -384,22 +372,8 @@
                 }}
             />
             <AddPropertyButtonWrapper
-                property="matrixRoomPropertyData"
-                onclick={() => onAddProperty("matrixRoomPropertyData")}
-            />
-            <AddPropertyButtonWrapper property="focusable" onclick={() => onAddProperty("focusable")} />
-            <AddPropertyButtonWrapper property="highlight" onclick={() => onAddProperty("highlight")} />
-            <AddPropertyButtonWrapper
                 property="tooltipPropertyData"
                 onclick={() => onAddProperty("tooltipPropertyData")}
-            />
-            <AddPropertyButtonWrapper
-                property="lockableAreaPropertyData"
-                onclick={() => onAddProperty("lockableAreaPropertyData")}
-            />
-            <AddPropertyButtonWrapper
-                property="maxUsersInAreaPropertyData"
-                onclick={() => onAddProperty("maxUsersInAreaPropertyData")}
             />
         </div>
         <div class="properties-buttons flex flex-row flex-wrap m-2">

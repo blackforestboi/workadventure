@@ -13,7 +13,7 @@
         onchange?: () => void;
         onblur?: () => void;
         disabled?: boolean;
-        type?: "text" | "url" | "number" | "color";
+        type?: "text" | "url" | "number" | "color" | "password";
         value?: string | number | null;
         onclick?: () => void;
         variant?: "light";

@@ -1,5 +1,5 @@
 export const MAP_TILE_SIZE = 32;
-export const ENTITY_SIZE_TILE_OPTIONS = [0.5, 1, 2, 4, 8, 16, 32, 50, 75, 100] as const;
+export const ENTITY_SIZE_TILE_OPTIONS = [0.5, 1, 2, 3, 4, 8, 16, 32, 50, 75, 100] as const;
 
 export function getEntityDisplaySize(
     naturalWidth: number,
