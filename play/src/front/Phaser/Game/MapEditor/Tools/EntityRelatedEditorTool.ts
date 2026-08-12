@@ -11,7 +11,6 @@ import {
     mapEditorEntityFileDroppedStore,
     mapEditorEntityModeStore,
     mapEditorModeStore,
-    mapEditorSelectedEntityDraggedStore,
     mapEditorSelectedEntityPrefabStore,
     mapEditorSelectedEntityStore,
     mapEditorVisibilityStore,
@@ -24,7 +23,6 @@ import { EntityResizeHandles } from "../Entities/EntityResizeHandles";
 import { getEntityDisplaySize } from "../../../../Utils/EntityPrefabSize";
 import { MapEditorTool } from "./MapEditorTool";
 
-import Image = Phaser.GameObjects.Image;
 import Sprite = Phaser.GameObjects.Sprite;
 
 export abstract class EntityRelatedEditorTool extends MapEditorTool {
@@ -36,12 +34,10 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
 
     protected entityPrefab: EntityPrefab | undefined;
     protected entityPrefabPreview: Sprite | undefined;
-    protected entityOldPositionPreview: Image | undefined;
 
     protected mapEditorSelectedEntityPrefabStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEntityEditorModeStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEditorSelectedEntityStoreUnsubscriber: Unsubscriber | undefined;
-    protected mapEditorSelectedEntityDraggedStoreUnsubscriber: Unsubscriber | undefined;
     private entityResizeHandles: EntityResizeHandles | undefined;
 
     protected constructor(mapEditorModeManager: MapEditorModeManager) {
@@ -53,7 +49,6 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
 
         this.entityPrefab = undefined;
         this.entityPrefabPreview = undefined;
-        this.entityOldPositionPreview = undefined;
 
         this.handleDeleteEntity = this.deleteEntity.bind(this);
     }
@@ -129,7 +124,6 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
         this.mapEditorSelectedEntityPrefabStoreUnsubscriber?.();
         this.mapEntityEditorModeStoreUnsubscriber?.();
         this.mapEditorSelectedEntityStoreUnsubscriber?.();
-        this.mapEditorSelectedEntityDraggedStoreUnsubscriber?.();
     }
 
     protected subscribeToStores(): void {
@@ -157,6 +151,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                                 preview.width,
                                 preview.height,
                                 entityPrefab.defaultSizeInTiles,
+                                entityPrefab.defaultHeightInTiles,
                             );
                             preview.setDisplaySize(displaySize.width, displaySize.height);
                             TexturesHelper.playEntityAnimation(this.entityPrefabPreview, entityPrefab);
@@ -170,25 +165,12 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
             },
         );
 
-        this.mapEditorSelectedEntityDraggedStoreUnsubscriber = mapEditorSelectedEntityDraggedStore.subscribe(
-            (dragged) => {
-                if (!dragged) {
-                    this.entityOldPositionPreview?.destroy();
-                }
-            },
-        );
-
         this.mapEditorSelectedEntityStoreUnsubscriber = mapEditorSelectedEntityStore.subscribe((entity) => {
-            this.entityOldPositionPreview?.destroy();
             this.entityResizeHandles?.destroy();
             this.entityResizeHandles = undefined;
             if (!entity) {
                 return;
             }
-            this.entityOldPositionPreview = this.scene.add
-                .image(entity.x, entity.y, entity.texture)
-                .setOrigin(0)
-                .setAlpha(0.5);
             if (entity.canEdit) {
                 this.entityResizeHandles = new EntityResizeHandles(this.scene, entity);
             }

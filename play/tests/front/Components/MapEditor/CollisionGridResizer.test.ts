@@ -37,15 +37,24 @@ describe("collision grid resizer", () => {
         expect(customEntityEditionFormSource).toContain("Metadata");
         expect(customEntityEditionFormSource).toContain("Positioning");
         expect(customEntityEditionFormSource).toContain("Clear collision areas");
+        expect(customEntityEditionFormSource).toMatch(
+            /\{#if hasCollisionAreas\}[\s\S]*?Clear collision areas[\s\S]*?\{\/if\}[\s\S]*?<label for="previewPadding">Padding<\/label>/,
+        );
+        expect(customEntityEditionFormSource).toMatch(/appearance="border"\s*\{disabled\}/);
+        expect(customEntityEditionFormSource).not.toContain("disabled={disabled || !hasCollisionAreas}");
         expect(customEntityEditionFormSource).toContain('min="-64"');
         expect(customEntityEditionFormSource).toContain("style:clip-path");
-        expect(customEntityEditionFormSource).toContain("oninput={updateCollisionCellSize}");
+        expect(customEntityEditionFormSource).toContain("oninput={updateCollisionGridWidth}");
+        expect(customEntityEditionFormSource).toContain("oninput={updateCollisionGridHeight}");
         expect(customEntityEditionFormSource).toContain("ENTITY_SIZE_TILE_OPTIONS");
         expect(customEntityEditionFormSource).toContain("defaultSizeInTiles * MAP_TILE_SIZE");
         expect(customEntityEditionFormSource).toContain("collisionGridWidth + previewPadding * 2");
-        expect(customEntityEditionFormSource).toContain("collisionFrameHeight / collisionFrameWidth");
+        expect(customEntityEditionFormSource).toContain("getOpaqueImageBounds(");
+        expect(customEntityEditionFormSource).toContain("getDefaultHeightInTiles(bounds.width, bounds.height)");
         expect(customEntityEditionFormSource).toContain("offsetX={collisionFrameOffset}");
         expect(customEntityEditionFormSource).toContain("oninput={updatePreviewPadding}");
+        expect(customEntityEditionFormSource).toContain("customEntity.previewPadding ?? 24");
+        expect(customEntityEditionFormSource).toContain("previewPadding,");
         expect(customEntityEditionFormSource).toContain("100 tiles");
         expect(customEntityEditionFormSource).not.toContain('<select\n                        id="collisionCellSize"');
         expect(customEntityEditionFormSource).not.toContain("Add collision areas");

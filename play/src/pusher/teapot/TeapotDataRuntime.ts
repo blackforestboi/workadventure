@@ -19,6 +19,7 @@ import type { TeapotDataServices } from "./createTeapotDataServices";
 let services = createTeapotDataServices(new InMemoryTeapotDataRepository());
 let initialization: Promise<void> | undefined;
 let postgresPool: Pool | undefined;
+let unregisterPostgresPoolErrorHandler: (() => void) | undefined;
 let durable = false;
 
 export interface TeapotDataRuntimeStatus {
@@ -34,6 +35,20 @@ export function getTeapotDataRuntimeStatus(): TeapotDataRuntimeStatus {
     return { initialized: initialization !== undefined, durable };
 }
 
+/**
+ * node-postgres emits this on the pool when an idle connection is cut by the
+ * database or network. Without a listener, Node treats it as an unhandled
+ * EventEmitter error and terminates the pusher process.
+ */
+function handlePostgresPoolError(error: Error): void {
+    console.error("Teapot PostgreSQL pool discarded a failed connection", error);
+}
+
+export function registerPostgresPoolErrorHandler(pool: Pick<Pool, "on" | "off">): () => void {
+    pool.on("error", handlePostgresPoolError);
+    return () => pool.off("error", handlePostgresPoolError);
+}
+
 export function initializeTeapotDataRuntime(): Promise<void> {
     initialization ??= initialize();
     return initialization;
@@ -42,6 +57,8 @@ export function initializeTeapotDataRuntime(): Promise<void> {
 export async function closeTeapotDataRuntime(): Promise<void> {
     const pool = postgresPool;
     postgresPool = undefined;
+    unregisterPostgresPoolErrorHandler?.();
+    unregisterPostgresPoolErrorHandler = undefined;
     await pool?.end();
     durable = false;
     initialization = undefined;
@@ -63,6 +80,7 @@ async function initialize(): Promise<void> {
         connectionTimeoutMillis: 10_000,
         application_name: "teapot-maps-pusher",
     });
+    unregisterPostgresPoolErrorHandler = registerPostgresPoolErrorHandler(pool);
     const adapter = new NodePostgresPoolAdapter(pool);
     await adapter.query("SELECT 1");
     await new PostgresMigrationRunner(adapter, resolveMigrationsDirectory()).migrate();

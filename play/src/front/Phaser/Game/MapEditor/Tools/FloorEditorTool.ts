@@ -612,7 +612,7 @@ export class FloorEditorTool extends MapEditorTool {
     }
 
     public rejectTerrainMutation(reason: string): void {
-        const restoredMap = this.draftMap ?? this.publishedMap ?? structuredClone(this.scene.mapFile);
+        const restoredMap = this.draftBaseMap ?? this.publishedMap ?? structuredClone(this.scene.mapFile);
         this.publishedMap = structuredClone(restoredMap);
         this.scene.mapFile = structuredClone(restoredMap);
         this.draftMap = undefined;

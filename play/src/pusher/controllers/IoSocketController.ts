@@ -40,7 +40,6 @@ import { PusherRoomSocketController } from "../services/PusherRoomSocketControll
 import { AdminWebSocketBackpressureWriter } from "../services/AdminWebSocketBackpressureWriter";
 import type { PusherWebSocket } from "../services/PusherWebSocket";
 import { getTeapotDataServices } from "../teapot/TeapotDataRuntime";
-import { TeapotWorldAdmissionGate } from "../teapot/TeapotWorldAdmissionGate";
 import { teapotWamRevisionCoordinator } from "../teapot/TeapotWamRevisionCoordinator";
 import { hasTemporaryRootGuestAccess } from "../teapot/TemporaryRootEditorAccess";
 
@@ -364,27 +363,6 @@ export class IoSocketController {
                             },
                         } satisfies UpgradeFailedData);
                         return;
-                    }
-
-                    if (tokenData?.authProvider === "x") {
-                        try {
-                            await new TeapotWorldAdmissionGate(getTeapotDataServices()).assertTokenCanEnter(tokenData);
-                        } catch {
-                            reject({
-                                rejected: true,
-                                reason: "error",
-                                error: {
-                                    status: "error",
-                                    type: "error",
-                                    title: "Invitations needed",
-                                    subtitle: "Three people must endorse you before you can enter",
-                                    image: "",
-                                    code: "TEAPOT_ADMISSION_PENDING",
-                                    details: "Share your invitation link and collect three endorsements.",
-                                },
-                            } satisfies UpgradeFailedData);
-                            return;
-                        }
                     }
 
                     if (DISABLE_ANONYMOUS && !tokenData) {

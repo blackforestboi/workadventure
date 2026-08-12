@@ -10,21 +10,39 @@ describe("asset generation panel", () => {
             /\$effect\(\(\) => \{\s*if \(\$assetGenerationSettings\.initialized && readySelection === undefined\)/,
         );
         expect(assetGenerationPanelSource).toMatch(
-            /function requestApproval\(\)[\s\S]*?if \(selection === undefined\)[\s\S]*?aiGenerationSettingsVisibilityStore\.open\(\)/,
+            /function requestGeneration\(\)[\s\S]*?if \(selection === undefined\)[\s\S]*?aiGenerationSettingsVisibilityStore\.open\(\)/,
         );
         expect(assetGenerationPanelSource).toContain(">Open AI settings</Button");
     });
 
+    it("generates immediately without showing an approval dialog", () => {
+        expect(assetGenerationPanelSource).toContain("void generate(selection);");
+        expect(assetGenerationPanelSource).toContain("titlePrompt: prompt");
+        expect(assetGenerationPanelSource).not.toContain("Approve and generate");
+        expect(assetGenerationPanelSource).not.toContain('aria-label="Approve paid generation"');
+    });
+
+    it("shows an image-sized loading placeholder while generation is in progress", () => {
+        expect(assetGenerationPanelSource).toContain('lifecycle === "generating" || lifecycle === "cancelling"');
+        expect(assetGenerationPanelSource).toContain('role="status"');
+        expect(assetGenerationPanelSource).toContain('aria-live="polite"');
+        expect(assetGenerationPanelSource).toContain("Generating image…");
+        expect(assetGenerationPanelSource).toContain("h-[240px] w-[240px]");
+        expect(assetGenerationPanelSource).toContain("animate-pulse");
+    });
+
     it("provides a compact map-object generation layout without changing the default panel", () => {
         expect(assetGenerationPanelSource).toContain("compact = false");
-        expect(assetGenerationPanelSource).toMatch(/compact\s*\?\s*"Generate"/);
+        expect(assetGenerationPanelSource).toContain('? "Use image"');
         expect(assetGenerationPanelSource).toContain(
             'compact ? "mt-3 flex items-center justify-between gap-2" : "mt-3 flex flex-wrap gap-2"',
         );
         expect(assetGenerationPanelSource).toContain("&& !compact");
 
-        expect(entityUploadSource).toContain('title="Generate with AI"');
+        expect(entityUploadSource).toContain('title={selectedAsset ? "Modify with AI" : "Generate with AI"}');
         expect(entityUploadSource).toContain("compact");
+        expect(entityUploadSource).not.toContain("Saved AI assets");
+        expect(entityUploadSource).not.toContain('aria-label="Saved generated assets"');
         expect(entityUploadSource).not.toContain("uploadEntity.title()");
         expect(entityUploadSource).not.toContain("uploadEntity.description()");
 
@@ -47,6 +65,49 @@ describe("asset generation panel", () => {
         expect(assetGenerationPanelSource).toContain("frameCount");
         expect(assetGenerationPanelSource).toContain("frameDurationMs");
         expect(assetGenerationPanelSource).toContain("one horizontal sprite strip");
-        expect(entityUploadSource).toContain("animation={asset.animation}");
+        expect(entityUploadSource).toContain(
+            "acceptAsset(asset.blob, asset.title ?? `generated-${uuidv4()}.png`, asset.animation);",
+        );
+    });
+
+    it("returns image editing to the up-to-date Custom asset list", () => {
+        expect(entityUploadSource).toContain('selectCategoryStore.set({ kind: "special", tag: "custom" });');
+        expect(entityUploadSource).toContain("closeForm={closeToCustomAssets}");
+        expect(entityUploadSource).toContain("onClose?.();");
+        expect(entityEditorPickerSource).toContain("function showCustomAssets()");
+        expect(entityEditorPickerSource).toContain("<EntityUpload onClose={showCustomAssets} />");
+        expect(entityEditorPickerSource).toContain(
+            'closeForm={pickedEntity.type === "Custom" ? showCustomAssets : clearEntitySelection}',
+        );
+    });
+
+    it("hides the variant selector when there is nothing to choose", () => {
+        expect(entityEditorPickerSource).toContain("let hasVariantOptions = $derived(");
+        expect(entityEditorPickerSource).toContain("pickedEntityVariant.colors.length > 1");
+        expect(entityEditorPickerSource).toContain(
+            "pickedEntityVariant.getEntityPrefabsPositions(selectedColor).length > 1",
+        );
+        expect(entityEditorPickerSource).toContain("{#if pickedEntityVariant && pickedEntity && hasVariantOptions}");
+    });
+
+    it("keeps category options flat beneath search", () => {
+        expect(entityEditorPickerSource).toContain(
+            '<p class="m-0 truncate text-lg">{getCategoryLabel($selectCategoryStore)}</p>',
+        );
+        expect(entityEditorPickerSource).not.toContain("{filteredEntityPrefabVariants.length} options");
+        expect(entityEditorPickerSource).not.toContain(
+            '<section class="shrink-0 rounded-xl border border-white/10 bg-black/10 p-3">',
+        );
+    });
+
+    it("adapts the compact uploader controls to an image and prompt", () => {
+        expect(entityUploadSource).toContain('title={selectedAsset ? "Modify with AI" : "Generate with AI"}');
+        expect(entityUploadSource).toContain("src={selectedAsset.previewUrl}");
+        expect(entityUploadSource).toContain("onUseImage={selectedAsset ? startEditingSelectedAsset : undefined}");
+        expect(assetGenerationPanelSource).toContain("onUseImage?: () => void;");
+        expect(assetGenerationPanelSource).toContain('prompt.trim() === "" && onUseImage !== undefined');
+        expect(assetGenerationPanelSource).toContain('? "Use image"');
+        expect(assetGenerationPanelSource).toContain('{#if compact && prompt.trim() !== ""}');
+        expect(assetGenerationPanelSource).toContain('compact ? "text-base font-semibold"');
     });
 });

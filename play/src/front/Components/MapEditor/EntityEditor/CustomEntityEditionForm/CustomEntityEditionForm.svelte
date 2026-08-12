@@ -10,6 +10,7 @@
     import Button from "../../../UI/Button.svelte";
     import EntityEditionCollisionGrid from "./EntityEditionCollisionGrid.svelte";
     import { createEmptyCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
+    import { getDefaultHeightInTiles, getOpaqueImageBounds } from "./OpaqueImageBounds";
     import { ENTITY_SIZE_TILE_OPTIONS, MAP_TILE_SIZE } from "../../../../Utils/EntityPrefabSize";
     import { IconChevronLeft } from "@wa-icons";
 
@@ -41,6 +42,7 @@
         collisionGrid: customEntityCollisionGrid,
         depthOffset: depthOffsetCustomEntity,
         defaultSizeInTiles: defaultSizeInTilesCustomEntity,
+        defaultHeightInTiles: defaultHeightInTilesCustomEntity,
     } = $state((() => customEntity)());
     let inputTagOptions: InputTagOption[] | undefined = $state(tags.map((tag) => ({ value: tag, label: tag })));
     let collisionGrid = $state(customEntityCollisionGrid ? customEntityCollisionGrid.map((row) => [...row]) : []);
@@ -49,12 +51,19 @@
     let collisionGridWidth = $state(0);
     let collisionGridHeight = $state(0);
     let displayDepthCustomSelector = $state(false);
-    let previewPadding = $state(24);
+    let previewPadding = $state(customEntity.previewPadding ?? 24);
     let defaultSizeInTiles = $state(defaultSizeInTilesCustomEntity ?? 1);
-    let collisionGridSizeIndex = $state(
+    let defaultHeightInTiles = $state(defaultHeightInTilesCustomEntity ?? 1);
+    let collisionGridWidthIndex = $state(
         Math.max(
             0,
             ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultSizeInTiles),
+        ),
+    );
+    let collisionGridHeightIndex = $state(
+        Math.max(
+            0,
+            ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultHeightInTiles),
         ),
     );
     let imageResizeObserver: ResizeObserver | undefined;
@@ -84,6 +93,8 @@
             collisionGrid: hasCollisionAreas ? collisionGrid : undefined,
             depthOffset: depthOffset !== 0 ? -depthOffset : 0,
             defaultSizeInTiles,
+            defaultHeightInTiles,
+            previewPadding,
         };
     }
 
@@ -98,7 +109,35 @@
         imageResizeObserver.observe(imageRef);
         collisionGridWidth = imageRef.width;
         collisionGridHeight = imageRef.height;
+        detectTileFootprint(imageRef);
         resizeCollisionGridForFrame();
+    }
+
+    function detectTileFootprint(imageRef: HTMLImageElement) {
+        if (
+            defaultHeightInTilesCustomEntity !== undefined ||
+            imageRef.naturalWidth === 0 ||
+            imageRef.naturalHeight === 0
+        )
+            return;
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = imageRef.naturalWidth;
+            canvas.height = imageRef.naturalHeight;
+            const context = canvas.getContext("2d", { willReadFrequently: true });
+            if (!context) return;
+            context.drawImage(imageRef, 0, 0);
+            const bounds = getOpaqueImageBounds(
+                context.getImageData(0, 0, canvas.width, canvas.height).data,
+                canvas.width,
+                canvas.height,
+            );
+            if (!bounds) return;
+            defaultHeightInTiles = getDefaultHeightInTiles(bounds.width, bounds.height);
+            collisionGridHeightIndex = ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultHeightInTiles);
+        } catch {
+            // A cross-origin image may not expose pixels. Keep the safe 1×1 fallback.
+        }
     }
 
     function updateCollisionGrid(rowIndex: number, columnIndex: number) {
@@ -109,9 +148,15 @@
         collisionGrid = collisionGrid.map((row) => row.map(() => 0));
     }
 
-    function updateCollisionCellSize(event: Event) {
-        collisionGridSizeIndex = Number((event.currentTarget as HTMLInputElement).value);
-        defaultSizeInTiles = ENTITY_SIZE_TILE_OPTIONS[collisionGridSizeIndex] ?? 1;
+    function updateCollisionGridWidth(event: Event) {
+        collisionGridWidthIndex = Number((event.currentTarget as HTMLInputElement).value);
+        defaultSizeInTiles = ENTITY_SIZE_TILE_OPTIONS[collisionGridWidthIndex] ?? 1;
+        resizeCollisionGridForFrame();
+    }
+
+    function updateCollisionGridHeight(event: Event) {
+        collisionGridHeightIndex = Number((event.currentTarget as HTMLInputElement).value);
+        defaultHeightInTiles = ENTITY_SIZE_TILE_OPTIONS[collisionGridHeightIndex] ?? 1;
         resizeCollisionGridForFrame();
     }
 
@@ -123,7 +168,7 @@
     function resizeCollisionGridForFrame() {
         if (collisionGridWidth <= 0 || collisionGridHeight <= 0) return;
         const columns = Math.max(1, Math.ceil(defaultSizeInTiles));
-        const rows = Math.max(1, Math.ceil(defaultSizeInTiles * (collisionFrameHeight / collisionFrameWidth)));
+        const rows = Math.max(1, Math.ceil(defaultHeightInTiles));
         collisionGrid =
             collisionGrid.length === 0
                 ? createEmptyCollisionGrid(rows, columns)
@@ -265,6 +310,13 @@
 
             <section class="flex flex-col gap-4" aria-labelledby="positioning-heading">
                 <h3 id="positioning-heading" class="m-0 text-base font-semibold">Positioning</h3>
+                {#if hasCollisionAreas}
+                    <div>
+                        <Button size="xs" variant="light" appearance="border" {disabled} onclick={clearCollisionAreas}
+                            >Clear collision areas</Button
+                        >
+                    </div>
+                {/if}
                 <div>
                     <div class="mb-2 flex items-center justify-between gap-3">
                         <label for="previewPadding">Padding</label>
@@ -287,7 +339,7 @@
                 </div>
                 <div>
                     <div class="mb-2 flex items-center justify-between gap-3">
-                        <label for="collisionCellSize">Grid size</label>
+                        <label for="collisionGridWidth">Grid width</label>
                         <span class="text-xs opacity-60">
                             {defaultSizeInTiles}
                             {defaultSizeInTiles === 1 ? "tile" : "tiles"} wide ·
@@ -295,34 +347,49 @@
                         </span>
                     </div>
                     <input
-                        id="collisionCellSize"
+                        id="collisionGridWidth"
                         class="w-full cursor-grab active:cursor-grabbing"
                         type="range"
                         min="0"
                         max={ENTITY_SIZE_TILE_OPTIONS.length - 1}
                         step="1"
-                        value={collisionGridSizeIndex}
-                        oninput={updateCollisionCellSize}
+                        value={collisionGridWidthIndex}
+                        oninput={updateCollisionGridWidth}
                     />
                     <div class="mt-1 flex justify-between text-[11px] opacity-50">
                         <span>0.5 tile</span>
                         <span>100 tiles</span>
                     </div>
-                    <p class="mb-0 mt-2 text-xs opacity-60">Larger cells make a simpler collision mask.</p>
                 </div>
                 <div>
-                    <div class="flex items-start justify-between gap-3">
-                        <p class="m-0 text-xs opacity-70">
-                            Click grid cells on the image to mark areas players cannot cross.
-                        </p>
-                        <Button
-                            size="xs"
-                            variant="light"
-                            appearance="border"
-                            disabled={disabled || !hasCollisionAreas}
-                            onclick={clearCollisionAreas}>Clear collision areas</Button
-                        >
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <label for="collisionGridHeight">Grid height</label>
+                        <span class="text-xs opacity-60">
+                            {defaultHeightInTiles}
+                            {defaultHeightInTiles === 1 ? "tile" : "tiles"} tall ·
+                            {defaultHeightInTiles * MAP_TILE_SIZE}px
+                        </span>
                     </div>
+                    <input
+                        id="collisionGridHeight"
+                        class="w-full cursor-grab active:cursor-grabbing"
+                        type="range"
+                        min="0"
+                        max={ENTITY_SIZE_TILE_OPTIONS.length - 1}
+                        step="1"
+                        value={collisionGridHeightIndex}
+                        oninput={updateCollisionGridHeight}
+                    />
+                    <div class="mt-1 flex justify-between text-[11px] opacity-50">
+                        <span>0.5 tile</span>
+                        <span>100 tiles</span>
+                    </div>
+                    <p class="mb-0 mt-2 text-xs opacity-60">The grid matches the asset's placed width and height.</p>
+                </div>
+                <div>
+                    <p class="m-0 text-xs opacity-70">
+                        Click grid cells on the image to mark areas players cannot cross.
+                    </p>
                 </div>
                 {#if !isUploadForm}
                     <div class="mt-auto pt-2">

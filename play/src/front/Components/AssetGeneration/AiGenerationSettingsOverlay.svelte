@@ -44,11 +44,7 @@
             shouldPersist ? { passphrase: newVaultPassphrase, label: "OpenRouter" } : undefined,
         );
         if ($assetGenerationSettings.lifecycle === "connected") {
-            apiKey = "";
-            if (shouldPersist) {
-                sessionCredential = "";
-                newVaultPassphrase = "";
-            }
+            close();
         }
     }
 
@@ -64,6 +60,9 @@
         const passphrase = savedVaultPassphrase;
         savedVaultPassphrase = "";
         await assetGenerationSettings.reconnectSavedCredential(passphrase);
+        if ($assetGenerationSettings.lifecycle === "connected") {
+            close();
+        }
     }
 
     async function deleteSavedVault(): Promise<void> {

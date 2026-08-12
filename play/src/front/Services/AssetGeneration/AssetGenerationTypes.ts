@@ -106,6 +106,7 @@ export interface ApprovedAssetGenerationBatch {
     approvedAt: string;
     metadata: AssetGenerationApprovalMetadata;
     request: AssetGenerationRequest;
+    titlePrompt?: string;
 }
 
 export interface AssetGenerationUsage {
@@ -137,6 +138,7 @@ export interface AssetGenerationResult {
     assets: readonly GeneratedAsset[];
     provenance: AssetGenerationProvenance;
     usage: AssetGenerationUsage;
+    title?: string;
 }
 
 export type AssetGenerationLifecycleEvent =
@@ -159,4 +161,5 @@ export interface ImageGenerationProvider {
     readonly capabilities: AssetGenerationCapabilities;
     listModels(credential: string, signal: AbortSignal): Promise<readonly AssetGenerationModel[]>;
     generate(request: AssetGenerationRequest, credential: string, signal: AbortSignal): Promise<AssetGenerationResult>;
+    generateTitle?(prompt: string, credential: string, signal: AbortSignal): Promise<string | undefined>;
 }

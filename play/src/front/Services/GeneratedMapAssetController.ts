@@ -24,6 +24,7 @@ export interface GeneratedMapAssetSnapshot {
 
 export interface AcceptedGeneratedMapAsset {
     blob: Blob;
+    title?: string;
     providerId: AssetGenerationProviderId;
     modelId: string;
     prompt: string;
@@ -96,7 +97,7 @@ export class GeneratedMapAssetController {
         const sha256 = await sha256ForPng(asset.blob);
         const record = await this.localStore.upsert(this.ownerScope, {
             clientId: uuidv4(),
-            name: generatedAssetDisplayName(asset.prompt),
+            name: generatedAssetDisplayName(asset.title ?? asset.prompt),
             png: asset.blob,
             sha256,
             provenance: { providerId: asset.providerId, modelId: asset.modelId },

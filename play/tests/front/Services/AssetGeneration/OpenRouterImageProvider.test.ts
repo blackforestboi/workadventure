@@ -7,6 +7,7 @@ import { encodeBase64 } from "../../../../src/front/Services/AssetGeneration/Bas
 import { DeterministicFakeImageProvider } from "../../../../src/front/Services/AssetGeneration/DeterministicFakeImageProvider";
 import {
     OPENROUTER_GENERATION_MODEL_ID,
+    OPENROUTER_TITLE_MODEL_ID,
     OpenRouterImageProvider,
     type AssetGenerationFetch,
 } from "../../../../src/front/Services/AssetGeneration/OpenRouterImageProvider";
@@ -154,6 +155,34 @@ describe("OpenRouterImageProvider", () => {
         expect(requestBody.resolution).toBe("512");
         expect(requestBody.aspect_ratio).toBe("1:1");
         expect(requestBody.prompt).toContain("uniform chroma background for easy removal");
+    });
+
+    it("creates a concise title from the original prompt with GPT-5 Nano", async () => {
+        const fetcher = vi.fn<AssetGenerationFetch>(async () =>
+            jsonResponse({ choices: [{ message: { content: '"Mossy Notice Board"' } }] }),
+        );
+        const provider = new OpenRouterImageProvider({ fetcher });
+
+        await expect(
+            provider.generateTitle(
+                "A mossy community notice board with small pinned cards",
+                "private-openrouter-key",
+                new AbortController().signal,
+            ),
+        ).resolves.toBe("Mossy Notice Board");
+
+        expect(fetcher.mock.calls[0]?.[0]).toBe("https://openrouter.ai/api/v1/chat/completions");
+        const serializedRequest = fetcher.mock.calls[0]?.[1]?.body;
+        if (typeof serializedRequest !== "string")
+            throw new Error("Expected a serialized OpenRouter title request body");
+        expect(JSON.parse(serializedRequest)).toMatchObject({
+            model: OPENROUTER_TITLE_MODEL_ID,
+            max_tokens: 16,
+            messages: [
+                { role: "system" },
+                { role: "user", content: "A mossy community notice board with small pinned cards" },
+            ],
+        });
     });
 
     it.each([

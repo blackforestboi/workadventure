@@ -105,16 +105,15 @@ describe("Teapot authoring access gate", () => {
         );
     });
 
-    it("rejects pending and suspended X identities", async () => {
+    it("lets pending X identities through while invitation admission is disabled, but rejects suspended accounts", async () => {
         const fixture = createFixture(true);
         const pending = await createIdentity(fixture.services, "x", "x-pending");
         const suspended = await createIdentity(fixture.services, "x", "x-suspended", "suspended");
         const gate = createTeapotAuthoringGate(fixture.dependencies);
 
         const pendingResponse = new AuthoringResponse(pending.id, "x");
-        expect(await runGate(gate, pendingResponse)).not.toHaveBeenCalled();
-        expect(pendingResponse.statusCode).toBe(403);
-        expect(pendingResponse.json).toHaveBeenCalledWith(expect.objectContaining({ error: "admission_required" }));
+        expect(await runGate(gate, pendingResponse)).toHaveBeenCalledOnce();
+        expect(pendingResponse.statusCode).toBe(200);
 
         const suspendedResponse = new AuthoringResponse(suspended.id, "x");
         expect(await runGate(gate, suspendedResponse)).not.toHaveBeenCalled();
@@ -138,6 +137,7 @@ describe("Teapot authoring access gate", () => {
         const enabled = createFixture(true);
         const localIdentity = await createIdentity(enabled.services, "workadventure-jwt", "local", "admitted");
         const xIdentity = await createIdentity(enabled.services, "x", "x-session-owner", "admitted");
+        const pendingXIdentity = await createIdentity(enabled.services, "x", "x-pending-session-owner");
 
         await expect(
             assertTeapotMcpSessionAuthoringAccess(localIdentity.id, enabled.dependencies),
@@ -147,6 +147,9 @@ describe("Teapot authoring access gate", () => {
         } satisfies Partial<TeapotAuthoringAccessError>);
         await expect(assertTeapotMcpSessionAuthoringAccess(xIdentity.id, enabled.dependencies)).resolves.toMatchObject({
             id: xIdentity.id,
+        });
+        await expect(assertTeapotMcpSessionAuthoringAccess(pendingXIdentity.id, enabled.dependencies)).resolves.toMatchObject({
+            id: pendingXIdentity.id,
         });
 
         const disabled = createFixture(false);

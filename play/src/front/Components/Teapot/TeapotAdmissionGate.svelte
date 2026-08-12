@@ -15,11 +15,9 @@
     let inviteToken = $state<string | null>(null);
     let readyToEnter = $state(false);
 
-    let visible = $derived(
-        enabled &&
-            !loading &&
-            (token === null || status?.identity.admissionState !== "admitted" || inviteToken !== null || readyToEnter),
-    );
+    // Invitation flows stay implemented, but the rollout currently only needs
+    // this screen to provide sign-in for visitors without an application token.
+    let visible = $derived(enabled && !loading && token === null);
 
     onMount(() => {
         initialize().catch(() => undefined);

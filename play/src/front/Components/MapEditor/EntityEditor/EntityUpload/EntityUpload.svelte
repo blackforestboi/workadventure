@@ -1,19 +1,16 @@
 <script lang="ts">
     import { CustomEntityDirection } from "@workadventure/messages";
     import { onDestroy, onMount } from "svelte";
-    import { SvelteMap } from "svelte/reactivity";
     import { v4 as uuidv4 } from "uuid";
     import type { EntityPrefab, VisualAssetAnimation } from "@workadventure/map-editor";
     import { Direction, ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
     import AssetGenerationPanel from "../../../AssetGeneration/AssetGenerationPanel.svelte";
-    import AnimatedAssetPreview from "../../../AssetGeneration/AnimatedAssetPreview.svelte";
     import { teapotGeneratedAssetApi } from "../../../../Services/TeapotGeneratedAssetApi";
     import { GeneratedAssetLocalStore } from "../../../../Services/GeneratedAssetLocalStore";
     import {
         GeneratedMapAssetController,
         generatedAssetOwnerScope,
         type AcceptedGeneratedMapAsset,
-        type GeneratedMapAssetCard,
     } from "../../../../Services/GeneratedMapAssetController";
     import { localUserStore } from "../../../../Connection/LocalUserStore";
     import LL from "../../../../../i18n/i18n-svelte";
@@ -28,9 +25,10 @@
     interface Props {
         generatedAsset?: Blob | File;
         generatedAssetName?: string;
+        onClose?: () => void;
     }
 
-    let { generatedAsset, generatedAssetName = "generated-entity.png" }: Props = $props();
+    let { generatedAsset, generatedAssetName = "generated-entity.png", onClose }: Props = $props();
 
     let files: FileList | undefined = $state(undefined);
     let dropZoneRef: HTMLDivElement | undefined = $state();
@@ -41,19 +39,13 @@
         | undefined = $state(undefined);
     let uploadDraft: MapEditorEntityUploadDraft | undefined = $state(undefined);
     let consumedGeneratedAsset: Blob | File | undefined;
-    let savedAssets: GeneratedMapAssetCard[] = $state([]);
-    let savedAssetsLoading = $state(false);
-    let savedAssetsError = $state<string>();
-    let savedAssetItemErrors: Record<string, string> = $state({});
-    const savedAssetsController = new AbortController();
+    const generatedAssetsController = new AbortController();
     let generatedAssetController: GeneratedMapAssetController | undefined;
     let persistedGeneratedAsset: Blob | undefined;
-    const savedAssetPreviewUrls = new SvelteMap<string, { blob: Blob; url: string }>();
 
     const BASIC_TYPE = "Custom";
 
     onMount(() => {
-        savedAssetsLoading = true;
         const token = localUserStore.getAuthToken();
         const ownerScope = generatedAssetOwnerScope(token, localUserStore.getLocalUser()?.uuid);
         generatedAssetController = new GeneratedMapAssetController(
@@ -61,20 +53,7 @@
             ownerScope !== "anonymous",
             new GeneratedAssetLocalStore(),
             teapotGeneratedAssetApi,
-            ({ items, warning }) => {
-                replaceSavedAssets(items);
-                savedAssetsError = warning;
-            },
-        );
-        generatedAssetController.hydrate(savedAssetsController.signal).then(
-            () => {
-                savedAssetsLoading = false;
-            },
-            (reason: unknown) => {
-                savedAssetsLoading = false;
-                if (reason instanceof DOMException && reason.name === "AbortError") return;
-                savedAssetsError = reason instanceof Error ? reason.message : "Saved assets could not be loaded.";
-            },
+            () => undefined,
         );
     });
 
@@ -115,10 +94,13 @@
         return format.trim().length > 0 && ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT.includes(format);
     }
     function completeAndResetUpload(draft: MapEditorEntityUploadDraft) {
-        // At the end, open the category of the uploaded image.
-        const selectedTag = draft.uploadEntityMessage.tags[0] ?? BASIC_TYPE;
-        selectCategoryStore.set({ kind: "tag", tag: selectedTag });
-        initFileUpload(draft.commandId);
+        closeToCustomAssets(draft.commandId);
+    }
+
+    function closeToCustomAssets(commandId?: string) {
+        initFileUpload(commandId);
+        selectCategoryStore.set({ kind: "special", tag: "custom" });
+        onClose?.();
     }
 
     async function processFileToUpload(customEditedEntity: EntityPrefab) {
@@ -144,6 +126,8 @@
                     collisionGrid: customEditedEntity.collisionGrid,
                     depthOffset: customEditedEntity.depthOffset,
                     defaultSizeInTiles: customEditedEntity.defaultSizeInTiles,
+                    defaultHeightInTiles: customEditedEntity.defaultHeightInTiles,
+                    previewPadding: customEditedEntity.previewPadding,
                     color: "",
                     animation: customEditedEntity.animation,
                 },
@@ -166,81 +150,34 @@
         }
         const previewUrl = URL.createObjectURL(source);
         selectedAsset = { source, name, previewUrl, animation };
+        errorOnFile = undefined;
+    }
+
+    function startEditingSelectedAsset() {
+        if (!selectedAsset) return;
         customEntityToUpload = {
             collectionName: "custom entities",
-            name,
-            imagePath: previewUrl,
+            name: selectedAsset.name,
+            imagePath: selectedAsset.previewUrl,
             id: uuidv4(),
             direction: Direction.Down,
             tags: [],
             color: "",
             type: BASIC_TYPE,
-            animation,
+            animation: selectedAsset.animation,
         };
-        errorOnFile = undefined;
-    }
-
-    async function reuseSavedAsset(asset: GeneratedMapAssetCard): Promise<void> {
-        savedAssetItemErrors = { ...savedAssetItemErrors, [asset.key]: "" };
-        try {
-            const blob = await generatedAssetController?.open(asset, savedAssetsController.signal);
-            if (blob !== undefined) acceptAsset(blob, savedAssetFileName(asset), asset.animation);
-        } catch (reason: unknown) {
-            if (reason instanceof DOMException && reason.name === "AbortError") return;
-            savedAssetItemErrors = {
-                ...savedAssetItemErrors,
-                [asset.key]: reason instanceof Error ? reason.message : "Saved asset could not be opened.",
-            };
-        }
     }
 
     async function persistGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
         if (generatedAssetController === undefined) throw new Error("Generated asset storage is not ready yet.");
-        await generatedAssetController.saveGenerated(asset, savedAssetsController.signal);
+        await generatedAssetController.saveGenerated(asset, generatedAssetsController.signal);
         persistedGeneratedAsset = asset.blob;
     }
 
     async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
         if (persistedGeneratedAsset !== asset.blob) await persistGeneratedAsset(asset);
-        acceptAsset(asset.blob, `generated-${uuidv4()}.png`, asset.animation);
-    }
-
-    async function retrySavedAsset(asset: GeneratedMapAssetCard): Promise<void> {
-        if (asset.local === undefined) return;
-        savedAssetItemErrors = { ...savedAssetItemErrors, [asset.key]: "" };
-        try {
-            await generatedAssetController?.retry(asset.local.clientId, savedAssetsController.signal);
-        } catch (reason: unknown) {
-            savedAssetItemErrors = {
-                ...savedAssetItemErrors,
-                [asset.key]: reason instanceof Error ? reason.message : "Upload retry failed.",
-            };
-        }
-    }
-
-    function replaceSavedAssets(items: GeneratedMapAssetCard[]): void {
-        const nextKeys = new Set(items.map((item) => item.key));
-        for (const [key, preview] of savedAssetPreviewUrls) {
-            if (!nextKeys.has(key)) {
-                URL.revokeObjectURL(preview.url);
-                savedAssetPreviewUrls.delete(key);
-            }
-        }
-        savedAssets = items;
-    }
-
-    function savedAssetPreview(asset: GeneratedMapAssetCard): string {
-        if (asset.blob === undefined) return asset.remote?.url ?? "";
-        const existing = savedAssetPreviewUrls.get(asset.key);
-        if (existing?.blob === asset.blob) return existing.url;
-        if (existing !== undefined) URL.revokeObjectURL(existing.url);
-        const url = URL.createObjectURL(asset.blob);
-        savedAssetPreviewUrls.set(asset.key, { blob: asset.blob, url });
-        return url;
-    }
-
-    function savedAssetFileName(asset: GeneratedMapAssetCard): string {
-        return `${asset.remote?.id ?? asset.local?.clientId ?? "saved"}-${asset.name.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 48)}.png`;
+        acceptAsset(asset.blob, asset.title ?? `generated-${uuidv4()}.png`, asset.animation);
+        startEditingSelectedAsset();
     }
 
     function mapDraftToEntityPrefab(draft: MapEditorEntityUploadDraft): EntityPrefab {
@@ -291,8 +228,7 @@
     onDestroy(() => {
         savedAssetsController.abort();
         mapEditorEntityUploadDraftStoreUnsubscriber();
-        for (const preview of savedAssetPreviewUrls.values()) URL.revokeObjectURL(preview.url);
-        savedAssetPreviewUrls.clear();
+        generatedAssetsController.abort();
         if (uploadDraft === undefined && selectedAsset) {
             URL.revokeObjectURL(selectedAsset.previewUrl);
         }
@@ -305,7 +241,7 @@
             isUploadForm
             disabled={uploadDraft?.status === "submitting"}
             customEntity={customEntityToUpload}
-            closeForm={initFileUpload}
+            closeForm={closeToCustomAssets}
             applyEntityModifications={(customModifiedEntity) =>
                 processFileToUpload(customModifiedEntity).catch((e) => console.error(e))}
         />
@@ -317,56 +253,6 @@
     </div>
 {:else}
     <div class="no-padding">
-        {#if savedAssetsLoading && savedAssets.length === 0}
-            <p class="mt-3 text-xs opacity-60">Loading your saved generated assets…</p>
-        {:else if savedAssets.length > 0}
-            <section class="my-3 rounded-md border border-white/10 bg-white/5 p-3" aria-label="Saved generated assets">
-                <p class="m-0 text-sm font-semibold">Saved AI assets</p>
-                <p class="mt-1 text-xs opacity-60">
-                    Open one to configure its name, tags, depth, and collision before uploading it into this map.
-                </p>
-                <div class="mt-2 grid max-h-40 grid-cols-3 gap-2 overflow-y-auto">
-                    {#each savedAssets as asset (asset.key)}
-                        <div class="rounded border border-white/10 bg-black/20 p-2">
-                            <button
-                                type="button"
-                                class="w-full text-left hover:opacity-80"
-                                onclick={() => reuseSavedAsset(asset)}
-                            >
-                                <AnimatedAssetPreview
-                                    classNames="h-16 w-full object-contain [image-rendering:pixelated]"
-                                    imageSource={savedAssetPreview(asset)}
-                                    imageAlt={asset.name}
-                                    animation={asset.animation}
-                                />
-                                <span class="mt-1 block truncate text-xs">{asset.name}</span>
-                            </button>
-                            {#if asset.local?.syncStatus === "pending"}
-                                <span class="text-[10px] opacity-60">Saving online…</span>
-                            {:else if asset.local?.syncStatus === "failed"}
-                                <button
-                                    type="button"
-                                    class="text-[10px] text-cyan-300 underline"
-                                    onclick={() => retrySavedAsset(asset)}>Retry upload</button
-                                >
-                                <span class="block text-[10px] text-red-400">{asset.local.syncError}</span>
-                            {/if}
-                            {#if savedAssetItemErrors[asset.key]}
-                                <span class="block text-[10px] text-red-400">{savedAssetItemErrors[asset.key]}</span>
-                                <button
-                                    type="button"
-                                    class="text-[10px] text-cyan-300 underline"
-                                    onclick={() => reuseSavedAsset(asset)}>Retry open</button
-                                >
-                            {/if}
-                        </div>
-                    {/each}
-                </div>
-            </section>
-        {/if}
-        {#if savedAssetsError}
-            <p class="my-2 text-xs text-red-500" aria-live="polite">{savedAssetsError}</p>
-        {/if}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
             ondrop={(event) => {
@@ -410,14 +296,24 @@
                 </span></label
             >
         </div>
+        {#if selectedAsset}
+            <div class="mt-3 flex justify-center rounded-md border border-white/10 bg-black/20 p-2">
+                <img
+                    src={selectedAsset.previewUrl}
+                    alt={selectedAsset.name}
+                    class="max-h-40 max-w-full object-contain"
+                />
+            </div>
+        {/if}
         <div class="mt-3">
             <AssetGenerationPanel
                 target="environment-object"
-                title="Generate with AI"
+                title={selectedAsset ? "Modify with AI" : "Generate with AI"}
                 promptPlaceholder="A mossy community notice board with small pinned cards, viewed from above…"
                 compact
                 outputSize={{ width: 512, height: 512 }}
                 onGenerated={persistGeneratedAsset}
+                onUseImage={selectedAsset ? startEditingSelectedAsset : undefined}
                 onAccept={acceptGeneratedAsset}
             />
         </div>
