@@ -1,8 +1,10 @@
 import {
     compactTeapotTileRegions,
     applyTeapotTerrainMutation,
+    getElevationAt,
     getTileLayerGid,
     type TeapotTerrainMutation,
+    type TeapotElevationUpdate,
     type TeapotTilePatch,
     type TeapotTileRegion,
 } from "@workadventure/map-editor";
@@ -28,6 +30,9 @@ export function createFloorEdit(map: ITiledMap, patch: TeapotTerrainMutation | T
                   beforeLayer: patch.beforeLayer,
               }
             : {}),
+        ...("elevationUpdates" in patch && patch.elevationUpdates !== undefined
+            ? { elevationUpdates: patch.elevationUpdates }
+            : {}),
     };
     const historyMap =
         forward.layerJson !== undefined && !forward.removeLayer
@@ -35,6 +40,12 @@ export function createFloorEdit(map: ITiledMap, patch: TeapotTerrainMutation | T
             : map;
     const backwardRegions: TeapotTileRegion[] = [];
     let changesMap = forward.layerJson !== undefined;
+    const backwardElevationUpdates: TeapotElevationUpdate[] = [];
+    for (const update of forward.elevationUpdates ?? []) {
+        const previousElevation = getElevationAt(map, update.layer, update.x, update.y);
+        if (previousElevation !== update.elevation) changesMap = true;
+        backwardElevationUpdates.push({ ...update, elevation: previousElevation });
+    }
 
     for (const region of forward.regions) {
         const layer = flattenLayers(historyMap.layers).find((candidate) => candidate.name === region.layer);
@@ -68,6 +79,7 @@ export function createFloorEdit(map: ITiledMap, patch: TeapotTerrainMutation | T
                       removeLayer: !forward.removeLayer,
                       beforeLayer: forward.beforeLayer,
                   }),
+            ...(backwardElevationUpdates.length === 0 ? {} : { elevationUpdates: backwardElevationUpdates }),
         },
     };
 }

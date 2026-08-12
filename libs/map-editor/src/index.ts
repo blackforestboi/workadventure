@@ -28,3 +28,4 @@ export * from "./Permissions/EntityPermissions";
 export * from "./Permissions/AreaPermissions";
 export * from "./Authoring/TeapotTilePatch";
 export * from "./Authoring/TeapotTerrainMutation";
+export * from "./Authoring/ElevationTerrain";

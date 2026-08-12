@@ -204,6 +204,7 @@ import { audioPlaybackStore } from "../../Stores/AudioPlaybackStore";
 import { requestedScreenSharingState } from "../../Stores/ScreenSharingStore";
 import { EnterLeaveScriptingService } from "../Helpers/EnterLeaveScriptingService";
 import { GameMapFrontWrapper } from "./GameMap/GameMapFrontWrapper";
+import { ElevationRenderer } from "./GameMap/ElevationRenderer";
 import { GameRenderLayers } from "./GameRenderLayers";
 import { LocalPlayerAssetOcclusion } from "./LocalPlayerAssetOcclusion";
 import { resolveTilesetImageUrl } from "./GameMap/TilesetImageUrl";
@@ -353,6 +354,7 @@ export class GameScene extends DirtyScene {
     private entityPermissions: EntityPermissions | undefined;
     private entityPermissionsDeferred: Deferred<EntityPermissions> = new Deferred();
     private gameMapFrontWrapper!: GameMapFrontWrapper;
+    private elevationRenderer!: ElevationRenderer;
     private gameRenderLayers!: GameRenderLayers;
     private readonly localPlayerAssetOcclusion = new LocalPlayerAssetOcclusion();
     private actionableItems: Map<number, ActionableItem> = new Map<number, ActionableItem>();
@@ -737,6 +739,10 @@ export class GameScene extends DirtyScene {
         const mapBounds = this.gameMapFrontWrapper.getMapBounds();
         this.physics.world.setBounds(mapBounds.x, mapBounds.y, mapBounds.width, mapBounds.height);
         this.gameMapFrontWrapper.initialize().catch((e) => console.error(e));
+        this.elevationRenderer = new ElevationRenderer(this);
+        this.gameMapFrontWrapper.initializedPromise.promise
+            .then(() => this.elevationRenderer.render(this.mapFile))
+            .catch((e) => console.error(e));
         for (const layer of this.gameMapFrontWrapper.getFlatLayers()) {
             if (layer.type === "tilelayer") {
                 const exitSceneUrl = this.getExitSceneUrl(layer);
@@ -1265,6 +1271,7 @@ export class GameScene extends DirtyScene {
         this.playersEventDispatcher.cleanup();
         this.playersMovementEventDispatcher.cleanup();
         this.usernameDomLayer?.destroy();
+        this.elevationRenderer?.destroy();
         this.gameMapFrontWrapper?.close();
         this.followManager?.close();
         this.inviteManager?.close();
@@ -1389,6 +1396,7 @@ export class GameScene extends DirtyScene {
         }
 
         this.remotePlayersRepository.reset();
+        this.elevationRenderer?.updateWorldObjects();
 
         // Let's handle all events
         while (this.pendingEvents.length !== 0) {
@@ -1770,6 +1778,10 @@ export class GameScene extends DirtyScene {
 
     public getGameMapFrontWrapper(): GameMapFrontWrapper {
         return this.gameMapFrontWrapper;
+    }
+
+    public getElevationRenderer(): ElevationRenderer {
+        return this.elevationRenderer;
     }
 
     public getGameRenderLayers(): GameRenderLayers {

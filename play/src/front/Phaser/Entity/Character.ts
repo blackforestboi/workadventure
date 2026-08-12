@@ -65,6 +65,7 @@ export abstract class Character extends Container implements OutlineableInterfac
     private textsToBuild = new Map();
     scene: GameScene;
     private lastRenderedSprite: string | undefined;
+    private elevationOffset = 0;
     private readonly _pictureStore: Readable<string | undefined>;
     protected readonly outlineColorStore = createColorStore();
     private outlineColorStoreUnsubscribe: Unsubscriber | undefined;
@@ -75,7 +76,7 @@ export abstract class Character extends Container implements OutlineableInterfac
     private currentPathSegmentDistanceFromStart = 0;
     private pathFollowingResolve?: (result: PathFollowResult) => void;
     private readonly syncDisplayPositionWithPhysics = (): void => {
-        this.setDepthIfNeeded(this.y + 16);
+        this.setDepthIfNeeded(this.y - this.elevationOffset + 16);
         this.updateUsernameDisplayPosition();
     };
 
@@ -281,6 +282,16 @@ export abstract class Character extends Container implements OutlineableInterfac
         return { x: this.x, y: this.y };
     }
 
+    /** Moves only the rendered character; its network and physics position stays on the 2D navigation plane. */
+    public setElevationOffset(offset: number): void {
+        if (this.elevationOffset === offset) return;
+        this.elevationOffset = offset;
+        for (const sprite of this.sprites.values()) sprite.setY(-offset);
+        this.setDepthIfNeeded(this.y - offset + 16);
+        this.updateUsernameDisplayPosition();
+        this.scene.markDirty();
+    }
+
     /**
      * Returns position based on where player is currently facing
      * @param shift How far from player should the point of interest be.
@@ -352,6 +363,7 @@ export abstract class Character extends Container implements OutlineableInterfac
             }
             preserveHighResolutionWokaSampling(this.scene.textures.get(texture));
             const sprite = new Sprite(this.scene, 0, 0, texture, frame);
+            sprite.setY(-this.elevationOffset);
             // Keep the original frame pixels and normalize only their world-space display size.
             sprite.setDisplaySize(CHARACTER_DISPLAY_SIZE, CHARACTER_DISPLAY_SIZE);
             this.add(sprite);
@@ -403,12 +415,12 @@ export abstract class Character extends Container implements OutlineableInterfac
     }
 
     protected updateUsernameDisplayPosition(x = this.x, y = this.y): void {
-        this.usernameDisplay?.setPosition(x, y + playerNameY);
+        this.usernameDisplay?.setPosition(x, y + playerNameY - this.elevationOffset);
     }
 
     setPosition(x: number, y: number): this {
         super.setPosition(Math.round(x), Math.round(y));
-        this.setDepth(this.y + 16);
+        this.setDepth(this.y - this.elevationOffset + 16);
         this.usernameDisplay?.setPlayerDepth(this.depth);
         this.updateUsernameDisplayPosition();
         this.movedSubject?.next({ x: this.x, y: this.y });

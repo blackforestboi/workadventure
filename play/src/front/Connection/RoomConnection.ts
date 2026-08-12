@@ -1253,6 +1253,7 @@ export class RoomConnection implements RoomConnection {
                                 layerJson: mutation.layerJson ?? "",
                                 removeLayer: mutation.removeLayer ?? false,
                                 beforeLayer: mutation.beforeLayer ?? "",
+                                elevationUpdates: mutation.elevationUpdates?.map((update) => ({ ...update })) ?? [],
                             },
                         },
                     },

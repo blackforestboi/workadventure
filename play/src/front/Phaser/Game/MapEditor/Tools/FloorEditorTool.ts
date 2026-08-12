@@ -2,7 +2,10 @@ import {
     addTeapotEmbeddedTileset,
     applyTeapotTerrainMutation,
     createWaterUnderlayLayer,
+    ELEVATION_WORLD_LAYER,
+    getElevationAt,
     getTileLayerGid,
+    sculptElevation,
     tileToWorldCenter,
     tileToWorldTopLeft,
     type TeapotTerrainMutation,
@@ -11,6 +14,7 @@ import {
     waterUnderlayCoverLayerName,
     waterUnderlayLayerName,
     worldToTileCoordinates,
+    WIDE_ELEVATION_BRUSH_RADIUS,
 } from "@workadventure/map-editor";
 import type { EditMapCommandMessage } from "@workadventure/messages";
 import type { ITiledMap, ITiledMapLayer, ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
@@ -52,6 +56,8 @@ import {
     getAuthoringPathOverlayKind,
 } from "../../GameMap/AuthoringCollision";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
+import { isElevatableTerrainGid } from "../../GameMap/ElevationEligibility";
+import { ELEVATION_COMPOSITE_LAYER_DATA_KEY } from "../../GameMap/ElevationRenderer";
 import type { GameScene } from "../../GameScene";
 import { ModifyTerrainFrontCommand } from "../Commands/Terrain/ModifyTerrainFrontCommand";
 import type { MapEditorModeManager } from "../MapEditorModeManager";
@@ -83,6 +89,8 @@ const AUTHORING_PATH_OVERLAY_COLORS = {
     exit: { base: 0xf59e0b, checks: 0xfcd34d },
     start: { base: 0x22c55e, checks: 0x86efac },
 } as const;
+
+const ELEVATION_REPEAT_INTERVAL_MS = 120;
 
 export const OCCUPIED_TILE_DELETION_ERROR = "A tile beneath an avatar cannot be deleted.";
 
@@ -124,6 +132,10 @@ export class FloorEditorTool extends MapEditorTool {
     private panning = false;
     private lastPaintedTileKey: string | undefined;
     private activeEditGroup: FloorEdit[] | undefined;
+    private elevationPointerTile: { layer: string; x: number; y: number } | undefined;
+    private elevationDirection: 1 | -1 = 1;
+    private elevationBrushRadius = 0;
+    private nextElevationSculptAt = 0;
     private readonly shiftKey: Phaser.Input.Keyboard.Key | undefined;
     private readonly pointerMoveEventHandler = (pointer: Phaser.Input.Pointer) => this.handlePointerMove(pointer);
     private readonly pointerDownEventHandler = (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer);
@@ -137,7 +149,18 @@ export class FloorEditorTool extends MapEditorTool {
         this.shiftKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     }
 
-    public update(_time: number, _dt: number): void {}
+    public update(time: number, _dt: number): void {
+        if (
+            !this.painting ||
+            this.elevationPointerTile === undefined ||
+            time < this.nextElevationSculptAt ||
+            get(mapEditorFloorStateStore)?.toolMode !== "elevation"
+        ) {
+            return;
+        }
+        this.paintElevation(this.elevationPointerTile);
+        this.nextElevationSculptAt = time + ELEVATION_REPEAT_INTERVAL_MS;
+    }
 
     public clear(): void {
         this.clearHoverPreview();
@@ -223,6 +246,7 @@ export class FloorEditorTool extends MapEditorTool {
             layerJson: message.modifyTerrainMessage.layerJson || undefined,
             removeLayer: message.modifyTerrainMessage.removeLayer,
             beforeLayer: message.modifyTerrainMessage.beforeLayer || undefined,
+            elevationUpdates: message.modifyTerrainMessage.elevationUpdates,
         });
         if (message.modifyTerrainMessage.tilesetJson !== "" && !message.modifyTerrainMessage.removeTileset) {
             await this.loadEmbeddedRuntimeTilesets(this.draftMap ?? this.scene.mapFile);
@@ -257,6 +281,10 @@ export class FloorEditorTool extends MapEditorTool {
             }
             if (action.type === "select-brush") {
                 this.selectBrush(action.layer, action.gid);
+                return Promise.resolve();
+            }
+            if (action.type === "select-elevation") {
+                this.selectElevation(action.layer);
                 return Promise.resolve();
             }
             if (action.type === "select-library-brush") {
@@ -305,6 +333,9 @@ export class FloorEditorTool extends MapEditorTool {
                       beforeLayer: patch.beforeLayer,
                   }
                 : {}),
+            ...("elevationUpdates" in patch && patch.elevationUpdates !== undefined
+                ? { elevationUpdates: patch.elevationUpdates }
+                : {}),
         };
         if (!this.canApplyTerrainMutation(mutation)) {
             this.setState({ status: "failed", error: OCCUPIED_TILE_DELETION_ERROR });
@@ -318,6 +349,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.previewRegions = [...this.previewRegions, ...patch.regions];
         this.updateChangedTileKeys(patch.regions, updated);
         this.renderRegions(patch.regions, updated);
+        this.scene.getElevationRenderer().render(updated);
         if (edit !== undefined && this.activeEditGroup !== undefined) this.activeEditGroup.push(edit);
         this.setState({ status: "saving", changedTiles: this.changedTileKeys.size, error: undefined });
         return true;
@@ -389,6 +421,28 @@ export class FloorEditorTool extends MapEditorTool {
         this.clearPathOverlay();
     }
 
+    private selectElevation(layer: string): void {
+        const state = get(mapEditorFloorStateStore);
+        if (state === undefined || !state.layers.some((candidate) => candidate.name === layer)) return;
+        this.clearHoverPreview();
+        this.cancelShapeDrag();
+        this.selectedAutotile = undefined;
+        this.selectedAutotileForTileBrush = undefined;
+        this.selectedWaterFillGid = undefined;
+        this.selectedLayer = layer;
+        this.selectedGid = 1;
+        this.setState({
+            selectedLayer: layer,
+            selectedGid: this.selectedGid,
+            toolMode: "elevation",
+            selectedTerrainFamilyId: undefined,
+            error: undefined,
+        });
+        this.updateCursor();
+        this.refreshPathOverlay();
+        this.scene.getElevationRenderer().render(this.draftMap ?? this.draftBaseMap ?? this.publishedMap);
+    }
+
     private getTileBrushAutotile(state: MapEditorFloorState, gid: number): TerrainAutotileTiles | undefined {
         const tileset = state.tilesets.find(
             (candidate) =>
@@ -454,6 +508,12 @@ export class FloorEditorTool extends MapEditorTool {
             this.showShapeOutline(this.shapeStart, tile);
             return;
         }
+        const elevationMode = get(mapEditorFloorStateStore)?.toolMode === "elevation";
+        if (elevationMode) {
+            this.elevationDirection = getElevationDirection(pointer);
+            this.elevationBrushRadius = isShiftDown(pointer, this.shiftKey) ? WIDE_ELEVATION_BRUSH_RADIUS : 0;
+            if (this.painting && pointer.leftButtonDown()) this.elevationPointerTile = tile;
+        }
         const key = tileKey(tile.layer, tile.x, tile.y);
         if (
             this.hoveredTile === undefined ||
@@ -462,7 +522,12 @@ export class FloorEditorTool extends MapEditorTool {
             this.showHoverPreview(tile);
         }
         if (this.painting && pointer.leftButtonDown() && key !== this.lastPaintedTileKey) {
-            this.paintTile(tile);
+            if (elevationMode) {
+                this.paintElevation(tile);
+                this.nextElevationSculptAt = this.scene.time.now + ELEVATION_REPEAT_INTERVAL_MS;
+            } else {
+                this.paintTile(tile);
+            }
         }
     }
 
@@ -475,6 +540,17 @@ export class FloorEditorTool extends MapEditorTool {
         }
         const tile = this.getTileAtPointer(pointer);
         if (tile === undefined) return;
+        if (get(mapEditorFloorStateStore)?.toolMode === "elevation") {
+            this.painting = true;
+            this.lastPaintedTileKey = undefined;
+            this.activeEditGroup = [];
+            this.elevationPointerTile = tile;
+            this.elevationDirection = getElevationDirection(pointer);
+            this.elevationBrushRadius = isShiftDown(pointer, this.shiftKey) ? WIDE_ELEVATION_BRUSH_RADIUS : 0;
+            this.paintElevation(tile);
+            this.nextElevationSculptAt = this.scene.time.now + ELEVATION_REPEAT_INTERVAL_MS;
+            return;
+        }
         const shapeBrush =
             this.selectedAutotile?.familyId === "water"
                 ? { kind: "water" as const, gid: this.selectedAutotile.tiles.center }
@@ -545,10 +621,12 @@ export class FloorEditorTool extends MapEditorTool {
             return undefined;
         const visibleMap = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
         const coordinates = worldToTileCoordinates(visibleMap, pointer.worldX, pointer.worldY);
-        const targetLayer =
-            this.selectedGid === 0 && getAuthoringPathOverlayKind(this.selectedLayer) === undefined
-                ? (findTopmostErasableLayer(visibleMap.layers, coordinates.x, coordinates.y) ?? this.selectedLayer)
-                : this.selectedLayer;
+        const elevationMode = get(mapEditorFloorStateStore)?.toolMode === "elevation";
+        const targetLayer = elevationMode
+            ? (findTopmostErasableLayer(visibleMap.layers, coordinates.x, coordinates.y) ?? this.selectedLayer)
+            : this.selectedGid === 0 && getAuthoringPathOverlayKind(this.selectedLayer) === undefined
+              ? (findTopmostErasableLayer(visibleMap.layers, coordinates.x, coordinates.y) ?? this.selectedLayer)
+              : this.selectedLayer;
         const layer = findLayer(visibleMap.layers, targetLayer);
         if (layer?.type !== "tilelayer") return undefined;
         return { layer: targetLayer, ...coordinates };
@@ -604,6 +682,33 @@ export class FloorEditorTool extends MapEditorTool {
             }),
         );
         if (applied && this.liquidStrokeAutotile !== undefined) this.liquidStrokePrevious = tile;
+        this.showHoverPreview(tile);
+    }
+
+    private paintElevation(tile: { layer: string; x: number; y: number }): void {
+        const source = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
+        if (source === undefined) return;
+        const layer = findLayer(source.layers, tile.layer);
+        if (layer?.type !== "tilelayer" || !isElevatableTerrainGid(source, getTileLayerGid(layer, tile.x, tile.y))) {
+            this.setState({ error: "Elevation is available only on outdoor dirt and natural terrain." });
+            this.showHoverPreview(tile);
+            return;
+        }
+        const elevationUpdates = sculptElevation(source, ELEVATION_WORLD_LAYER, tile.x, tile.y, {
+            direction: this.elevationDirection,
+            radius: this.elevationBrushRadius,
+        });
+        this.lastPaintedTileKey = tileKey(ELEVATION_WORLD_LAYER, tile.x, tile.y);
+        if (elevationUpdates.length === 0) {
+            this.showHoverPreview(tile);
+            return;
+        }
+        const mutation: TeapotTerrainMutation = {
+            mapId: this.scene.getMapUrl(),
+            regions: [],
+            elevationUpdates,
+        };
+        this.preview(mutation);
         this.showHoverPreview(tile);
     }
 
@@ -747,6 +852,8 @@ export class FloorEditorTool extends MapEditorTool {
     private finishPaintStroke(): void {
         this.painting = false;
         this.lastPaintedTileKey = undefined;
+        this.elevationPointerTile = undefined;
+        this.nextElevationSculptAt = 0;
         this.strokeAutotile = undefined;
         this.strokeWaterFillGid = undefined;
         this.liquidStrokeAutotile = undefined;
@@ -763,6 +870,7 @@ export class FloorEditorTool extends MapEditorTool {
         const mutation: TeapotTerrainMutation = {
             mapId: this.scene.getMapUrl(),
             regions: collapseTileRegions(edits.flatMap((edit) => edit.forward.regions)),
+            elevationUpdates: edits.flatMap((edit) => edit.forward.elevationUpdates ?? []),
             ...(forwardLayerEdit === undefined
                 ? {}
                 : {
@@ -774,6 +882,7 @@ export class FloorEditorTool extends MapEditorTool {
         const inverseMutation: TeapotTerrainMutation = {
             mapId: this.scene.getMapUrl(),
             regions: collapseTileRegions([...edits].reverse().flatMap((edit) => edit.backward.regions)),
+            elevationUpdates: [...edits].reverse().flatMap((edit) => edit.backward.elevationUpdates ?? []),
             ...(backwardLayerEdit === undefined
                 ? {}
                 : {
@@ -822,6 +931,7 @@ export class FloorEditorTool extends MapEditorTool {
             this.updateChangedTileKeys(mutation.regions, updated);
             this.renderRegions(mutation.regions, updated);
         }
+        if (mutation.elevationUpdates !== undefined) this.scene.getElevationRenderer().render(updated);
         this.saving = true;
         this.setState({ status: "saving", changedTiles: this.changedTileKeys.size, error: undefined });
     }
@@ -850,6 +960,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.changedTileKeys.clear();
         this.pendingTilesetSelection = undefined;
         this.saving = false;
+        this.scene.getElevationRenderer().render(restoredMap);
         this.setState({ status: "failed", changedTiles: 0, error: reason });
     }
 
@@ -861,10 +972,21 @@ export class FloorEditorTool extends MapEditorTool {
         const phaserLayer = this.scene.getGameMapFrontWrapper().findPhaserLayer(tile.layer);
         const tileWidth = visibleMap.tilewidth ?? 32;
         const tileHeight = visibleMap.tileheight ?? 32;
-        const { x: left, y: top } = tileToWorldTopLeft(visibleMap, tile.x, tile.y);
+        const { x: left, y: baseTop } = tileToWorldTopLeft(visibleMap, tile.x, tile.y);
         const pathOverlay = getAuthoringPathOverlay(visibleMap, tile.layer);
+        const elevationMode = get(mapEditorFloorStateStore)?.toolMode === "elevation";
+        const previewElevation = elevationMode
+            ? Math.max(
+                  0,
+                  Math.min(
+                      getElevationAt(visibleMap, ELEVATION_WORLD_LAYER, tile.x, tile.y) + this.elevationDirection,
+                      20,
+                  ),
+              )
+            : 0;
+        const top = elevationMode ? baseTop - previewElevation * (tileHeight / 2) : baseTop;
         const hoverDepth = pathOverlay === undefined ? (phaserLayer?.depth ?? 0) + 2 : DEPTH_OVERLAY_INDEX + 2;
-        if (pathOverlay === undefined) {
+        if (pathOverlay === undefined && !elevationMode) {
             const tileTexture = this.getTileTexture(this.selectedGid);
             if (tileTexture !== undefined) {
                 this.hoverTilePreview = this.scene.add
@@ -880,7 +1002,15 @@ export class FloorEditorTool extends MapEditorTool {
         this.hoverOutline ??= this.scene.add.graphics();
         this.hoverOutline.clear();
         if (pathOverlay === undefined) {
-            this.hoverOutline.fillStyle(0xffffff, 0.12).fillRect(left, top, tileWidth, tileHeight);
+            const radius = elevationMode ? this.elevationBrushRadius : 0;
+            this.hoverOutline
+                .fillStyle(this.elevationDirection === -1 ? 0xfb7185 : 0xffffff, 0.12)
+                .fillRect(
+                    left - radius * tileWidth,
+                    top - radius * tileHeight,
+                    tileWidth * (radius * 2 + 1),
+                    tileHeight * (radius * 2 + 1),
+                );
         } else {
             const colors = AUTHORING_PATH_OVERLAY_COLORS[pathOverlay.kind];
             const halfWidth = tileWidth / 2;
@@ -893,8 +1023,13 @@ export class FloorEditorTool extends MapEditorTool {
                 .fillRect(left + halfWidth, top + halfHeight, halfWidth, halfHeight);
         }
         this.hoverOutline
-            .lineStyle(2, 0xffffff, 0.95)
-            .strokeRect(left, top, tileWidth, tileHeight)
+            .lineStyle(2, this.elevationDirection === -1 ? 0xfb7185 : 0xffffff, 0.95)
+            .strokeRect(
+                left - (elevationMode ? this.elevationBrushRadius : 0) * tileWidth,
+                top - (elevationMode ? this.elevationBrushRadius : 0) * tileHeight,
+                tileWidth * ((elevationMode ? this.elevationBrushRadius : 0) * 2 + 1),
+                tileHeight * ((elevationMode ? this.elevationBrushRadius : 0) * 2 + 1),
+            )
             .setDepth(hoverDepth);
         if (phaserLayer !== undefined) {
             this.hoverOutline.setScrollFactor(phaserLayer.scrollFactorX, phaserLayer.scrollFactorY);
@@ -1116,7 +1251,8 @@ export class FloorEditorTool extends MapEditorTool {
 
     private renderRegions(regions: readonly TeapotTileRegion[], map: ITiledMap): void {
         const wrapper = this.scene.getGameMapFrontWrapper();
-        wrapper.synchronizeMapGeometry(map);
+        wrapper.synchronizeMapGeometryIfNeeded(map);
+        const renderedCells: { layer: string; x: number; y: number }[] = [];
         for (const region of regions) {
             const layer = findLayer(map.layers, region.layer);
             if (layer?.type !== "tilelayer") continue;
@@ -1125,10 +1261,12 @@ export class FloorEditorTool extends MapEditorTool {
                     const absoluteX = region.x + x;
                     const absoluteY = region.y + y;
                     const gid = getTileLayerGid(layer, absoluteX, absoluteY);
-                    this.renderTile(region.layer, absoluteX, absoluteY, gid, map);
+                    this.renderTile(region.layer, absoluteX, absoluteY, gid, map, { deferRefresh: true });
+                    renderedCells.push({ layer: region.layer, x: absoluteX, y: absoluteY });
                 }
             }
         }
+        wrapper.refreshTileBatch(renderedCells, map);
         this.refreshPathOverlay();
     }
 
@@ -1172,7 +1310,14 @@ export class FloorEditorTool extends MapEditorTool {
         this.pathOverlay = undefined;
     }
 
-    private renderTile(layer: string, x: number, y: number, gid: number, map: ITiledMap): void {
+    private renderTile(
+        layer: string,
+        x: number,
+        y: number,
+        gid: number,
+        map: ITiledMap,
+        options: { deferRefresh?: boolean } = {},
+    ): void {
         const overlayKey = tileKey(layer, x, y);
         this.tileOverlays.get(overlayKey)?.destroy();
         this.tileOverlays.delete(overlayKey);
@@ -1187,13 +1332,14 @@ export class FloorEditorTool extends MapEditorTool {
             // Collision markers must stay non-empty for Arcade Physics; checker overlays own all path visuals.
             gameMapFrontWrapper.putTile(gid === 0 ? null : gid, x, y, layer, {
                 render: pathOverlayKind === "collision",
+                deferRefresh: options.deferRefresh,
             });
             return;
         }
         if (!tileLayerCanRenderGid(phaserLayer, gid)) {
             const tileTexture = this.getTileTexture(gid);
             if (tileTexture !== undefined) {
-                gameMapFrontWrapper.putTile(null, x, y, layer);
+                gameMapFrontWrapper.putTile(null, x, y, layer, options);
                 this.renderOverlay(
                     overlayKey,
                     x,
@@ -1203,11 +1349,12 @@ export class FloorEditorTool extends MapEditorTool {
                     map,
                     renderReferenceLayer,
                     underlayCoverLayer === undefined ? 0.01 : -0.01,
+                    underlayCoverLayer ?? layer,
                 );
                 return;
             }
         }
-        gameMapFrontWrapper.putTile(gid === 0 ? null : gid, x, y, layer);
+        gameMapFrontWrapper.putTile(gid === 0 ? null : gid, x, y, layer, options);
     }
 
     private getTileTexture(gid: number): { textureKey: string; frame: string | number } | undefined {
@@ -1243,6 +1390,7 @@ export class FloorEditorTool extends MapEditorTool {
         map: ITiledMap,
         phaserLayer: ReturnType<GameMapFrontWrapper["findPhaserLayer"]>,
         depthOffset: number,
+        compositeLayer: string,
     ): void {
         const tileWidth = map.tilewidth ?? 32;
         const tileHeight = map.tileheight ?? 32;
@@ -1250,6 +1398,7 @@ export class FloorEditorTool extends MapEditorTool {
         const overlay = this.scene.add
             .image(centre.x, centre.y, textureKey, frame)
             .setDisplaySize(tileWidth, tileHeight);
+        overlay.setData(ELEVATION_COMPOSITE_LAYER_DATA_KEY, compositeLayer);
         if (phaserLayer !== undefined) {
             overlay.setScrollFactor(phaserLayer.scrollFactorX, phaserLayer.scrollFactorY);
             this.scene
@@ -1380,7 +1529,12 @@ export class FloorEditorTool extends MapEditorTool {
             changedTiles: 0,
             selectedLayer: this.selectedLayer,
             selectedGid: this.selectedGid,
-            toolMode: this.selectedAutotile === undefined ? "tile" : "shape",
+            toolMode:
+                previous?.toolMode === "elevation" && this.selectedLayer !== ""
+                    ? "elevation"
+                    : this.selectedAutotile === undefined
+                      ? "tile"
+                      : "shape",
             selectedTerrainFamilyId: this.selectedAutotile?.familyId,
             hoveredTile: this.hoveredTile,
             ...update,
@@ -1470,6 +1624,16 @@ function getTerrainAutotileFamilies(map: ITiledMap): TerrainAutotileFamily[] {
 
 function tileKey(layer: string, x: number, y: number): string {
     return `${layer}\u0000${x}\u0000${y}`;
+}
+
+function getElevationDirection(pointer: Phaser.Input.Pointer): 1 | -1 {
+    const event = pointer.event as { metaKey?: boolean; ctrlKey?: boolean } | undefined;
+    return event?.metaKey === true || event?.ctrlKey === true ? -1 : 1;
+}
+
+function isShiftDown(pointer: Phaser.Input.Pointer, shiftKey: Phaser.Input.Keyboard.Key | undefined): boolean {
+    const event = pointer.event as { shiftKey?: boolean } | undefined;
+    return event?.shiftKey === true || shiftKey?.isDown === true;
 }
 
 function resolveTilesetImage(image: string, mapUrl: string): string {

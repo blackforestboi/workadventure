@@ -6,6 +6,7 @@ import {
 } from "@workadventure/tiled-map-type-guard";
 
 import { forEachTileInLayer } from "../GameMap/CenteredMapCoordinates";
+import { applyElevationUpdates, type TeapotElevationUpdate } from "./ElevationTerrain";
 import { applyTeapotTilePatch, TeapotTilePatch, type TeapotTileRegion } from "./TeapotTilePatch";
 
 const MAX_TILESET_JSON_BYTES = 64 * 1024;
@@ -21,6 +22,7 @@ export interface TeapotTerrainMutation {
     layerJson?: string;
     removeLayer?: boolean;
     beforeLayer?: string;
+    elevationUpdates?: readonly TeapotElevationUpdate[];
 }
 
 export interface TerrainTileCoordinate {
@@ -69,13 +71,15 @@ export function applyTeapotTerrainMutation(source: ITiledMap, mutation: TeapotTe
     const hasRegions = mutation.regions.length > 0;
     const hasTileset = mutation.tilesetJson !== undefined && mutation.tilesetJson !== "";
     const hasLayer = mutation.layerJson !== undefined && mutation.layerJson !== "";
-    if (hasTileset && (hasRegions || hasLayer)) throw new Error("A tileset edit cannot contain tile or layer changes");
-    if (!hasRegions && !hasTileset && !hasLayer)
+    const hasElevationUpdates = mutation.elevationUpdates !== undefined && mutation.elevationUpdates.length > 0;
+    if (hasTileset && (hasRegions || hasLayer || hasElevationUpdates))
+        throw new Error("A tileset edit cannot contain tile, layer, or elevation changes");
+    if (!hasRegions && !hasTileset && !hasLayer && !hasElevationUpdates)
         throw new Error("A terrain edit must contain tiles, a layer, or a tileset");
 
     if (hasTileset) return applyTilesetMutation(source, mutation);
 
-    let map = structuredClone(source);
+    let map = hasLayer ? structuredClone(source) : source;
     if (hasLayer && !mutation.removeLayer) map = addTerrainLayer(map, mutation.layerJson!, mutation.beforeLayer);
     if (hasRegions) {
         map = applyTeapotTilePatch(
@@ -87,6 +91,7 @@ export function applyTeapotTerrainMutation(source: ITiledMap, mutation: TeapotTe
             }),
         ).map;
     }
+    if (hasElevationUpdates) map = applyElevationUpdates(map, mutation.elevationUpdates!);
     if (hasLayer && mutation.removeLayer) map = removeTerrainLayer(map, mutation.layerJson!);
     return map;
 }

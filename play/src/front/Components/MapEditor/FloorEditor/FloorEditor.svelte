@@ -72,6 +72,10 @@
         dispatchMapEditorFloorAction({ type: "select-brush", layer, gid });
     }
 
+    function selectElevation(layer: string) {
+        dispatchMapEditorFloorAction({ type: "select-elevation", layer });
+    }
+
     function selectPaletteBrush(layer: string, gid: number, layers: readonly { name: string }[]) {
         dispatchMapEditorFloorAction({
             type: "select-brush",
@@ -125,7 +129,7 @@
     function selectLayer(
         layer: string,
         state: {
-            toolMode: "tile" | "shape";
+            toolMode: "tile" | "shape" | "elevation";
             selectedTerrainFamilyId?: string;
             selectedGid: number;
             tilesets: readonly MapEditorFloorTileset[];
@@ -296,7 +300,12 @@
     {:else}
         {@const state = $mapEditorFloorStateStore}
         {@const terrainModes = getTerrainModeOptions(state.layers)}
-        {@const activeTerrainModeId = getActiveTerrainModeId(terrainModes, state.selectedLayer, state.selectedGid)}
+        {@const activeTerrainModeId = getActiveTerrainModeId(
+            terrainModes,
+            state.selectedLayer,
+            state.selectedGid,
+            state.toolMode,
+        )}
         {@const activeAuthoringPathTool = getActiveAuthoringPathTool(terrainModes, state.selectedLayer)}
         {#if state.error}<p class="m-0 text-sm text-red-300" role="alert">{state.error}</p>{/if}
 
@@ -324,6 +333,10 @@
                                 return;
                             }
                             if (mode.layer === undefined) return;
+                            if (mode.id === "elevation") {
+                                selectElevation(mode.layer);
+                                return;
+                            }
                             if (isAuthoringPathMode(mode.id)) selectBrush(mode.layer, 1);
                             else selectLayer(mode.layer, state, state.layers);
                         }}
@@ -352,6 +365,8 @@
                                 <IconDoorExit />
                             {:else if mode.id === "start"}
                                 <IconFlag />
+                            {:else if mode.id === "elevation"}
+                                <span class="text-lg leading-none">▲</span>
                             {:else}
                                 <IconWall />
                             {/if}
@@ -386,6 +401,15 @@
                     Add asset
                 </button>
             </div>
+        {/if}
+
+        {#if activeTerrainModeId === "elevation"}
+            <p
+                class="m-0 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs leading-5 text-white/75"
+            >
+                Hold and drag to raise the map-wide surface; whichever floor is visible on top becomes the hill skin.
+                Command-drag lowers; Shift-drag uses a wide area brush. Maximum height is 20 half-tile steps.
+            </p>
         {/if}
 
         {#if isTerrainAssetBrowserMode(activeTerrainModeId) && assetPanelOpen}
