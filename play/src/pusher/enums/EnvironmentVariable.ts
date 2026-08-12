@@ -123,7 +123,7 @@ export const PROVIDE_DEFAULT_WOKA_TEXTURE: "no" | "random" | "fix" | undefined =
 export const ENABLE_OPENAPI_ENDPOINT = env.ENABLE_OPENAPI_ENDPOINT;
 
 // The URL to use if the user is visiting the first time and hitting the "/" route.
-export const START_ROOM_URL: string = env.START_ROOM_URL || "/_/global/maps.workadventu.re/starter/map.json";
+export const START_ROOM_URL: string = env.START_ROOM_URL;
 export const FALLBACK_LOCALE: string | undefined = env.FALLBACK_LOCALE;
 
 // Logrocket id

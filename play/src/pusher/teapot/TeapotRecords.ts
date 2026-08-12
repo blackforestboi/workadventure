@@ -77,7 +77,7 @@ export interface TeapotMapWriterLease {
 }
 
 export const TEAPOT_ROOM_ACCESS_MODES = ["everyone", "specific", "nobody"] as const;
-export const TEAPOT_ROOM_ACCESS_ROLES = ["view", "edit", "admin"] as const;
+export const TEAPOT_ROOM_ACCESS_ROLES = ["view", "edit", "admin", "directory"] as const;
 
 export type TeapotRoomAccessMode = (typeof TEAPOT_ROOM_ACCESS_MODES)[number];
 export type TeapotRoomAccessRole = (typeof TEAPOT_ROOM_ACCESS_ROLES)[number];

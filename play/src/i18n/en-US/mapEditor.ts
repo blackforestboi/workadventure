@@ -485,7 +485,7 @@ const mapEditor: BaseTranslation = {
         },
         editorAccess: {
             title: "Room access",
-            description: "Choose who can view, edit, and administer this room.",
+            description: "Choose who can view, edit, administer, and find this room in the directory.",
             loading: "Loading room access…",
             roleLabel: "Role",
             hierarchyNotice:
@@ -502,6 +502,10 @@ const mapEditor: BaseTranslation = {
                 admin: {
                     title: "Admin",
                     description: "Manage room access and administrative tools.",
+                },
+                directory: {
+                    title: "Find in directory",
+                    description: "Show this room as an exit destination and in room directories.",
                 },
             },
             modes: {

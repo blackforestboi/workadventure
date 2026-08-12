@@ -4,7 +4,7 @@ import { localUserStore } from "../Connection/LocalUserStore";
 import { ABSOLUTE_PUSHER_URL } from "../Enum/ComputedConst";
 
 const RoomAccessModeSchema = z.enum(["everyone", "specific", "nobody"]);
-const RoomAccessRoleSchema = z.enum(["view", "edit", "admin"]);
+const RoomAccessRoleSchema = z.enum(["view", "edit", "admin", "directory"]);
 const RoomAccessUserSchema = z.object({
     userId: z.string(),
     identifier: z.string(),
@@ -25,7 +25,7 @@ const RoomVisitorSchema = RoomAccessUserSchema.extend({
 });
 const RoomAccessResponseSchema = z.object({
     mapId: z.string(),
-    policies: z.array(RoomAccessPolicySchema).length(3),
+    policies: z.array(RoomAccessPolicySchema).length(4),
     visitors: z.array(RoomVisitorSchema),
 });
 
