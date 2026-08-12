@@ -43,6 +43,16 @@ if (changed) fs.writeFileSync(file, JSON.stringify(wam));
 NODE
 fi
 
+# The map editor always loads its custom-entity collection, including before
+# the first uploaded asset. Seed the empty catalog once for existing volumes so
+# that request returns a valid collection rather than a 404.
+entity_collection_file="/maps/assets/entities/entities.json"
+if [ ! -f "$entity_collection_file" ]; then
+    mkdir -p "$(dirname "$entity_collection_file")"
+    printf '%s' '{"version":"1.0","collection":[],"collectionName":"custom entities","tags":[]}' > "$entity_collection_file"
+    chown node:node "$entity_collection_file"
+fi
+
 # Railway mounts a new persistent volume as root-owned. The bootstrap needs
 # that privilege, but the map-storage server must still run unprivileged.
 exec su -s /bin/sh node -c 'npm run start'
