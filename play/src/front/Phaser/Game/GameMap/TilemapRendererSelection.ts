@@ -1,8 +1,20 @@
+import { isCenteredMap } from "@workadventure/map-editor";
+import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
+
 export interface TileLayerPosition {
     x?: number;
     y?: number;
     offsetx?: number;
     offsety?: number;
+}
+
+/**
+ * Centered, infinite maps are authored as an open-ended signed tile grid.
+ * This is a map invariant, not a transient map-editor UI state: it must
+ * survive a scene rebuild after a browser reload.
+ */
+export function canExpandMap(map: ITiledMap): boolean {
+    return map.infinite === true && isCenteredMap(map);
 }
 
 /**

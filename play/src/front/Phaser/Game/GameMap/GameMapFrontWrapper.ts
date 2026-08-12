@@ -50,7 +50,7 @@ import {
     isCollisionStorageLayer,
     type CollisionGridLayer,
 } from "./AuthoringCollision";
-import { canUseGpuTilemapRenderer } from "./TilemapRendererSelection";
+import { canExpandMap, canUseGpuTilemapRenderer } from "./TilemapRendererSelection";
 
 import TilemapLayer = Phaser.Tilemaps.TilemapLayer;
 import TilemapGPULayer = Phaser.Tilemaps.TilemapGPULayer;
@@ -120,6 +120,8 @@ export class GameMapFrontWrapper {
      */
     private entitiesManager: EntitiesManager;
 
+    private readonly mapCanExpand: boolean;
+
     public readonly phaserMap: Tilemap;
     public readonly phaserLayers: RenderableTilemapLayer[] = [];
     /**
@@ -185,11 +187,11 @@ export class GameMapFrontWrapper {
         phaserMap: Tilemap,
         terrains: Array<Tileset>,
         private readonly gameRenderLayers: GameRenderLayers,
-        private readonly mapCanExpand = false,
     ) {
         this.scene = scene;
         this.gameMap = gameMap;
         this.phaserMap = phaserMap;
+        this.mapCanExpand = canExpandMap(this.gameMap.getMap());
 
         this.existingTileIndex = terrains.length > 0 ? terrains[0].firstgid : -1;
 

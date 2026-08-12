@@ -730,7 +730,6 @@ export class GameScene extends DirtyScene {
             this.Map,
             this.Terrains,
             this.gameRenderLayers,
-            get(mapEditorActivated),
         );
         const mapBounds = this.gameMapFrontWrapper.getMapBounds();
         this.physics.world.setBounds(mapBounds.x, mapBounds.y, mapBounds.width, mapBounds.height);
@@ -3484,7 +3483,6 @@ ${escapedMessage}
                                 this.Map,
                                 this.Terrains,
                                 this.gameRenderLayers,
-                                get(mapEditorActivated),
                             );
                             // Unsubscribe if needed and subscribe to GameMapChanged event again
                             this.subscribeToGameMapChanged();
