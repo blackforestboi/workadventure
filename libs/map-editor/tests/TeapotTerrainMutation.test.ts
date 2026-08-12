@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
     applyTeapotTerrainMutation,
     containsOccupiedVisualTileDeletion,
+    createWaterUnderlayLayer,
     isAvatarSupportingTileLayerName,
+    waterUnderlayLayerName,
 } from "../src/Authoring/TeapotTerrainMutation";
 import { createCenteredMap, getTileLayerGid } from "../src/GameMap/CenteredMapCoordinates";
 
@@ -93,6 +95,44 @@ describe("applyTeapotTerrainMutation", () => {
 
         expect(getTileLayerGid(floorLayer(updated), -3, -2)).toBe(8);
         expect(getTileLayerGid(floorLayer(source), -3, -2)).toBe(0);
+    });
+
+    it("atomically adds a water underlay before its cover and paints it", () => {
+        const source = createSourceMap();
+        const layer = createWaterUnderlayLayer(source, "floor");
+        const updated = applyTeapotTerrainMutation(source, {
+            mapId: "https://example.com/map.tmj",
+            regions: [{ layer: layer.name, x: -1, y: -1, width: 1, height: 1, gids: [8] }],
+            layerJson: JSON.stringify(layer),
+            beforeLayer: "floor",
+        });
+        const underlay = updated.layers[0];
+
+        expect(underlay?.name).toBe(waterUnderlayLayerName("floor"));
+        expect(updated.layers[1]?.name).toBe("floor");
+        expect(underlay?.type === "tilelayer" ? getTileLayerGid(underlay, -1, -1) : 0).toBe(8);
+        expect(source.layers).toHaveLength(1);
+    });
+
+    it("applies inverse surface writes before removing a water underlay", () => {
+        const source = createSourceMap();
+        const layer = createWaterUnderlayLayer(source, "floor");
+        const added = applyTeapotTerrainMutation(source, {
+            mapId: "https://example.com/map.tmj",
+            regions: [{ layer: layer.name, x: -1, y: -1, width: 1, height: 1, gids: [8] }],
+            layerJson: JSON.stringify(layer),
+            beforeLayer: "floor",
+        });
+        const removed = applyTeapotTerrainMutation(added, {
+            mapId: "https://example.com/map.tmj",
+            regions: [{ layer: "floor", x: -1, y: -1, width: 1, height: 1, gids: [1] }],
+            layerJson: JSON.stringify(layer),
+            removeLayer: true,
+            beforeLayer: "floor",
+        });
+
+        expect(removed.layers.map((candidate) => candidate.name)).toEqual(["floor"]);
+        expect(getTileLayerGid(floorLayer(removed), -1, -1)).toBe(1);
     });
 
     it("adds and removes an embedded tileset", () => {

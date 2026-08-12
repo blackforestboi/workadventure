@@ -32,6 +32,16 @@ export interface TerrainTile extends TerrainTileCoordinate {
     gid: number;
 }
 
+export interface TerrainAutotileFamily {
+    tiles: TerrainAutotileTiles;
+    gids: ReadonlySet<number>;
+}
+
+export interface WaterTerrainComposition {
+    regions: TeapotTileRegion[];
+    visibleWater: TerrainTileCoordinate[];
+}
+
 export function normalizeTerrainRectangle(
     start: TerrainTileCoordinate,
     end: TerrainTileCoordinate,
@@ -181,6 +191,22 @@ function lineCoordinates(start: TerrainTileCoordinate, end: TerrainTileCoordinat
     }
 }
 
+function liquidStrokeFootprint(
+    previous: TerrainTileCoordinate,
+    target: TerrainTileCoordinate,
+): Map<string, TerrainTileCoordinate> {
+    const result = new Map<string, TerrainTileCoordinate>();
+    for (const coordinate of lineCoordinates(previous, target)) {
+        for (let y = coordinate.y - 1; y <= coordinate.y + 1; y += 1) {
+            for (let x = coordinate.x - 1; x <= coordinate.x + 1; x += 1) {
+                const painted = { x, y };
+                result.set(coordinateKey(painted), painted);
+            }
+        }
+    }
+    return result;
+}
+
 /**
  * Paints a three-tile-wide stroke into the matching terrain occupancy mask,
  * then retiles only that footprint and its contour halo. Existing fields touched
@@ -202,21 +228,130 @@ export function createLiquidTerrainBrushRegions(
         if (matchingFamilyGids.has(tile.gid)) occupied.set(coordinateKey(tile), tile);
     }
 
-    const stroke = new Map<string, TerrainTileCoordinate>();
-    for (const coordinate of lineCoordinates(previous, target)) stroke.set(coordinateKey(coordinate), coordinate);
+    const added = liquidStrokeFootprint(previous, target);
+    for (const [key, coordinate] of added) occupied.set(key, coordinate);
+    return retilePaintedTerrain(layer, occupied, added, existing, tiles);
+}
 
-    const added = new Map<string, TerrainTileCoordinate>();
-    for (const coordinate of stroke.values()) {
+/**
+ * Cuts the stroke core out of a covering terrain layer, re-contours each verified
+ * covering family, and fills borderless water beneath both the opening and the
+ * transparent pixels of its surrounding edge tiles.
+ */
+export function createWaterTerrainBrushRegions(
+    coverLayer: string,
+    waterLayer: string,
+    previous: TerrainTileCoordinate,
+    target: TerrainTileCoordinate,
+    waterGid: number,
+    existingCoverTiles: Iterable<TerrainTile>,
+    existingWaterTiles: Iterable<TerrainTile>,
+    coverFamilies: readonly TerrainAutotileFamily[],
+): WaterTerrainComposition {
+    return createWaterTerrainRegions(
+        coverLayer,
+        waterLayer,
+        new Map(
+            lineCoordinates(previous, target).map((coordinate) => [coordinateKey(coordinate), coordinate] as const),
+        ),
+        waterGid,
+        existingCoverTiles,
+        existingWaterTiles,
+        coverFamilies,
+    );
+}
+
+export function createWaterTerrainRectangleRegions(
+    coverLayer: string,
+    waterLayer: string,
+    start: TerrainTileCoordinate,
+    end: TerrainTileCoordinate,
+    waterGid: number,
+    existingCoverTiles: Iterable<TerrainTile>,
+    existingWaterTiles: Iterable<TerrainTile>,
+    coverFamilies: readonly TerrainAutotileFamily[],
+): WaterTerrainComposition {
+    const bounds = normalizeTerrainRectangle(start, end);
+    const footprint = new Map<string, TerrainTileCoordinate>();
+    for (let y = bounds.y; y < bounds.y + bounds.height; y += 1) {
+        for (let x = bounds.x; x < bounds.x + bounds.width; x += 1) {
+            const coordinate = { x, y };
+            footprint.set(coordinateKey(coordinate), coordinate);
+        }
+    }
+    return createWaterTerrainRegions(
+        coverLayer,
+        waterLayer,
+        footprint,
+        waterGid,
+        existingCoverTiles,
+        existingWaterTiles,
+        coverFamilies,
+    );
+}
+
+function createWaterTerrainRegions(
+    coverLayer: string,
+    waterLayer: string,
+    footprint: ReadonlyMap<string, TerrainTileCoordinate>,
+    waterGid: number,
+    existingCoverTiles: Iterable<TerrainTile>,
+    existingWaterTiles: Iterable<TerrainTile>,
+    coverFamilies: readonly TerrainAutotileFamily[],
+): WaterTerrainComposition {
+    const cover = new Map<string, TerrainTile>();
+    const water = new Map<string, TerrainTile>();
+    for (const tile of existingCoverTiles) cover.set(coordinateKey(tile), tile);
+    for (const tile of existingWaterTiles) water.set(coordinateKey(tile), tile);
+
+    const familyForGid = (gid: number) => coverFamilies.find((family) => family.gids.has(gid));
+    const familyOccupancy = new Map<TerrainAutotileFamily, Set<string>>();
+    for (const [key, tile] of cover) {
+        if (footprint.has(key)) continue;
+        const family = familyForGid(tile.gid);
+        if (family === undefined) continue;
+        const occupied = familyOccupancy.get(family) ?? new Set<string>();
+        occupied.add(key);
+        familyOccupancy.set(family, occupied);
+    }
+
+    const dirty = new Map<string, TerrainTileCoordinate>();
+    for (const coordinate of footprint.values()) {
         for (let y = coordinate.y - 1; y <= coordinate.y + 1; y += 1) {
             for (let x = coordinate.x - 1; x <= coordinate.x + 1; x += 1) {
-                const painted = { x, y };
-                const key = coordinateKey(painted);
-                added.set(key, painted);
-                occupied.set(key, painted);
+                const neighbour = { x, y };
+                dirty.set(coordinateKey(neighbour), neighbour);
             }
         }
     }
-    return retilePaintedTerrain(layer, occupied, added, existing, tiles);
+
+    const changes: TeapotTileRegion[] = [];
+    for (const [key, coordinate] of footprint) {
+        if ((cover.get(key)?.gid ?? 0) !== 0) {
+            changes.push({ layer: coverLayer, ...coordinate, width: 1, height: 1, gids: [0] });
+        }
+    }
+    for (const [key, coordinate] of dirty) {
+        if (footprint.has(key)) continue;
+        const existing = cover.get(key);
+        if (existing === undefined) continue;
+        const family = familyForGid(existing.gid);
+        const occupied = family === undefined ? undefined : familyOccupancy.get(family);
+        if (family === undefined || occupied === undefined) continue;
+        const gid = tileForContour(coordinate, occupied, family.tiles);
+        if (gid !== existing.gid) changes.push({ layer: coverLayer, ...coordinate, width: 1, height: 1, gids: [gid] });
+    }
+
+    const waterFootprint = new Map(footprint);
+    for (const [key, coordinate] of dirty) {
+        if (cover.has(key)) waterFootprint.set(key, coordinate);
+    }
+    for (const [key, coordinate] of waterFootprint) {
+        if (water.get(key)?.gid !== waterGid) {
+            changes.push({ layer: waterLayer, ...coordinate, width: 1, height: 1, gids: [waterGid] });
+        }
+    }
+    return { regions: compactTeapotTileRegions(changes), visibleWater: [...footprint.values()] };
 }
 
 function retilePaintedTerrain(

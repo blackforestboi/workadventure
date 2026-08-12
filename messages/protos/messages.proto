@@ -264,6 +264,9 @@ message ModifyTerrainMessage {
   repeated TerrainRegionMessage regions = 2;
   string tilesetJson = 3;
   bool removeTileset = 4;
+  string layerJson = 7;
+  bool removeLayer = 8;
+  string beforeLayer = 9;
   reserved 5, 6;
   reserved "prependLeft", "prependTop";
 }

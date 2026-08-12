@@ -283,7 +283,7 @@ const TERRAIN_FAMILIES: readonly TerrainFamilyDefinition[] = [
         solid: true,
         tags: ["water", "river", "pond", "lake", "blue", "shoreline", "wetland", "blocked", "impassable"],
         description:
-            "Blue water terrain for rivers, lakes, ponds, streams, wetlands, and shoreline transitions. These cells are solid so players cannot cross open water without an explicit crossing object.",
+            "Borderless blue water fill for rivers, lakes, ponds, streams, and wetlands. Water is placed beneath the surrounding surface, whose edge and corner tiles form the shoreline. Open water is solid unless an explicit crossing object is present.",
         autotile: {
             topLeft: 655,
             top: 656,
@@ -313,7 +313,7 @@ const TERRAIN_FAMILIES: readonly TerrainFamilyDefinition[] = [
             },
             [592, 593, 624, 625],
         ),
-        displayTileIds: [655, 656, 657, 687, 688, 689, 719, 720, 721, 592, 593, 624, 625],
+        displayTileIds: [688],
         previewTileId: 688,
     },
     {
@@ -439,6 +439,15 @@ export function getBuiltInTerrainAsset(tileId: number): BuiltInTerrainAsset | un
 export function getBuiltInTerrainAutotile(tileId: number): TerrainAutotileTiles | undefined {
     return TERRAIN_FAMILIES.find((family) => family.autotile !== undefined && family.tileIds.includes(tileId))
         ?.autotile;
+}
+
+/** Water uses its centre sprite as a boundary-free fill beneath the surrounding surface. */
+export function getBuiltInWaterFillTileId(tileId: number): number | undefined {
+    const family = TERRAIN_FAMILIES.find(
+        (candidate) =>
+            candidate.terrainType === "water" && candidate.autotile !== undefined && candidate.tileIds.includes(tileId),
+    );
+    return family?.autotile?.center;
 }
 
 export function searchBuiltInTerrainAssets(search: BuiltInTerrainSearch = {}): readonly BuiltInTerrainAsset[] {

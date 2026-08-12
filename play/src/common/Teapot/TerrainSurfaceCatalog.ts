@@ -15,6 +15,15 @@ export type TerrainAssetReadiness = "not-started" | "partial" | "complete";
 export type TerrainTraversalMode = "walk" | "swim" | "blocked" | "conditional";
 export type TerrainCompositionMode = "patch" | "enclosure";
 export type TerrainEffectType = "slippery" | "hazardous" | "current" | "sinking";
+export type TerrainWaterKind = "still" | "flowing" | "whitewater" | "coastal" | "wetland" | "flooded";
+export type TerrainWaterColor = "clear" | "blue" | "deep-blue" | "turquoise" | "green" | "brown" | "dark";
+export type TerrainWaterWaveform =
+    | "glass"
+    | "small-ripples"
+    | "directional-flow"
+    | "choppy-waves"
+    | "breaking-waves"
+    | "foam";
 
 export interface TerrainEffect {
     type: TerrainEffectType;
@@ -63,7 +72,7 @@ export interface TerrainSpriteRoleDefinition {
 }
 
 export interface TerrainSpriteTemplateProfile {
-    id: "surface-32-v1";
+    id: "surface-32-v1" | "water-fill-32-v1";
     tileWidth: 32;
     tileHeight: 32;
     compositionModes: readonly TerrainCompositionMode[];
@@ -99,6 +108,14 @@ export interface TerrainSurfaceAssets {
     special: readonly TerrainSpecialSpriteAsset[];
 }
 
+/** The visual identity of water. The terrain surrounding it owns any shoreline or riverbank edge. */
+export interface TerrainWaterAppearance {
+    kind: TerrainWaterKind;
+    color: TerrainWaterColor;
+    waveform: TerrainWaterWaveform;
+    boundaryOwner: "environment";
+}
+
 export interface TerrainSurface {
     id: string;
     name: string;
@@ -107,6 +124,8 @@ export interface TerrainSurface {
     tags: readonly string[];
     traversal: TerrainTraversal;
     assets: TerrainSurfaceAssets;
+    /** Present only for water and wetland surfaces rendered as a boundary-free water fill. */
+    waterAppearance?: TerrainWaterAppearance;
     /** Whether this surface may use the future generic blend treatment beside another mixable surface. */
     mixable: boolean;
     /** False until every required template role has an available source. */
@@ -137,6 +156,13 @@ export const TERRAIN_SPRITE_TEMPLATE_PROFILES: readonly TerrainSpriteTemplatePro
         tileHeight: 32,
         compositionModes: ["patch", "enclosure"],
         roles: TERRAIN_SURFACE_SPRITE_ROLES.map(roleDefinition),
+    },
+    {
+        id: "water-fill-32-v1",
+        tileWidth: 32,
+        tileHeight: 32,
+        compositionModes: ["patch", "enclosure"],
+        roles: [roleDefinition("center")],
     },
 ];
 
@@ -648,6 +674,43 @@ const HAZARDOUS_SURFACES = new Set([
     "starfield-void",
 ]);
 
+const WATER_APPEARANCES: Readonly<Record<string, TerrainWaterAppearance>> = {
+    puddle: { kind: "still", color: "brown", waveform: "small-ripples", boundaryOwner: "environment" },
+    "shallow-stream": { kind: "flowing", color: "clear", waveform: "directional-flow", boundaryOwner: "environment" },
+    "deep-stream": { kind: "flowing", color: "blue", waveform: "directional-flow", boundaryOwner: "environment" },
+    "river-ford": { kind: "flowing", color: "clear", waveform: "small-ripples", boundaryOwner: "environment" },
+    "river-channel": { kind: "flowing", color: "blue", waveform: "directional-flow", boundaryOwner: "environment" },
+    rapids: { kind: "whitewater", color: "blue", waveform: "foam", boundaryOwner: "environment" },
+    "waterfall-lip": { kind: "whitewater", color: "blue", waveform: "foam", boundaryOwner: "environment" },
+    pond: { kind: "still", color: "blue", waveform: "small-ripples", boundaryOwner: "environment" },
+    "vernal-pool": { kind: "still", color: "brown", waveform: "glass", boundaryOwner: "environment" },
+    "lake-shallows": { kind: "still", color: "turquoise", waveform: "small-ripples", boundaryOwner: "environment" },
+    "lake-depths": { kind: "still", color: "deep-blue", waveform: "small-ripples", boundaryOwner: "environment" },
+    reservoir: { kind: "still", color: "blue", waveform: "small-ripples", boundaryOwner: "environment" },
+    "canal-water": { kind: "flowing", color: "blue", waveform: "directional-flow", boundaryOwner: "environment" },
+    "coastal-shallows": { kind: "coastal", color: "turquoise", waveform: "choppy-waves", boundaryOwner: "environment" },
+    "open-sea": { kind: "coastal", color: "deep-blue", waveform: "breaking-waves", boundaryOwner: "environment" },
+    "tidal-flat": { kind: "coastal", color: "brown", waveform: "small-ripples", boundaryOwner: "environment" },
+    "tidal-creek": { kind: "flowing", color: "brown", waveform: "directional-flow", boundaryOwner: "environment" },
+    "tide-pool": { kind: "coastal", color: "turquoise", waveform: "small-ripples", boundaryOwner: "environment" },
+    lagoon: { kind: "coastal", color: "turquoise", waveform: "small-ripples", boundaryOwner: "environment" },
+    estuary: { kind: "flowing", color: "brown", waveform: "directional-flow", boundaryOwner: "environment" },
+    "river-delta": { kind: "flowing", color: "brown", waveform: "directional-flow", boundaryOwner: "environment" },
+    "coral-reef": { kind: "coastal", color: "turquoise", waveform: "choppy-waves", boundaryOwner: "environment" },
+    "seagrass-bed": { kind: "coastal", color: "green", waveform: "small-ripples", boundaryOwner: "environment" },
+    "kelp-bed": { kind: "coastal", color: "green", waveform: "choppy-waves", boundaryOwner: "environment" },
+    "freshwater-marsh": { kind: "wetland", color: "green", waveform: "small-ripples", boundaryOwner: "environment" },
+    "salt-marsh": { kind: "wetland", color: "brown", waveform: "small-ripples", boundaryOwner: "environment" },
+    "swamp-water": { kind: "wetland", color: "dark", waveform: "glass", boundaryOwner: "environment" },
+    "bog-pool": { kind: "wetland", color: "dark", waveform: "glass", boundaryOwner: "environment" },
+    fen: { kind: "wetland", color: "green", waveform: "small-ripples", boundaryOwner: "environment" },
+    mudflat: { kind: "wetland", color: "brown", waveform: "glass", boundaryOwner: "environment" },
+    "muddy-riverbank": { kind: "wetland", color: "brown", waveform: "small-ripples", boundaryOwner: "environment" },
+    "flooded-grassland": { kind: "flooded", color: "green", waveform: "small-ripples", boundaryOwner: "environment" },
+    "flooded-forest": { kind: "flooded", color: "dark", waveform: "small-ripples", boundaryOwner: "environment" },
+    "mangrove-mud": { kind: "wetland", color: "brown", waveform: "small-ripples", boundaryOwner: "environment" },
+};
+
 const movementSpeed = (id: string, category: TerrainSurfaceCategory): number => {
     if (id.includes("mud") || id.includes("marsh") || id === "fen" || id.includes("swamp")) return 0.55;
     if (id.includes("powder-snow") || id.includes("debris") || id.includes("scree") || id.includes("talus"))
@@ -674,9 +737,10 @@ const traversalFor = (id: string, category: TerrainSurfaceCategory): TerrainTrav
     return { mode, speedMultiplier: mode === "blocked" ? null : movementSpeed(id, category), effects };
 };
 
-const spriteAssetsFor = (id: string): TerrainSurfaceAssets => {
+const spriteAssetsFor = (id: string, isWater: boolean): TerrainSurfaceAssets => {
     const binding = LEGACY_BINDINGS[id];
-    const roles = TERRAIN_SURFACE_SPRITE_ROLES.map((role): TerrainSpriteAsset => {
+    const requiredRoles = isWater ? (["center"] as const) : TERRAIN_SURFACE_SPRITE_ROLES;
+    const roles = requiredRoles.map((role): TerrainSpriteAsset => {
         const legacyRole = LEGACY_ROLE_KEYS[role];
         const tileId = binding !== undefined && legacyRole !== undefined ? binding.tiles[legacyRole] : undefined;
         return tileId === undefined
@@ -696,7 +760,7 @@ const spriteAssetsFor = (id: string): TerrainSurfaceAssets => {
     return {
         readiness: availableCount === 0 ? "not-started" : availableCount === roles.length ? "complete" : "partial",
         hasAnyAvailableAssets: availableCount > 0,
-        templateProfileId: "surface-32-v1",
+        templateProfileId: isWater ? "water-fill-32-v1" : "surface-32-v1",
         roles,
         special: [],
     };
@@ -713,7 +777,8 @@ const makeSurface = (category: TerrainSurfaceCategory, name: string): TerrainSur
             category,
         ]),
     ];
-    const assets = spriteAssetsFor(id);
+    const waterAppearance = WATER_APPEARANCES[id];
+    const assets = spriteAssetsFor(id, waterAppearance !== undefined);
     return {
         id,
         name,
@@ -722,6 +787,7 @@ const makeSurface = (category: TerrainSurfaceCategory, name: string): TerrainSur
         tags,
         traversal: traversalFor(id, category),
         assets,
+        waterAppearance,
         mixable: MIXABLE_SURFACE_IDS.has(id),
         editorEligible: assets.readiness === "complete",
         searchText: [name, category, ...tags].join(" ").toLowerCase(),
@@ -759,14 +825,24 @@ export function validateTerrainSurfaceCatalog(): readonly string[] {
     const ids = new Set(TERRAIN_SURFACES.map((surface) => surface.id));
     if (ids.size !== TERRAIN_SURFACES.length) issues.push("Surface IDs must be unique.");
     for (const surface of TERRAIN_SURFACES) {
-        if (surface.assets.roles.length !== TERRAIN_SURFACE_SPRITE_ROLES.length) {
+        const expectedRoleCount = surface.waterAppearance === undefined ? TERRAIN_SURFACE_SPRITE_ROLES.length : 1;
+        if (surface.assets.roles.length !== expectedRoleCount) {
             issues.push(`${surface.id} does not outline every required sprite role.`);
         }
         if (surface.traversal.mode === "blocked" && surface.traversal.speedMultiplier !== null) {
             issues.push(`${surface.id} is blocked but has a movement speed.`);
         }
+        if (surface.category === "water-wetland" && surface.waterAppearance === undefined) {
+            issues.push(`${surface.id} must define its water appearance.`);
+        }
+        if (surface.category !== "water-wetland" && surface.waterAppearance !== undefined) {
+            issues.push(`${surface.id} has water appearance outside the water and wetland category.`);
+        }
+        if (surface.waterAppearance !== undefined && surface.assets.templateProfileId !== "water-fill-32-v1") {
+            issues.push(`${surface.id} must use the boundary-free water fill template.`);
+        }
         if (surface.category === "water-wetland" && surface.mixable) {
-            issues.push(`${surface.id} is water or wetland and must keep a hard boundary.`);
+            issues.push(`${surface.id} is water or wetland and cannot use the generic surface blend.`);
         }
     }
     return issues;

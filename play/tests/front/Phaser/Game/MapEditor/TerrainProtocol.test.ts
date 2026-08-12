@@ -11,6 +11,9 @@ describe("terrain edit protocol", () => {
                     regions: [{ layer: "floor", x: -17, y: -23, width: 2, height: 1, gids: [4, 5] }],
                     tilesetJson: "",
                     removeTileset: false,
+                    layerJson: '{"name":"water"}',
+                    removeLayer: false,
+                    beforeLayer: "floor",
                 },
             },
         }).finish();
@@ -19,6 +22,11 @@ describe("terrain edit protocol", () => {
         expect(decoded.message?.$case).toBe("modifyTerrainMessage");
         if (decoded.message?.$case !== "modifyTerrainMessage") throw new Error("Expected terrain edit");
         expect(decoded.message.modifyTerrainMessage.regions[0]).toMatchObject({ x: -17, y: -23 });
+        expect(decoded.message.modifyTerrainMessage).toMatchObject({
+            layerJson: '{"name":"water"}',
+            removeLayer: false,
+            beforeLayer: "floor",
+        });
         expect("prependLeft" in decoded.message.modifyTerrainMessage).toBe(false);
         expect("prependTop" in decoded.message.modifyTerrainMessage).toBe(false);
     });

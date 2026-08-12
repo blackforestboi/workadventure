@@ -7,6 +7,7 @@ export {
     BUILT_IN_TERRAIN_TYPES,
     getBuiltInTerrainAsset,
     getBuiltInTerrainAutotile,
+    getBuiltInWaterFillTileId,
     getBuiltInTerrainTileIds,
     searchBuiltInAtlasAssets,
     searchBuiltInTerrainAssets,
@@ -47,4 +48,8 @@ export {
     type TerrainSurfaceSpriteRole,
     type TerrainTraversal,
     type TerrainTraversalMode,
+    type TerrainWaterAppearance,
+    type TerrainWaterColor,
+    type TerrainWaterKind,
+    type TerrainWaterWaveform,
 } from "../../common/Teapot/TerrainSurfaceCatalog";

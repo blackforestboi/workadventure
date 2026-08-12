@@ -1,26 +1,43 @@
 import {
     compactTeapotTileRegions,
+    applyTeapotTerrainMutation,
     getTileLayerGid,
-    TeapotTilePatch,
+    type TeapotTerrainMutation,
+    type TeapotTilePatch,
     type TeapotTileRegion,
 } from "@workadventure/map-editor";
 import type { ITiledMap, ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 
 export interface FloorEdit {
-    forward: TeapotTilePatch;
-    backward: TeapotTilePatch;
+    forward: TeapotTerrainMutation;
+    backward: TeapotTerrainMutation;
 }
 
 export function collapseTileRegions(regions: readonly TeapotTileRegion[]): TeapotTileRegion[] {
     return compactTeapotTileRegions(regions);
 }
 
-export function createFloorEdit(map: ITiledMap, patch: TeapotTilePatch): FloorEdit | undefined {
+export function createFloorEdit(map: ITiledMap, patch: TeapotTerrainMutation | TeapotTilePatch): FloorEdit | undefined {
+    const forward: TeapotTerrainMutation = {
+        mapId: patch.mapId,
+        regions: patch.regions,
+        ...("layerJson" in patch
+            ? {
+                  layerJson: patch.layerJson,
+                  removeLayer: patch.removeLayer,
+                  beforeLayer: patch.beforeLayer,
+              }
+            : {}),
+    };
+    const historyMap =
+        forward.layerJson !== undefined && !forward.removeLayer
+            ? applyTeapotTerrainMutation(map, { ...forward, regions: [] })
+            : map;
     const backwardRegions: TeapotTileRegion[] = [];
-    let changesMap = false;
+    let changesMap = forward.layerJson !== undefined;
 
-    for (const region of patch.regions) {
-        const layer = flattenLayers(map.layers).find((candidate) => candidate.name === region.layer);
+    for (const region of forward.regions) {
+        const layer = flattenLayers(historyMap.layers).find((candidate) => candidate.name === region.layer);
         if (layer?.type !== "tilelayer") continue;
         const gids: number[] = [];
 
@@ -40,12 +57,18 @@ export function createFloorEdit(map: ITiledMap, patch: TeapotTilePatch): FloorEd
 
     if (!changesMap) return undefined;
     return {
-        forward: patch,
-        backward: TeapotTilePatch.parse({
+        forward,
+        backward: {
             mapId: patch.mapId,
-            expectedRevision: patch.expectedRevision,
             regions: backwardRegions,
-        }),
+            ...(forward.layerJson === undefined
+                ? {}
+                : {
+                      layerJson: forward.layerJson,
+                      removeLayer: !forward.removeLayer,
+                      beforeLayer: forward.beforeLayer,
+                  }),
+        },
     };
 }
 

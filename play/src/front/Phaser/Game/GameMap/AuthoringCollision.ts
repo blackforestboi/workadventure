@@ -4,6 +4,7 @@ import {
     GameMapProperties,
     getMapTileBounds,
     isAvatarSupportingTileLayerName,
+    WATER_UNDERLAY_LAYER_PREFIX,
     type TeapotTileRegion,
 } from "@workadventure/map-editor";
 import type { ITiledMap, ITiledMapLayer, ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
@@ -219,7 +220,11 @@ export function appendDefaultCollisionRegions(
     if (collisionGid === undefined) return regions;
     const collisionRegions: TeapotTileRegion[] = [];
     for (const region of regions) {
-        if (getAuthoringPathOverlayKind(region.layer) !== undefined) continue;
+        if (
+            getAuthoringPathOverlayKind(region.layer) !== undefined ||
+            region.layer.startsWith(WATER_UNDERLAY_LAYER_PREFIX)
+        )
+            continue;
         for (let y = 0; y < region.height; y += 1) {
             for (let x = 0; x < region.width; x += 1) {
                 const gid = region.gids[y * region.width + x] ?? 0;
@@ -236,6 +241,28 @@ export function appendDefaultCollisionRegions(
         }
     }
     return compactTeapotTileRegions([...regions, ...collisionRegions]);
+}
+
+export function appendWaterCollisionRegions(
+    map: ITiledMap,
+    regions: readonly TeapotTileRegion[],
+    visibleWater: readonly { x: number; y: number }[],
+): readonly TeapotTileRegion[] {
+    const collisionLayer = findCollisionLayer(map);
+    if (collisionLayer === undefined) return regions;
+    const collisionGid = findCollisionBrushGid(map, collisionLayer.name);
+    if (collisionGid === undefined) return regions;
+    return compactTeapotTileRegions([
+        ...regions,
+        ...visibleWater.map(({ x, y }) => ({
+            layer: collisionLayer.name,
+            x,
+            y,
+            width: 1,
+            height: 1,
+            gids: [collisionGid],
+        })),
+    ]);
 }
 
 export function getCollisionOverlayCells(

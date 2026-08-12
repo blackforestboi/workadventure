@@ -5,6 +5,7 @@ import {
     BUILT_IN_TERRAIN_ASSETS,
     BUILT_IN_TERRAIN_TILESET,
     getBuiltInTerrainTileIds,
+    getBuiltInWaterFillTileId,
     searchBuiltInAtlasAssets,
     searchBuiltInTerrainAssets,
 } from "../../../../../src/front/Services/BuiltInTerrainCatalog";
@@ -53,10 +54,14 @@ describe("built-in terrain catalog", () => {
             expect(group).toBeDefined();
             expect(group?.autotile).toBeDefined();
             expect(Object.values(group!.autotile!)).toEqual(matrix);
-            expect(group?.displayTileIds.slice(0, 9)).toEqual(matrix.slice(0, 9));
+            if (id !== "water") expect(group?.displayTileIds.slice(0, 9)).toEqual(matrix.slice(0, 9));
             expect(group?.tileIds).toContain(group?.previewTileId);
             expect(Object.values(group!.autotile!).every((tileId) => group!.tileIds.includes(tileId))).toBe(true);
         }
+        expect(BUILT_IN_TERRAIN_TILESET.groups.find((group) => group.id === "water")?.displayTileIds).toEqual([688]);
+        expect(getBuiltInWaterFillTileId(688)).toBe(688);
+        expect(getBuiltInWaterFillTileId(655)).toBe(688);
+        expect(getBuiltInWaterFillTileId(97)).toBeUndefined();
     });
 
     it("searches the descriptions, tags, terrain type, and solid option used by map generation", () => {

@@ -9,6 +9,7 @@ import {
 import { PathTileType } from "../../../../../src/front/Utils/PathfindingManager";
 import {
     appendDefaultCollisionRegions,
+    appendWaterCollisionRegions,
     composeCollisionGrid,
     containsOccupiedVisualTileDeletion,
     findAuthoringPathBrushGid,
@@ -286,6 +287,35 @@ describe("authoring collision", () => {
         expect(regions).toEqual([
             { layer: "floor", x: 0, y: 0, width: 2, height: 1, gids: [101, 102] },
             { layer: "collisions", x: 0, y: 0, width: 1, height: 1, gids: [101] },
+        ]);
+    });
+
+    it("adds collision only to visible water, not its under-cover halo", () => {
+        const regions = appendWaterCollisionRegions(
+            collisionMap(),
+            [
+                {
+                    layer: "__teapot_water_underlay__floor",
+                    x: 0,
+                    y: 0,
+                    width: 3,
+                    height: 1,
+                    gids: [688, 688, 688],
+                },
+            ],
+            [{ x: 1, y: 0 }],
+        );
+
+        expect(regions).toEqual([
+            {
+                layer: "__teapot_water_underlay__floor",
+                x: 0,
+                y: 0,
+                width: 3,
+                height: 1,
+                gids: [688, 688, 688],
+            },
+            { layer: "collisions", x: 1, y: 0, width: 1, height: 1, gids: [101] },
         ]);
     });
 

@@ -7,6 +7,8 @@ import {
     createMergedTerrainAutotileRegions,
     createTerrainAutotileRegion,
     createTerrainTileRegion,
+    createWaterTerrainBrushRegions,
+    createWaterTerrainRectangleRegions,
     normalizeTerrainRectangle,
     translateTerrainAutotileTiles,
     type TerrainAutotileTiles,
@@ -38,6 +40,10 @@ function regionTiles(regions: readonly TeapotTileRegion[]): Map<string, number> 
         }
     }
     return result;
+}
+
+function regionTilesForLayer(regions: readonly TeapotTileRegion[], layer: string): Map<string, number> {
+    return regionTiles(regions.filter((region) => region.layer === layer));
 }
 
 function applyTerrainRegions(
@@ -481,5 +487,82 @@ describe("terrain rectangle auto-tiling", () => {
         for (let x = 1; x <= 7; x += 1) expect(result.get(`${x},1`), `x=${x}`).toBe(tiles.center);
         expect(result.get("0,1")).toBe(tiles.left);
         expect(result.get("8,1")).toBe(tiles.right);
+    });
+
+    it("cuts a water opening and places borderless water beneath the covering contour", () => {
+        const cover = rectangularTerrain(0, 0, 7, 7);
+        const composition = createWaterTerrainBrushRegions(
+            "floor",
+            "water",
+            { x: 3, y: 3 },
+            { x: 3, y: 3 },
+            50,
+            cover,
+            [],
+            [{ tiles, gids: new Set(Object.values(tiles)) }],
+        );
+        const coverPatch = regionTilesForLayer(composition.regions, "floor");
+        const waterPatch = regionTilesForLayer(composition.regions, "water");
+
+        expect(coverPatch.get("3,3")).toBe(0);
+        expect(coverPatch.get("3,2")).toBe(tiles.bottom);
+        expect(coverPatch.get("2,2")).toBe(tiles.innerBottomRight);
+        expect(waterPatch.size).toBe(9);
+        expect(new Set(waterPatch.values())).toEqual(new Set([50]));
+        expect(composition.visibleWater).toEqual([{ x: 3, y: 3 }]);
+    });
+
+    it("keeps borderless water to the painted footprint when there is no covering surface", () => {
+        const composition = createWaterTerrainRectangleRegions(
+            "floor",
+            "water",
+            { x: 1, y: 2 },
+            { x: 3, y: 3 },
+            50,
+            [],
+            [],
+            [{ tiles, gids: new Set(Object.values(tiles)) }],
+        );
+
+        expect(regionTilesForLayer(composition.regions, "floor")).toEqual(new Map());
+        expect(regionTilesForLayer(composition.regions, "water").size).toBe(6);
+        expect(composition.visibleWater).toHaveLength(6);
+    });
+
+    it("extends an existing water opening without restoring a baked water border", () => {
+        const cover = rectangularTerrain(0, 0, 8, 7);
+        const first = createWaterTerrainBrushRegions(
+            "floor",
+            "water",
+            { x: 3, y: 3 },
+            { x: 3, y: 3 },
+            50,
+            cover,
+            [],
+            [{ tiles, gids: new Set(Object.values(tiles)) }],
+        );
+        const afterCover = applyTerrainRegions(
+            cover,
+            first.regions.filter((region) => region.layer === "floor"),
+        );
+        const afterWater = regionTilesForLayer(first.regions, "water");
+        const second = createWaterTerrainBrushRegions(
+            "floor",
+            "water",
+            { x: 4, y: 3 },
+            { x: 6, y: 3 },
+            50,
+            terrainTiles(afterCover),
+            terrainTiles(afterWater),
+            [{ tiles, gids: new Set(Object.values(tiles)) }],
+        );
+        const finalCover = applyTerrainRegions(
+            terrainTiles(afterCover),
+            second.regions.filter((region) => region.layer === "floor"),
+        );
+
+        expect(finalCover.get("6,3")).toBe(0);
+        expect(finalCover.get("7,3")).toBe(tiles.right);
+        expect(new Set(regionTilesForLayer(second.regions, "water").values())).toEqual(new Set([50]));
     });
 });

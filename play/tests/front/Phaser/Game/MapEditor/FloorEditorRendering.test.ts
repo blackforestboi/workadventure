@@ -27,7 +27,9 @@ describe("floor editor rendering", () => {
             /private paintTile\([\s\S]*?\n {4}private finishShapeDrag/,
         )?.[0];
 
-        expect(pointerDownSource).toContain("this.strokeAutotile = this.selectedAutotileForTileBrush");
+        expect(pointerDownSource).toContain(
+            "this.strokeAutotile = this.strokeWaterFillGid === undefined ? this.selectedAutotileForTileBrush : undefined",
+        );
         expect(pointerDownSource).toContain("this.liquidStrokeAutotile = this.strokeAutotile");
         expect(pointerDownSource).not.toContain("this.selectedGid === this.strokeAutotile.center");
         expect(pointerDownSource).not.toContain("strokeStartGid === this.strokeAutotile.center");
@@ -46,6 +48,17 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).toContain(
             "regions: collapseTileRegions(edits.flatMap((edit) => edit.forward.regions))",
         );
+    });
+
+    it("composes water as a borderless underlay beneath the selected surface", () => {
+        expect(floorEditorToolSource).toContain("this.strokeWaterFillGid = this.selectedWaterFillGid");
+        expect(floorEditorToolSource).toContain("createWaterTerrainBrushRegions");
+        expect(floorEditorToolSource).toContain("createWaterTerrainRectangleRegions");
+        expect(floorEditorToolSource).toContain("createWaterUnderlayLayer");
+        expect(floorEditorToolSource).toContain("beforeLayer: tile.layer");
+        expect(floorEditorToolSource).toContain("appendWaterCollisionRegions");
+        expect(floorEditorToolSource).toContain("waterUnderlayCoverLayerName");
+        expect(floorEditorToolSource).toContain("underlayCoverLayer === undefined ? 0.01 : -0.01");
     });
 
     it("uses an overlay when a GPU layer cannot render the selected tileset", () => {

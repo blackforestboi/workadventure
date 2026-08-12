@@ -1,4 +1,10 @@
-import { applyTeapotTilePatch, createCenteredMap, getTileLayerGid, TeapotTilePatch } from "@workadventure/map-editor";
+import {
+    applyTeapotTerrainMutation,
+    createCenteredMap,
+    createWaterUnderlayLayer,
+    getTileLayerGid,
+    TeapotTilePatch,
+} from "@workadventure/map-editor";
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
@@ -72,8 +78,8 @@ describe("createFloorEdit", () => {
         const edit = createFloorEdit(map, forward);
 
         expect(edit).toBeDefined();
-        const changed = applyTeapotTilePatch(map, edit!.forward).map;
-        const restored = applyTeapotTilePatch(changed, edit!.backward).map;
+        const changed = applyTeapotTerrainMutation(map, edit!.forward);
+        const restored = applyTeapotTerrainMutation(changed, edit!.backward);
         expect(getTileLayerGid(floorLayer(restored), -1, -1)).toBe(1);
         expect(getTileLayerGid(floorLayer(restored), 0, -1)).toBe(2);
     });
@@ -98,9 +104,30 @@ describe("createFloorEdit", () => {
         const edit = createFloorEdit(map, patch);
 
         expect(edit?.backward.regions).toEqual([{ layer: "floor", x: -3, y: -2, width: 1, height: 1, gids: [0] }]);
-        const changed = applyTeapotTilePatch(map, edit!.forward).map;
-        const restored = applyTeapotTilePatch(changed, edit!.backward).map;
+        const changed = applyTeapotTerrainMutation(map, edit!.forward);
+        const restored = applyTeapotTerrainMutation(changed, edit!.backward);
         expect(getTileLayerGid(floorLayer(restored), -3, -2)).toBe(0);
+        expect(getTileLayerGid(floorLayer(restored), -1, -1)).toBe(1);
+    });
+
+    it("undoes the first water edit together with its generated underlay layer", () => {
+        const map = createMap();
+        const waterLayer = createWaterUnderlayLayer(map, "floor");
+        const edit = createFloorEdit(map, {
+            mapId: "https://example.com/map.tmj",
+            regions: [
+                { layer: "floor", x: -1, y: -1, width: 1, height: 1, gids: [0] },
+                { layer: waterLayer.name, x: -1, y: -1, width: 1, height: 1, gids: [8] },
+            ],
+            layerJson: JSON.stringify(waterLayer),
+            beforeLayer: "floor",
+        });
+
+        expect(edit).toBeDefined();
+        const changed = applyTeapotTerrainMutation(map, edit!.forward);
+        const restored = applyTeapotTerrainMutation(changed, edit!.backward);
+        expect(changed.layers.map((layer) => layer.name)).toEqual([waterLayer.name, "floor"]);
+        expect(restored.layers.map((layer) => layer.name)).toEqual(["floor"]);
         expect(getTileLayerGid(floorLayer(restored), -1, -1)).toBe(1);
     });
 });

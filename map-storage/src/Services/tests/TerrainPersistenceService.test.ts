@@ -1,4 +1,10 @@
-import { createCenteredMap, getTileLayerGid, WamFile, type WAMFileFormat } from "@workadventure/map-editor";
+import {
+    createCenteredMap,
+    createWaterUnderlayLayer,
+    getTileLayerGid,
+    WamFile,
+    type WAMFileFormat,
+} from "@workadventure/map-editor";
 import type { ModifyTerrainMessage } from "@workadventure/messages";
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -77,6 +83,9 @@ function message(regions: ModifyTerrainMessage["regions"]): ModifyTerrainMessage
         regions,
         tilesetJson: "",
         removeTileset: false,
+        layerJson: "",
+        removeLayer: false,
+        beforeLayer: "",
     };
 }
 
@@ -116,6 +125,27 @@ describe("persistTerrainMutation", () => {
         expect(getTileLayerGid(floorLayer(secondPersisted), 0, 0)).toBe(1);
         expect(getTileLayerGid(floorLayer(secondPersisted), 4, 3)).toBe(7);
         expect(secondPersisted.properties).toEqual(firstPersisted.properties);
+    });
+
+    it("persists an atomic water underlay and surface cutout", async () => {
+        const map = JSON.parse(sourceMap) as ITiledMap;
+        const underlay = createWaterUnderlayLayer(map, "floor");
+        await persistTerrainMutation(new WamFile(wam), new URL("http://maps.example.test/maps/map.wam"), {
+            ...message([
+                { layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [0] },
+                { layer: underlay.name, x: 0, y: 0, width: 1, height: 1, gids: [8] },
+            ]),
+            layerJson: JSON.stringify(underlay),
+            beforeLayer: "floor",
+        });
+
+        const persisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;
+        const persistedUnderlay = persisted.layers[0];
+        expect(persistedUnderlay?.name).toBe(underlay.name);
+        expect(persisted.layers[1]?.name).toBe("floor");
+        expect(persistedUnderlay?.type === "tilelayer" ? getTileLayerGid(persistedUnderlay, 0, 0) : 0).toBe(8);
+        const persistedFloor = persisted.layers[1];
+        expect(persistedFloor?.type === "tilelayer" ? getTileLayerGid(persistedFloor, 0, 0) : -1).toBe(0);
     });
 
     it("rejects edits targeting a different TMJ", async () => {

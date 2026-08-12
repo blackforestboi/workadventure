@@ -1,13 +1,15 @@
 import {
     addTeapotEmbeddedTileset,
     applyTeapotTerrainMutation,
-    applyTeapotTilePatch,
+    createWaterUnderlayLayer,
     getTileLayerGid,
     tileToWorldCenter,
     tileToWorldTopLeft,
     type TeapotTerrainMutation,
     TeapotTilePatch,
     type TeapotTileRegion,
+    waterUnderlayCoverLayerName,
+    waterUnderlayLayerName,
     worldToTileCoordinates,
 } from "@workadventure/map-editor";
 import type { EditMapCommandMessage } from "@workadventure/messages";
@@ -21,9 +23,12 @@ import {
     createLiquidTerrainBrushRegions,
     createMergedTerrainAutotileRegions,
     createTerrainTileRegion,
+    createWaterTerrainBrushRegions,
+    createWaterTerrainRectangleRegions,
     normalizeTerrainRectangle,
     translateTerrainAutotileTiles,
     type TerrainAutotileTiles,
+    type TerrainAutotileFamily,
 } from "../../../../../common/Teapot/TerrainAutotile";
 import {
     mapEditorFloorActionStore,
@@ -36,10 +41,12 @@ import {
     BUILT_IN_TERRAIN_TILESET,
     getBuiltInTerrainAutotile,
     getBuiltInTerrainTileIds,
+    getBuiltInWaterFillTileId,
 } from "../../../../Services/BuiltInTerrainCatalog";
 import { DEPTH_OVERLAY_INDEX } from "../../DepthIndexes";
 import {
     appendDefaultCollisionRegions,
+    appendWaterCollisionRegions,
     findAuthoringPathBrushGid,
     getAuthoringPathOverlay,
     getAuthoringPathOverlayKind,
@@ -55,12 +62,21 @@ import { findTilesetForGid, tileLayerCanRenderGid } from "./FloorEditorRendering
 import { MapEditorTool } from "./MapEditorTool";
 
 type TilesetSelection =
-    | { kind: "tile"; layer: string; tileId: number; autotile?: TerrainAutotileTiles }
+    | {
+          kind: "tile";
+          layer: string;
+          tileId: number;
+          autotile?: TerrainAutotileTiles;
+          waterFillTileId?: number;
+      }
     | { kind: "shape"; layer: string; familyId: string; autotile: TerrainAutotileTiles };
 
 type PendingTilesetSelection = TilesetSelection & { firstGid: number; tileCount: number };
 
-type ShapeBrush = { kind: "autotile"; tiles: TerrainAutotileTiles } | { kind: "tile"; gid: number };
+type ShapeBrush =
+    | { kind: "autotile"; tiles: TerrainAutotileTiles }
+    | { kind: "water"; gid: number }
+    | { kind: "tile"; gid: number };
 
 const AUTHORING_PATH_OVERLAY_COLORS = {
     collision: { base: 0x4d9dff, checks: 0x84bdff },
@@ -90,10 +106,12 @@ export class FloorEditorTool extends MapEditorTool {
     private pendingTilesetSelection: PendingTilesetSelection | undefined;
     private selectedAutotile: { familyId: string; tiles: TerrainAutotileTiles } | undefined;
     private selectedAutotileForTileBrush: TerrainAutotileTiles | undefined;
+    private selectedWaterFillGid: number | undefined;
     private shapeStart: { layer: string; x: number; y: number } | undefined;
     private shapeEnd: { layer: string; x: number; y: number } | undefined;
     private shapeBrush: ShapeBrush | undefined;
     private strokeAutotile: TerrainAutotileTiles | undefined;
+    private strokeWaterFillGid: number | undefined;
     private liquidStrokeAutotile: TerrainAutotileTiles | undefined;
     private liquidStrokeSeed: { layer: string; x: number; y: number } | undefined;
     private liquidStrokePrevious: { layer: string; x: number; y: number } | undefined;
@@ -139,7 +157,9 @@ export class FloorEditorTool extends MapEditorTool {
         this.pendingTilesetSelection = undefined;
         this.selectedAutotile = undefined;
         this.selectedAutotileForTileBrush = undefined;
+        this.selectedWaterFillGid = undefined;
         this.strokeAutotile = undefined;
+        this.strokeWaterFillGid = undefined;
         this.liquidStrokeAutotile = undefined;
         this.liquidStrokeSeed = undefined;
         this.liquidStrokePrevious = undefined;
@@ -200,6 +220,9 @@ export class FloorEditorTool extends MapEditorTool {
             regions: message.modifyTerrainMessage.regions,
             tilesetJson: message.modifyTerrainMessage.tilesetJson || undefined,
             removeTileset: message.modifyTerrainMessage.removeTileset,
+            layerJson: message.modifyTerrainMessage.layerJson || undefined,
+            removeLayer: message.modifyTerrainMessage.removeLayer,
+            beforeLayer: message.modifyTerrainMessage.beforeLayer || undefined,
         });
         if (message.modifyTerrainMessage.tilesetJson !== "" && !message.modifyTerrainMessage.removeTileset) {
             await this.loadEmbeddedRuntimeTilesets(this.draftMap ?? this.scene.mapFile);
@@ -242,6 +265,7 @@ export class FloorEditorTool extends MapEditorTool {
                     layer: action.layer,
                     tileId: action.tileId,
                     autotile: getBuiltInTerrainAutotile(action.tileId),
+                    waterFillTileId: getBuiltInWaterFillTileId(action.tileId),
                 });
                 return Promise.resolve();
             }
@@ -268,21 +292,32 @@ export class FloorEditorTool extends MapEditorTool {
         }
     }
 
-    private preview(patch: TeapotTilePatch, recordHistory = true): boolean {
+    private preview(patch: TeapotTerrainMutation | TeapotTilePatch, recordHistory = true): boolean {
         if (this.publishedMap === undefined) throw new Error("The current map is not loaded");
         if (patch.mapId !== this.scene.getMapUrl()) throw new Error("This patch belongs to a different map");
-        if (!this.canApplyTerrainMutation({ mapId: patch.mapId, regions: patch.regions })) {
+        const mutation: TeapotTerrainMutation = {
+            mapId: patch.mapId,
+            regions: patch.regions,
+            ...("layerJson" in patch
+                ? {
+                      layerJson: patch.layerJson,
+                      removeLayer: patch.removeLayer,
+                      beforeLayer: patch.beforeLayer,
+                  }
+                : {}),
+        };
+        if (!this.canApplyTerrainMutation(mutation)) {
             this.setState({ status: "failed", error: OCCUPIED_TILE_DELETION_ERROR });
             return false;
         }
         this.clearHoverPreview();
         const visibleMap = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
-        const edit = recordHistory ? createFloorEdit(visibleMap, patch) : undefined;
-        const result = applyTeapotTilePatch(visibleMap, patch);
-        this.draftMap = result.map;
+        const edit = recordHistory ? createFloorEdit(visibleMap, mutation) : undefined;
+        const updated = applyTeapotTerrainMutation(visibleMap, mutation);
+        this.draftMap = updated;
         this.previewRegions = [...this.previewRegions, ...patch.regions];
-        this.updateChangedTileKeys(patch.regions, result.map);
-        this.renderRegions(patch.regions, result.map);
+        this.updateChangedTileKeys(patch.regions, updated);
+        this.renderRegions(patch.regions, updated);
         if (edit !== undefined && this.activeEditGroup !== undefined) this.activeEditGroup.push(edit);
         this.setState({ status: "saving", changedTiles: this.changedTileKeys.size, error: undefined });
         return true;
@@ -320,6 +355,8 @@ export class FloorEditorTool extends MapEditorTool {
         this.clearHoverPreview();
         this.cancelShapeDrag();
         this.selectedAutotile = undefined;
+        this.selectedWaterFillGid = this.getTileBrushWaterFillGid(state, selectedGid);
+        if (this.selectedWaterFillGid !== undefined) selectedGid = this.selectedWaterFillGid;
         this.selectedAutotileForTileBrush = this.getTileBrushAutotile(state, selectedGid);
         this.selectedLayer = layer;
         this.selectedGid = selectedGid;
@@ -339,6 +376,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.cancelShapeDrag();
         this.selectedAutotile = undefined;
         this.selectedAutotileForTileBrush = undefined;
+        this.selectedWaterFillGid = undefined;
         this.selectedLayer = "";
         this.setState({
             selectedLayer: this.selectedLayer,
@@ -361,6 +399,18 @@ export class FloorEditorTool extends MapEditorTool {
         if (tileset === undefined) return undefined;
         const autotile = getBuiltInTerrainAutotile(gid - tileset.firstGid);
         return autotile === undefined ? undefined : translateTerrainAutotileTiles(autotile, tileset.firstGid);
+    }
+
+    private getTileBrushWaterFillGid(state: MapEditorFloorState, gid: number): number | undefined {
+        const tileset = state.tilesets.find(
+            (candidate) =>
+                gid >= candidate.firstGid &&
+                gid < candidate.firstGid + candidate.tileCount &&
+                BUILT_IN_TERRAIN_TILESET.matchesImage(candidate.image),
+        );
+        if (tileset === undefined) return undefined;
+        const fillTileId = getBuiltInWaterFillTileId(gid - tileset.firstGid);
+        return fillTileId === undefined ? undefined : tileset.firstGid + fillTileId;
     }
 
     private bindPointerEvents(): void {
@@ -426,11 +476,13 @@ export class FloorEditorTool extends MapEditorTool {
         const tile = this.getTileAtPointer(pointer);
         if (tile === undefined) return;
         const shapeBrush =
-            this.selectedAutotile === undefined
-                ? this.shiftKey?.isDown
-                    ? { kind: "tile" as const, gid: this.selectedGid }
-                    : undefined
-                : { kind: "autotile" as const, tiles: this.selectedAutotile.tiles };
+            this.selectedAutotile?.familyId === "water"
+                ? { kind: "water" as const, gid: this.selectedAutotile.tiles.center }
+                : this.selectedAutotile === undefined
+                  ? this.shiftKey?.isDown
+                      ? { kind: "tile" as const, gid: this.selectedGid }
+                      : undefined
+                  : { kind: "autotile" as const, tiles: this.selectedAutotile.tiles };
         if (shapeBrush !== undefined) {
             this.painting = true;
             this.shapeStart = tile;
@@ -442,9 +494,11 @@ export class FloorEditorTool extends MapEditorTool {
         this.painting = true;
         this.lastPaintedTileKey = undefined;
         this.activeEditGroup = [];
-        this.strokeAutotile = this.selectedAutotileForTileBrush;
+        this.strokeWaterFillGid = this.selectedWaterFillGid;
+        this.strokeAutotile = this.strokeWaterFillGid === undefined ? this.selectedAutotileForTileBrush : undefined;
         this.liquidStrokeAutotile = this.strokeAutotile;
-        this.liquidStrokeSeed = this.liquidStrokeAutotile === undefined ? undefined : tile;
+        this.liquidStrokeSeed =
+            this.liquidStrokeAutotile === undefined && this.strokeWaterFillGid === undefined ? undefined : tile;
         this.liquidStrokePrevious = this.liquidStrokeSeed;
         this.paintTile(tile);
     }
@@ -507,6 +561,10 @@ export class FloorEditorTool extends MapEditorTool {
         const visibleMap = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
         const terrainLayer = findLayer(visibleMap.layers, tile.layer);
         const previous = this.liquidStrokePrevious ?? tile;
+        if (this.strokeWaterFillGid !== undefined && terrainLayer?.type === "tilelayer") {
+            this.paintWaterTile(visibleMap, terrainLayer, previous, tile, this.strokeWaterFillGid);
+            return;
+        }
         const existingTiles =
             terrainLayer?.type === "tilelayer" && this.strokeAutotile !== undefined
                 ? collectTerrainTiles(terrainLayer, previous, tile, this.liquidStrokeAutotile === undefined ? 2 : 3)
@@ -549,6 +607,43 @@ export class FloorEditorTool extends MapEditorTool {
         this.showHoverPreview(tile);
     }
 
+    private paintWaterTile(
+        visibleMap: ITiledMap,
+        coverLayer: ITiledMapTileLayer,
+        previous: { x: number; y: number },
+        tile: { layer: string; x: number; y: number },
+        waterGid: number,
+    ): void {
+        const waterLayerName = waterUnderlayLayerName(tile.layer);
+        const waterLayer = findLayer(visibleMap.layers, waterLayerName);
+        const composition = createWaterTerrainBrushRegions(
+            tile.layer,
+            waterLayerName,
+            previous,
+            tile,
+            waterGid,
+            collectTerrainTiles(coverLayer, previous, tile, 3),
+            waterLayer?.type === "tilelayer" ? collectTerrainTiles(waterLayer, previous, tile, 3) : [],
+            getTerrainAutotileFamilies(visibleMap),
+        );
+        const regions = appendWaterCollisionRegions(visibleMap, composition.regions, composition.visibleWater);
+        const addedLayer = waterLayer === undefined ? createWaterUnderlayLayer(visibleMap, tile.layer) : undefined;
+        if (regions.length === 0 && addedLayer === undefined) {
+            this.liquidStrokePrevious = tile;
+            this.showHoverPreview(tile);
+            return;
+        }
+        const mutation: TeapotTerrainMutation = {
+            mapId: this.scene.getMapUrl(),
+            regions,
+            ...(addedLayer === undefined
+                ? {}
+                : { layerJson: JSON.stringify(addedLayer), beforeLayer: tile.layer, removeLayer: false }),
+        };
+        if (this.preview(mutation)) this.liquidStrokePrevious = tile;
+        this.showHoverPreview(tile);
+    }
+
     private finishShapeDrag(): void {
         const start = this.shapeStart;
         const end = this.shapeEnd;
@@ -562,6 +657,32 @@ export class FloorEditorTool extends MapEditorTool {
 
         const source = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
         const terrainLayer = findLayer(source.layers, start.layer);
+        if (brush.kind === "water" && terrainLayer?.type === "tilelayer") {
+            const waterLayerName = waterUnderlayLayerName(start.layer);
+            const waterLayer = findLayer(source.layers, waterLayerName);
+            const composition = createWaterTerrainRectangleRegions(
+                start.layer,
+                waterLayerName,
+                start,
+                end,
+                brush.gid,
+                collectTerrainTiles(terrainLayer, start, end, 2),
+                waterLayer?.type === "tilelayer" ? collectTerrainTiles(waterLayer, start, end, 2) : [],
+                getTerrainAutotileFamilies(source),
+            );
+            const regions = appendWaterCollisionRegions(source, composition.regions, composition.visibleWater);
+            const addedLayer = waterLayer === undefined ? createWaterUnderlayLayer(source, start.layer) : undefined;
+            const mutation: TeapotTerrainMutation = {
+                mapId: this.scene.getMapUrl(),
+                regions,
+                ...(addedLayer === undefined
+                    ? {}
+                    : { layerJson: JSON.stringify(addedLayer), beforeLayer: start.layer, removeLayer: false }),
+            };
+            const edit = createFloorEdit(source, mutation);
+            if (edit !== undefined && this.preview(mutation, false)) this.commitEdits([edit]);
+            return;
+        }
         const existingTiles =
             terrainLayer?.type === "tilelayer" && brush.kind === "autotile"
                 ? collectTerrainTiles(terrainLayer, start, end, 2)
@@ -627,6 +748,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.painting = false;
         this.lastPaintedTileKey = undefined;
         this.strokeAutotile = undefined;
+        this.strokeWaterFillGid = undefined;
         this.liquidStrokeAutotile = undefined;
         this.liquidStrokeSeed = undefined;
         this.liquidStrokePrevious = undefined;
@@ -636,13 +758,29 @@ export class FloorEditorTool extends MapEditorTool {
     }
 
     private commitEdits(edits: FloorEdit[]): void {
+        const forwardLayerEdit = edits.find((edit) => edit.forward.layerJson !== undefined)?.forward;
+        const backwardLayerEdit = [...edits].reverse().find((edit) => edit.backward.layerJson !== undefined)?.backward;
         const mutation: TeapotTerrainMutation = {
             mapId: this.scene.getMapUrl(),
             regions: collapseTileRegions(edits.flatMap((edit) => edit.forward.regions)),
+            ...(forwardLayerEdit === undefined
+                ? {}
+                : {
+                      layerJson: forwardLayerEdit.layerJson,
+                      removeLayer: forwardLayerEdit.removeLayer,
+                      beforeLayer: forwardLayerEdit.beforeLayer,
+                  }),
         };
         const inverseMutation: TeapotTerrainMutation = {
             mapId: this.scene.getMapUrl(),
             regions: collapseTileRegions([...edits].reverse().flatMap((edit) => edit.backward.regions)),
+            ...(backwardLayerEdit === undefined
+                ? {}
+                : {
+                      layerJson: backwardLayerEdit.layerJson,
+                      removeLayer: backwardLayerEdit.removeLayer,
+                      beforeLayer: backwardLayerEdit.beforeLayer,
+                  }),
         };
         this.saving = true;
         this.setState({ status: "saving", error: undefined });
@@ -666,20 +804,10 @@ export class FloorEditorTool extends MapEditorTool {
 
     private applyTerrainMutationUnchecked(mutation: TeapotTerrainMutation): void {
         const source = this.draftMap ?? this.draftBaseMap ?? this.publishedMap ?? structuredClone(this.scene.mapFile);
-        const applied =
-            mutation.regions.length > 0
-                ? applyTeapotTilePatch(
-                      source,
-                      TeapotTilePatch.parse({
-                          mapId: mutation.mapId,
-                          expectedRevision: 0,
-                          regions: mutation.regions,
-                      }),
-                  )
-                : undefined;
-        const updated = applied?.map ?? applyTeapotTerrainMutation(source, mutation);
+        const updated = applyTeapotTerrainMutation(source, mutation);
         this.draftMap = updated;
         this.scene.mapFile = structuredClone(updated);
+        this.removeOrphanedLayerOverlays(updated);
         if (
             mutation.tilesetJson !== undefined &&
             !mutation.removeTileset &&
@@ -717,6 +845,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.scene.mapFile = structuredClone(restoredMap);
         this.draftMap = undefined;
         this.draftBaseMap = undefined;
+        this.removeOrphanedLayerOverlays(restoredMap);
         this.previewRegions = [];
         this.changedTileKeys.clear();
         this.pendingTilesetSelection = undefined;
@@ -790,13 +919,16 @@ export class FloorEditorTool extends MapEditorTool {
         for (const region of regions) {
             const publishedLayer = findLayer(this.publishedMap.layers, region.layer);
             const draftLayer = findLayer(draft.layers, region.layer);
-            if (publishedLayer?.type !== "tilelayer" || draftLayer?.type !== "tilelayer") continue;
+            if (draftLayer?.type !== "tilelayer") continue;
             for (let y = 0; y < region.height; y += 1) {
                 for (let x = 0; x < region.width; x += 1) {
                     const absoluteX = region.x + x;
                     const absoluteY = region.y + y;
                     const key = tileKey(region.layer, absoluteX, absoluteY);
-                    const publishedGid = getTileLayerGid(publishedLayer, absoluteX, absoluteY);
+                    const publishedGid =
+                        publishedLayer?.type === "tilelayer"
+                            ? getTileLayerGid(publishedLayer, absoluteX, absoluteY)
+                            : 0;
                     const draftGid = getTileLayerGid(draftLayer, absoluteX, absoluteY);
                     if (publishedGid === draftGid) this.changedTileKeys.delete(key);
                     else this.changedTileKeys.add(key);
@@ -883,7 +1015,14 @@ export class FloorEditorTool extends MapEditorTool {
 
     private activateEmbeddedSelection(selection: TilesetSelection, firstGid: number, tileCount: number): void {
         if (selection.kind === "tile") {
-            this.selectEmbeddedTilesetTile(selection.layer, firstGid, tileCount, selection.tileId, selection.autotile);
+            this.selectEmbeddedTilesetTile(
+                selection.layer,
+                firstGid,
+                tileCount,
+                selection.tileId,
+                selection.autotile,
+                selection.waterFillTileId,
+            );
             return;
         }
         this.selectEmbeddedTilesetShape(selection.layer, selection.familyId, firstGid, tileCount, selection.autotile);
@@ -895,6 +1034,7 @@ export class FloorEditorTool extends MapEditorTool {
         tileCount: number,
         tileId: number,
         autotile?: TerrainAutotileTiles,
+        waterFillTileId?: number,
     ): void {
         const state = get(mapEditorFloorStateStore);
         if (state === undefined || !state.layers.some((candidate) => candidate.name === layer)) {
@@ -921,6 +1061,8 @@ export class FloorEditorTool extends MapEditorTool {
             autotile === undefined
                 ? this.getTileBrushAutotile(state, gid)
                 : translateTerrainAutotileTiles(autotile, firstGid);
+        this.selectedWaterFillGid =
+            waterFillTileId === undefined ? this.getTileBrushWaterFillGid(state, gid) : firstGid + waterFillTileId;
         this.setState({
             selectedLayer: layer,
             selectedGid: this.selectedGid,
@@ -958,6 +1100,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.cancelShapeDrag();
         this.selectedLayer = layer;
         this.selectedAutotileForTileBrush = undefined;
+        this.selectedWaterFillGid = familyId === "water" ? firstGid + autotile.center : undefined;
         this.selectedAutotile = { familyId, tiles: translateTerrainAutotileTiles(autotile, firstGid) };
         this.selectedGid = this.selectedAutotile.tiles.center;
         this.setState({
@@ -1035,6 +1178,10 @@ export class FloorEditorTool extends MapEditorTool {
         this.tileOverlays.delete(overlayKey);
         const gameMapFrontWrapper = this.scene.getGameMapFrontWrapper();
         const phaserLayer = gameMapFrontWrapper.findPhaserLayer(layer);
+        const underlayCoverLayer = waterUnderlayCoverLayerName(layer);
+        const renderReferenceLayer =
+            phaserLayer ??
+            (underlayCoverLayer === undefined ? undefined : gameMapFrontWrapper.findPhaserLayer(underlayCoverLayer));
         const pathOverlayKind = getAuthoringPathOverlayKind(layer);
         if (pathOverlayKind !== undefined) {
             // Collision markers must stay non-empty for Arcade Physics; checker overlays own all path visuals.
@@ -1047,7 +1194,16 @@ export class FloorEditorTool extends MapEditorTool {
             const tileTexture = this.getTileTexture(gid);
             if (tileTexture !== undefined) {
                 gameMapFrontWrapper.putTile(null, x, y, layer);
-                this.renderOverlay(overlayKey, x, y, tileTexture.textureKey, tileTexture.frame, map, phaserLayer);
+                this.renderOverlay(
+                    overlayKey,
+                    x,
+                    y,
+                    tileTexture.textureKey,
+                    tileTexture.frame,
+                    map,
+                    renderReferenceLayer,
+                    underlayCoverLayer === undefined ? 0.01 : -0.01,
+                );
                 return;
             }
         }
@@ -1086,6 +1242,7 @@ export class FloorEditorTool extends MapEditorTool {
         frame: string | number,
         map: ITiledMap,
         phaserLayer: ReturnType<GameMapFrontWrapper["findPhaserLayer"]>,
+        depthOffset: number,
     ): void {
         const tileWidth = map.tilewidth ?? 32;
         const tileHeight = map.tileheight ?? 32;
@@ -1097,9 +1254,18 @@ export class FloorEditorTool extends MapEditorTool {
             overlay.setScrollFactor(phaserLayer.scrollFactorX, phaserLayer.scrollFactorY);
             this.scene
                 .getGameMapFrontWrapper()
-                .addToTileLayerRenderBand(phaserLayer, overlay, phaserLayer.depth + 0.01);
+                .addToTileLayerRenderBand(phaserLayer, overlay, phaserLayer.depth + depthOffset);
         }
         this.tileOverlays.set(overlayKey, overlay);
+    }
+
+    private removeOrphanedLayerOverlays(map: ITiledMap): void {
+        const layerNames = new Set(flattenLayers(map.layers).map((layer) => layer.name));
+        for (const [key, overlay] of this.tileOverlays) {
+            if (layerNames.has(key.split("\u0000", 1)[0])) continue;
+            overlay.destroy();
+            this.tileOverlays.delete(key);
+        }
     }
 
     private async loadEmbeddedRuntimeTilesets(map: ITiledMap): Promise<void> {
@@ -1162,7 +1328,7 @@ export class FloorEditorTool extends MapEditorTool {
         const mapWidth = this.publishedMap.width ?? 0;
         const mapHeight = this.publishedMap.height ?? 0;
         const editorLayers = flatLayers
-            .filter((layer) => layer.type === "tilelayer")
+            .filter((layer) => layer.type === "tilelayer" && waterUnderlayCoverLayerName(layer.name) === undefined)
             .map((layer) => ({
                 name: layer.name,
                 width: layer.width ?? mapWidth,
@@ -1281,6 +1447,25 @@ function getMatchingTerrainFamilyGids(map: ITiledMap, selectedGid: number): Read
         for (const localGid of Object.values(localAutotile)) familyGids.add(tileset.firstgid + localGid);
     }
     return familyGids;
+}
+
+function getTerrainAutotileFamilies(map: ITiledMap): TerrainAutotileFamily[] {
+    const families: TerrainAutotileFamily[] = [];
+    for (const tileset of map.tilesets) {
+        if (
+            tileset.firstgid === undefined ||
+            !("image" in tileset) ||
+            typeof tileset.image !== "string" ||
+            !BUILT_IN_TERRAIN_TILESET.matchesImage(tileset.image)
+        )
+            continue;
+        for (const group of BUILT_IN_TERRAIN_TILESET.groups) {
+            if (group.id === "water" || group.autotile === undefined) continue;
+            const translated = translateTerrainAutotileTiles(group.autotile, tileset.firstgid);
+            families.push({ tiles: translated, gids: new Set(Object.values(translated)) });
+        }
+    }
+    return families;
 }
 
 function tileKey(layer: string, x: number, y: number): string {

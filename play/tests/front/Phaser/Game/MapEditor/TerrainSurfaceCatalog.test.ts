@@ -17,8 +17,16 @@ describe("terrain surface catalog", () => {
         expect(new Set(TERRAIN_SURFACES.map((surface) => surface.category))).toEqual(
             new Set(TERRAIN_SURFACE_CATEGORIES),
         );
-        expect(TERRAIN_SURFACES.every((surface) => surface.assets.roles.length === 21)).toBe(true);
-        expect(TERRAIN_SURFACES.every((surface) => surface.editorEligible === false)).toBe(true);
+        expect(
+            TERRAIN_SURFACES.every((surface) =>
+                surface.category === "water-wetland"
+                    ? surface.assets.roles.length === 1
+                    : surface.assets.roles.length === 21,
+            ),
+        ).toBe(true);
+        expect(
+            TERRAIN_SURFACES.filter((surface) => surface.id !== "pond").every((surface) => !surface.editorEligible),
+        ).toBe(true);
         expect(TERRAIN_SURFACES.some((surface) => /(^|-)(tree|boulder|bench|crate)(-|$)/.test(surface.id))).toBe(false);
     });
 
@@ -38,7 +46,7 @@ describe("terrain surface catalog", () => {
     });
 
     it("marks verified legacy art as partial and every missing role explicitly not-started", () => {
-        for (const id of ["packed-earth", "loam", "short-turf", "pond"]) {
+        for (const id of ["packed-earth", "loam", "short-turf"]) {
             const surface = getTerrainSurface(id);
             expect(surface?.assets.readiness).toBe("partial");
             expect(surface?.assets.hasAnyAvailableAssets).toBe(true);
@@ -78,6 +86,35 @@ describe("terrain surface catalog", () => {
         expect(TERRAIN_SURFACES.every((surface) => typeof surface.mixable === "boolean")).toBe(true);
     });
 
+    it("models water by fill appearance while leaving its edge to the environment", () => {
+        expect(getTerrainSurface("pond")?.waterAppearance).toEqual({
+            kind: "still",
+            color: "blue",
+            waveform: "small-ripples",
+            boundaryOwner: "environment",
+        });
+        expect(getTerrainSurface("rapids")?.waterAppearance).toMatchObject({
+            kind: "whitewater",
+            waveform: "foam",
+            boundaryOwner: "environment",
+        });
+        expect(getTerrainSurface("open-sea")?.waterAppearance).toMatchObject({
+            kind: "coastal",
+            color: "deep-blue",
+            waveform: "breaking-waves",
+        });
+        expect(getTerrainSurface("pond")?.assets).toMatchObject({
+            templateProfileId: "water-fill-32-v1",
+            readiness: "complete",
+        });
+        expect(getTerrainSurface("pond")?.assets.roles).toHaveLength(1);
+        expect(
+            TERRAIN_SURFACES.filter((surface) => surface.category === "water-wetland").every(
+                (surface) => surface.waterAppearance?.boundaryOwner === "environment",
+            ),
+        ).toBe(true);
+    });
+
     it("supports surface-level search and readiness, traversal, and effect filters", () => {
         expect(searchTerrainSurfaces({ query: "alien sand" }).map((surface) => surface.id)).toContain(
             "iridescent-alien-sand",
@@ -86,7 +123,7 @@ describe("terrain surface catalog", () => {
             searchTerrainSurfaces({ readiness: "partial" })
                 .map((surface) => surface.id)
                 .sort(),
-        ).toEqual(["loam", "packed-earth", "pond", "short-turf"]);
+        ).toEqual(["loam", "packed-earth", "short-turf"]);
         expect(searchTerrainSurfaces({ effect: "slippery" })).toEqual(
             expect.arrayContaining([expect.objectContaining({ id: "sheet-ice" })]),
         );

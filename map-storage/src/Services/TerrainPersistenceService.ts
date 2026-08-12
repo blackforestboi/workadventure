@@ -24,6 +24,9 @@ export async function persistTerrainMutation(
         regions: message.regions,
         tilesetJson: message.tilesetJson || undefined,
         removeTileset: message.removeTileset,
+        layerJson: message.layerJson || undefined,
+        removeLayer: message.removeLayer,
+        beforeLayer: message.beforeLayer || undefined,
     });
     await fileSystem.writeStringAsFile(mapKey, JSON.stringify(updated));
 }

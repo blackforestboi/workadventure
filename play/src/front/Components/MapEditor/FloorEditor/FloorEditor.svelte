@@ -549,9 +549,9 @@
                                         aria-label={`Open ${group.name}. ${group.description}`}
                                     >
                                         <span class="grid aspect-[3/2] grid-cols-3 overflow-hidden bg-black/30">
-                                            {#each group.autotile === undefined ? [group.previewTileId] : Object.values(group.autotile).slice(0, 6) as tileId (tileId)}
+                                            {#each group.autotile === undefined || group.id === "water" ? [group.previewTileId] : Object.values(group.autotile).slice(0, 6) as tileId (tileId)}
                                                 <span
-                                                    class={group.autotile === undefined
+                                                    class={group.autotile === undefined || group.id === "water"
                                                         ? "col-span-3 h-full"
                                                         : "h-full"}
                                                     style={atlasTileStyle(
@@ -566,9 +566,11 @@
                                         <span class="block p-2">
                                             <strong class="block truncate text-xs">{group.name}</strong>
                                             <span class="mt-0.5 block text-[10px] capitalize text-white/45"
-                                                >{group.terrainType}{group.autotile === undefined
-                                                    ? " · tiles"
-                                                    : " · shape ready"}</span
+                                                >{group.terrainType}{group.id === "water"
+                                                    ? " · underlay"
+                                                    : group.autotile === undefined
+                                                      ? " · tiles"
+                                                      : " · shape ready"}</span
                                             >
                                         </span>
                                     </button>

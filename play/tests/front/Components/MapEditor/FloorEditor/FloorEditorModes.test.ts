@@ -90,6 +90,11 @@ describe("getTerrainModeOptions", () => {
         expect(floorEditorSource).not.toContain('activeTerrainModeId === "floor"');
     });
 
+    it("presents water as one borderless underlay instead of shoreline variants", () => {
+        expect(floorEditorSource).toContain('group.autotile === undefined || group.id === "water"');
+        expect(floorEditorSource).toContain('? " · underlay"');
+    });
+
     it("keeps path modes active while treating a zero floor brush as the eraser", () => {
         const modes = getTerrainModeOptions([
             layer("collisions"),
