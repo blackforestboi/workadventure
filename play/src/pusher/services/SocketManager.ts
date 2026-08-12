@@ -1289,7 +1289,13 @@ export class SocketManager implements ZoneEventListener {
         rooms: ShortMapDescription[],
         identifier: string,
     ): Promise<ShortMapDescription[]> {
-        const identity = await resolveTeapotRequestIdentity(identifier);
+        let identity: Awaited<ReturnType<typeof resolveTeapotRequestIdentity>>;
+        try {
+            identity = await resolveTeapotRequestIdentity(identifier);
+        } catch (error) {
+            console.warn("Could not resolve the room-directory identity; keeping rooms visible", error);
+            return rooms;
+        }
         return (
             await Promise.all(
                 rooms.map(async (room) => {

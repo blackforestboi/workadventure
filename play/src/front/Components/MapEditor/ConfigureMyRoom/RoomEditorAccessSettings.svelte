@@ -19,7 +19,13 @@
     const modes: RoomAccessMode[] = ["everyone", "specific", "nobody"];
 
     function emptyPolicy(role: RoomAccessRole): RoomAccessPolicy {
-        return { role, configured: false, mode: role === "view" ? "everyone" : "specific", version: 0, members: [] };
+        return {
+            role,
+            configured: false,
+            mode: role === "view" || role === "directory" ? "everyone" : "specific",
+            version: 0,
+            members: [],
+        };
     }
 
     let policies = $state<Record<RoomAccessRole, RoomAccessPolicy>>({
