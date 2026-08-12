@@ -2,7 +2,10 @@ import { applyTeapotTilePatch, createCenteredMap, getTileLayerGid, TeapotTilePat
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
-import { createFloorEdit } from "../../../../../src/front/Phaser/Game/MapEditor/Tools/FloorEditorHistory";
+import {
+    collapseTileRegions,
+    createFloorEdit,
+} from "../../../../../src/front/Phaser/Game/MapEditor/Tools/FloorEditorHistory";
 
 function createMap(): ITiledMap {
     return createCenteredMap({
@@ -49,6 +52,16 @@ function floorLayer(map: ITiledMap) {
 }
 
 describe("createFloorEdit", () => {
+    it("collapses repeated whole-blob snapshots to one final write per cell", () => {
+        const regions = collapseTileRegions([
+            { layer: "floor", x: 0, y: 0, width: 2, height: 1, gids: [1, 2] },
+            { layer: "floor", x: 0, y: 0, width: 3, height: 1, gids: [3, 4, 5] },
+            { layer: "floor", x: 1, y: 0, width: 2, height: 1, gids: [6, 7] },
+        ]);
+
+        expect(regions).toEqual([{ layer: "floor", x: 0, y: 0, width: 3, height: 1, gids: [3, 6, 7] }]);
+    });
+
     it("builds an inverse patch that restores signed tiles", () => {
         const map = createMap();
         const forward = TeapotTilePatch.parse({

@@ -19,6 +19,35 @@ describe("floor editor rendering", () => {
     const stone = tileset(1, 100);
     const grass = tileset(101, 100);
 
+    it("uses the selected terrain family for outside placement and paints through an existing edge", () => {
+        const pointerDownSource = floorEditorToolSource.match(
+            /private handlePointerDown\([\s\S]*?\n {4}private handlePointerUp/,
+        )?.[0];
+        const paintTileSource = floorEditorToolSource.match(
+            /private paintTile\([\s\S]*?\n {4}private finishShapeDrag/,
+        )?.[0];
+
+        expect(pointerDownSource).toContain("this.strokeAutotile = this.selectedAutotileForTileBrush");
+        expect(pointerDownSource).toContain("this.liquidStrokeAutotile = this.strokeAutotile");
+        expect(pointerDownSource).not.toContain("this.selectedGid === this.strokeAutotile.center");
+        expect(pointerDownSource).not.toContain("strokeStartGid === this.strokeAutotile.center");
+        expect(pointerDownSource).toContain("this.paintTile(tile)");
+        expect(paintTileSource).toContain("createLiquidTerrainBrushRegions");
+        expect(paintTileSource).toContain("if (rawRegions.length === 0)");
+        expect(paintTileSource).toContain("collectTerrainTiles");
+        expect(paintTileSource).not.toContain("forEachTileInLayer");
+        expect(paintTileSource).not.toContain("liquidStrokeHasExpanded");
+        expect(paintTileSource).not.toContain("Object.values(this.liquidStrokeAutotile).includes");
+        expect(paintTileSource).toContain("getMatchingTerrainFamilyGids(visibleMap, this.selectedGid)");
+        expect(paintTileSource).toContain("this.strokeAutotile === undefined");
+        expect(paintTileSource).toContain("createMergedTerrainAutotileRegions");
+        expect(floorEditorToolSource).toContain("private getTileBrushAutotile");
+        expect(floorEditorToolSource).toContain("function getMatchingTerrainFamilyGids");
+        expect(floorEditorToolSource).toContain(
+            "regions: collapseTileRegions(edits.flatMap((edit) => edit.forward.regions))",
+        );
+    });
+
     it("uses an overlay when a GPU layer cannot render the selected tileset", () => {
         expect(tileLayerCanRenderGid({ tileset: stone }, 118)).toBe(false);
         expect(findTilesetForGid([stone, grass], 118)).toBe(grass);
@@ -168,6 +197,18 @@ describe("floor editor rendering", () => {
         expect(addTilesetSource).toMatch(
             /this\.loadRuntimeTileset\(result\.firstGid[\s\S]*?\.then\(\(\) =>\s*this\.mapEditorModeManager\s*\.executeCommand/,
         );
+    });
+
+    it("carries terrain-family metadata through first-time embedded tile selection", () => {
+        const handleActionSource = floorEditorToolSource.match(
+            /private handleAction\([\s\S]*?\n {4}private preview/,
+        )?.[0];
+        const selectEmbeddedTileSource = floorEditorToolSource.match(
+            /private selectEmbeddedTilesetTile\([\s\S]*?\n {4}private selectEmbeddedTilesetShape/,
+        )?.[0];
+
+        expect(handleActionSource).toContain("autotile: getBuiltInTerrainAutotile(action.tileId)");
+        expect(selectEmbeddedTileSource).toContain("translateTerrainAutotileTiles(autotile, firstGid)");
     });
 
     it("does not paint with the previous brush while an embedded tile selection is loading", () => {

@@ -39,10 +39,10 @@ describe("built-in terrain catalog", () => {
 
     it("keeps Wang-backed terrain palettes coherent and exposes their exact nine-slice roles", () => {
         const expected = {
-            "light-dirt": [64, 65, 66, 96, 97, 98, 128, 129, 130],
-            "dark-dirt": [73, 74, 75, 105, 106, 107, 137, 138, 139],
-            "meadow-grass": [256, 257, 258, 288, 289, 290, 320, 321, 322],
-            water: [655, 656, 657, 687, 688, 689, 719, 720, 721],
+            "light-dirt": [64, 65, 66, 96, 97, 98, 128, 129, 130, 34, 33, 2, 1],
+            "dark-dirt": [73, 74, 75, 105, 106, 107, 137, 138, 139, 43, 42, 11, 10],
+            "meadow-grass": [256, 257, 258, 288, 289, 290, 320, 321, 322, 226, 225, 194, 193],
+            water: [655, 656, 657, 687, 688, 689, 719, 720, 721, 625, 624, 593, 592],
         } as const;
 
         expect(new Set(BUILT_IN_TERRAIN_TILESET.groups.map((group) => group.id))).toHaveLength(
@@ -53,7 +53,7 @@ describe("built-in terrain catalog", () => {
             expect(group).toBeDefined();
             expect(group?.autotile).toBeDefined();
             expect(Object.values(group!.autotile!)).toEqual(matrix);
-            expect(group?.displayTileIds.slice(0, 9)).toEqual(matrix);
+            expect(group?.displayTileIds.slice(0, 9)).toEqual(matrix.slice(0, 9));
             expect(group?.tileIds).toContain(group?.previewTileId);
             expect(Object.values(group!.autotile!).every((tileId) => group!.tileIds.includes(tileId))).toBe(true);
         }

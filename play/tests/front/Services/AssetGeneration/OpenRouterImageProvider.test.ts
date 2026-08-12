@@ -103,7 +103,7 @@ describe("OpenRouterImageProvider", () => {
         expect(requestBody.messages[1]?.content).toHaveLength(1);
         expect(requestBody.messages[1]?.content[0]).toMatchObject({
             type: "text",
-            text: expect.stringContaining("uniform chroma background for easy removal"),
+            text: expect.stringContaining("electric magenta #FF00FF"),
         });
         expect(result.provenance).toEqual({
             providerId: "openrouter",
@@ -154,7 +154,8 @@ describe("OpenRouterImageProvider", () => {
         expect(fetcher.mock.calls[0]?.[0]).toBe("https://openrouter.ai/api/v1/images");
         expect(requestBody.resolution).toBe("512");
         expect(requestBody.aspect_ratio).toBe("1:1");
-        expect(requestBody.prompt).toContain("uniform chroma background for easy removal");
+        expect(requestBody.prompt).toContain("electric magenta #FF00FF");
+        expect(requestBody.prompt).toContain("must not appear anywhere on the subject");
     });
 
     it("creates a concise title from the original prompt with GPT-5 Nano", async () => {

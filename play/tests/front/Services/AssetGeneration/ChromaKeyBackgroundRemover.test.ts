@@ -34,7 +34,7 @@ describe("removeEdgeConnectedBackground", () => {
         expect(alphaAt(image, 10, 16)).toBe(255);
     });
 
-    it("removes an exact matte-colored pocket enclosed inside the subject", () => {
+    it("preserves an exact matte-colored detail enclosed inside the subject", () => {
         const image = createImage(7, 7, [0, 255, 0, 255]);
         for (let y = 2; y <= 4; y += 1) {
             for (let x = 2; x <= 4; x += 1) setPixel(image, x, y, [180, 30, 30, 255]);
@@ -44,7 +44,7 @@ describe("removeEdgeConnectedBackground", () => {
         removeEdgeConnectedBackground(image);
 
         expect(alphaAt(image, 0, 0)).toBe(0);
-        expect(alphaAt(image, 3, 3)).toBe(0);
+        expect(alphaAt(image, 3, 3)).toBe(255);
     });
 
     it("preserves an enclosed color that merely resembles the matte", () => {
@@ -131,6 +131,20 @@ describe("removeEdgeConnectedBackground", () => {
         expect(image.data[offset + 3]).toBeGreaterThan(0);
         expect(image.data[offset + 3]).toBeLessThan(255);
         expect(image.data[offset + 1]).toBeLessThan(205);
+    });
+
+    it("suppresses spill from a magenta matte as well as a green matte", () => {
+        const image = createImage(5, 5, [255, 0, 255, 255]);
+        setPixel(image, 2, 2, [40, 80, 180, 255]);
+        setPixel(image, 2, 1, [205, 20, 205, 255]);
+
+        removeEdgeConnectedBackground(image);
+
+        const offset = (1 * image.width + 2) * 4;
+        expect(image.data[offset + 3]).toBeGreaterThan(0);
+        expect(image.data[offset + 3]).toBeLessThan(255);
+        expect(image.data[offset]).toBeLessThan(205);
+        expect(image.data[offset + 2]).toBeLessThan(205);
     });
 });
 

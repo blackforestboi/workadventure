@@ -274,7 +274,7 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
             request.target === "complete-woka" || request.target.startsWith("woka-")
                 ? "Avatar composition rule: show only one free-standing character. Never add a floor, ground plane, terrain, grass, path, pedestal, platform, horizon, baseline, contact line, contact shadow, scene, or frame around the character. There must be no visible mark beneath its feet."
                 : "";
-        return `${request.prompt}\n\n${avatarIsolationRule}\n\nUse a uniform chroma background for easy removal. Generate exactly one isolated subject against one flat, solid, untextured background colour with clear padding between the subject and every canvas edge. The background is a machine-readable matte that will be removed after generation. Never draw a checkerboard, transparency raster, grid, tiles, UI frame, border, rounded rectangle, gradient, texture, shadow, reflection, scenery, props, or a second background colour.`;
+        return `${request.prompt}\n\n${avatarIsolationRule}\n\nUse one flat, solid electric magenta #FF00FF background as a machine-readable matte. This exact colour must not appear anywhere on the subject, including its outline, highlights, shadows, texture, reflections, or semi-transparent edges. Generate exactly one isolated subject with clear padding between it and every canvas edge. Never draw a checkerboard, transparency raster, grid, tiles, UI frame, border, rounded rectangle, gradient, texture, shadow, reflection, scenery, props, or a second background colour.`;
     }
 
     private async decodeGeneratedAsset(payload: unknown, id: string): Promise<GeneratedAsset> {

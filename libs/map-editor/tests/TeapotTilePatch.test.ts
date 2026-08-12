@@ -1,7 +1,13 @@
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
-import { addTeapotEmbeddedTileset, applyTeapotTilePatch, TeapotTilePatchError } from "../src/Authoring/TeapotTilePatch";
+import {
+    addTeapotEmbeddedTileset,
+    applyTeapotTilePatch,
+    compactTeapotTileRegions,
+    TeapotTilePatch,
+    TeapotTilePatchError,
+} from "../src/Authoring/TeapotTilePatch";
 import {
     createCenteredMap,
     getMapWorldBounds,
@@ -78,6 +84,67 @@ describe("createCenteredMap", () => {
 });
 
 describe("applyTeapotTilePatch", () => {
+    it("accepts fragmented patches without an arbitrary region-count ceiling", () => {
+        expect(() =>
+            TeapotTilePatch.parse({
+                mapId: "world",
+                expectedRevision: 0,
+                regions: Array.from({ length: 500 }, (_, index) => ({
+                    layer: "ground",
+                    x: index * 2,
+                    y: 0,
+                    width: 1,
+                    height: 1,
+                    gids: [1],
+                })),
+            }),
+        ).not.toThrow();
+    });
+
+    it("packs repeated cell writes into one rectangular region", () => {
+        expect(
+            compactTeapotTileRegions(
+                Array.from({ length: 6 }, (_, index) => ({
+                    layer: "ground",
+                    x: index % 3,
+                    y: Math.floor(index / 3),
+                    width: 1,
+                    height: 1,
+                    gids: [index + 1],
+                })),
+            ),
+        ).toEqual([{ layer: "ground", x: 0, y: 0, width: 3, height: 2, gids: [1, 2, 3, 4, 5, 6] }]);
+    });
+
+    it("preserves last-write-wins behavior while packing overlapping edits", () => {
+        expect(
+            compactTeapotTileRegions([
+                { layer: "ground", x: 0, y: 0, width: 3, height: 1, gids: [1, 1, 1] },
+                { layer: "ground", x: 1, y: 0, width: 1, height: 1, gids: [2] },
+            ]),
+        ).toEqual([{ layer: "ground", x: 0, y: 0, width: 3, height: 1, gids: [1, 2, 1] }]);
+    });
+
+    it("splits very wide edits into schema-safe regions without dropping cells", () => {
+        const compacted = compactTeapotTileRegions(
+            Array.from({ length: 600 }, (_, x) => ({
+                layer: "ground",
+                x,
+                y: 0,
+                width: 1,
+                height: 1,
+                gids: [1],
+            })),
+        );
+
+        expect(compacted.map(({ x, width }) => ({ x, width }))).toEqual([
+            { x: 0, width: 256 },
+            { x: 256, width: 256 },
+            { x: 512, width: 88 },
+        ]);
+        expect(() => TeapotTilePatch.parse({ mapId: "world", expectedRevision: 0, regions: compacted })).not.toThrow();
+    });
+
     it("updates signed coordinates without mutating or dropping unknown source fields", () => {
         const source = Object.assign(createMap(), { teapotUnknown: { keep: true } });
         const sourceLayer = getGround(source);

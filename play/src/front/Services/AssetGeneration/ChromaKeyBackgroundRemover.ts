@@ -11,10 +11,6 @@ const FLOOR_COLOR_DISTANCE = 34;
 const MINIMUM_MATCHING_BORDER_RATIO = 0.65;
 const SOLID_MATTE_DISTANCE = 28;
 const FEATHERED_MATTE_DISTANCE = 88;
-// Interior removal is deliberately much stricter than edge-connected removal.
-// It clears a true chroma key inside a staff/cape gap without treating shading
-// that merely resembles the matte as transparent.
-const EXACT_INTERIOR_MATTE_DISTANCE = 4;
 
 interface RgbColor {
     red: number;
@@ -75,7 +71,7 @@ export function removeEdgeConnectedBackground(image: ImageData): boolean {
         const nextAlpha = Math.round(originalAlpha * retainedMatteFraction);
         if (nextAlpha !== originalAlpha) {
             data[offset + 3] = nextAlpha;
-            suppressGreenSpill(data, offset, background, retainedMatteFraction);
+            suppressMatteSpill(data, offset, background, retainedMatteFraction);
             changed = true;
         }
 
@@ -87,22 +83,7 @@ export function removeEdgeConnectedBackground(image: ImageData): boolean {
         if (y + 1 < height) enqueue(pixel + width);
     }
 
-    // Remove the actual key colour everywhere, including a gap enclosed by a
-    // staff or cape. Unlike the edge flood fill, this is an almost-exact RGB
-    // match; similar hair/fabric shading remains opaque.
-    if (removeExactInteriorMatte(data, backgroundColors)) changed = true;
     if (removeLowerFloorIllustration(image)) changed = true;
-    return changed;
-}
-
-function removeExactInteriorMatte(data: Uint8ClampedArray, backgroundColors: readonly RgbColor[]): boolean {
-    let changed = false;
-    for (let offset = 0; offset < data.length; offset += 4) {
-        if (data[offset + 3] <= TRANSPARENT_ALPHA) continue;
-        if (colorDistanceToMatte(data, offset, backgroundColors) > EXACT_INTERIOR_MATTE_DISTANCE) continue;
-        data[offset + 3] = 0;
-        changed = true;
-    }
     return changed;
 }
 
@@ -241,14 +222,24 @@ function colorDistance(data: Uint8ClampedArray, offset: number, color: RgbColor)
     return Math.hypot(data[offset] - color.red, data[offset + 1] - color.green, data[offset + 2] - color.blue);
 }
 
-function suppressGreenSpill(
+function suppressMatteSpill(
     data: Uint8ClampedArray,
     offset: number,
     background: RgbColor,
     retainedMatteFraction: number,
 ): void {
-    if (background.green < background.red + 40 || background.green < background.blue + 40) return;
-    const neutralGreen = Math.max(data[offset], data[offset + 2]);
-    if (data[offset + 1] <= neutralGreen) return;
-    data[offset + 1] = Math.round(neutralGreen + (data[offset + 1] - neutralGreen) * retainedMatteFraction);
+    const backgroundChannels = [background.red, background.green, background.blue];
+    const pixelChannels = [data[offset], data[offset + 1], data[offset + 2]];
+    const backgroundFloor = Math.min(...backgroundChannels);
+    const matteChannels = backgroundChannels.map((channel) => channel >= backgroundFloor + 40);
+    const neutralChannels = pixelChannels.filter((_, index) => !matteChannels[index]);
+    if (neutralChannels.length === 0) return;
+    const neutralValue = Math.max(...neutralChannels);
+
+    for (let index = 0; index < pixelChannels.length; index += 1) {
+        if (!matteChannels[index]) continue;
+        const value = pixelChannels[index];
+        if (value === undefined || value <= neutralValue) continue;
+        data[offset + index] = Math.round(neutralValue + (value - neutralValue) * retainedMatteFraction);
+    }
 }

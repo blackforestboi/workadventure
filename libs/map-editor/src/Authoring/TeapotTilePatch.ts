@@ -40,10 +40,91 @@ export type TeapotTileRegion = z.infer<typeof TeapotTileRegion>;
 export const TeapotTilePatch = z.object({
     mapId: z.string().trim().min(1).max(2_048),
     expectedRevision: z.number().int().nonnegative(),
-    regions: z.array(TeapotTileRegion).min(1).max(128),
+    regions: z.array(TeapotTileRegion).min(1),
 });
 
 export type TeapotTilePatch = z.infer<typeof TeapotTilePatch>;
+
+/**
+ * Resolves overlapping writes with last-write-wins semantics and packs the
+ * resulting cells into bounded rectangles. Region count is an encoding detail,
+ * not a limit on the size or shape of an edit.
+ */
+export function compactTeapotTileRegions(regions: readonly TeapotTileRegion[]): TeapotTileRegion[] {
+    const cells = new Map<string, { layer: string; x: number; y: number; gid: number }>();
+    const layerOrder = new Map<string, number>();
+    for (const region of regions) {
+        if (!layerOrder.has(region.layer)) layerOrder.set(region.layer, layerOrder.size);
+        for (let y = 0; y < region.height; y += 1) {
+            for (let x = 0; x < region.width; x += 1) {
+                const absoluteX = region.x + x;
+                const absoluteY = region.y + y;
+                cells.set(`${region.layer}\u0000${absoluteX}\u0000${absoluteY}`, {
+                    layer: region.layer,
+                    x: absoluteX,
+                    y: absoluteY,
+                    gid: region.gids[y * region.width + x] ?? 0,
+                });
+            }
+        }
+    }
+
+    const rows = new Map<string, { layer: string; y: number; cells: Array<{ x: number; gid: number }> }>();
+    for (const cell of cells.values()) {
+        const key = `${cell.layer}\u0000${cell.y}`;
+        const row = rows.get(key) ?? { layer: cell.layer, y: cell.y, cells: [] };
+        row.cells.push({ x: cell.x, gid: cell.gid });
+        rows.set(key, row);
+    }
+
+    const packed: TeapotTileRegion[] = [];
+    let active = new Map<string, number>();
+    let previousLayer: string | undefined;
+    let previousY: number | undefined;
+    for (const row of [...rows.values()].sort((left, right) => {
+        if (left.layer === right.layer) return left.y - right.y;
+        return (layerOrder.get(left.layer) ?? 0) - (layerOrder.get(right.layer) ?? 0);
+    })) {
+        const followsPreviousRow = row.layer === previousLayer && previousY !== undefined && row.y === previousY + 1;
+        if (!followsPreviousRow) active = new Map();
+        const nextActive = new Map<string, number>();
+        const sorted = row.cells.sort((left, right) => left.x - right.x);
+        let start = 0;
+        while (start < sorted.length) {
+            let end = start + 1;
+            while (end < sorted.length && sorted[end].x === sorted[end - 1].x + 1 && end - start < 256) end += 1;
+            const run = sorted.slice(start, end);
+            const signature = `${row.layer}\u0000${run[0].x}\u0000${run.length}`;
+            const activeIndex = active.get(signature);
+            const activeRegion = activeIndex === undefined ? undefined : packed[activeIndex];
+            if (
+                activeIndex !== undefined &&
+                activeRegion !== undefined &&
+                activeRegion.y + activeRegion.height === row.y &&
+                activeRegion.height < 256
+            ) {
+                activeRegion.height += 1;
+                activeRegion.gids.push(...run.map(({ gid }) => gid));
+                nextActive.set(signature, activeIndex);
+            } else {
+                packed.push({
+                    layer: row.layer,
+                    x: run[0].x,
+                    y: row.y,
+                    width: run.length,
+                    height: 1,
+                    gids: run.map(({ gid }) => gid),
+                });
+                nextActive.set(signature, packed.length - 1);
+            }
+            start = end;
+        }
+        active = nextActive;
+        previousLayer = row.layer;
+        previousY = row.y;
+    }
+    return packed;
+}
 
 export interface TeapotAppliedTilePatch {
     map: ITiledMap;

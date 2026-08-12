@@ -1,9 +1,18 @@
-import { getTileLayerGid, TeapotTilePatch, type TeapotTileRegion } from "@workadventure/map-editor";
+import {
+    compactTeapotTileRegions,
+    getTileLayerGid,
+    TeapotTilePatch,
+    type TeapotTileRegion,
+} from "@workadventure/map-editor";
 import type { ITiledMap, ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 
 export interface FloorEdit {
     forward: TeapotTilePatch;
     backward: TeapotTilePatch;
+}
+
+export function collapseTileRegions(regions: readonly TeapotTileRegion[]): TeapotTileRegion[] {
+    return compactTeapotTileRegions(regions);
 }
 
 export function createFloorEdit(map: ITiledMap, patch: TeapotTilePatch): FloorEdit | undefined {

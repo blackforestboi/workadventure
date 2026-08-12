@@ -1,8 +1,8 @@
 import {
+    compactTeapotTileRegions,
     forEachTileInLayer,
     GameMapProperties,
     getMapTileBounds,
-    containsOccupiedVisualTileDeletion,
     isAvatarSupportingTileLayerName,
     type TeapotTileRegion,
 } from "@workadventure/map-editor";
@@ -235,7 +235,7 @@ export function appendDefaultCollisionRegions(
             }
         }
     }
-    return [...regions, ...collisionRegions];
+    return compactTeapotTileRegions([...regions, ...collisionRegions]);
 }
 
 export function getCollisionOverlayCells(

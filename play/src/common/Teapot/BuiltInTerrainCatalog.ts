@@ -73,7 +73,12 @@ interface TerrainFamilyDefinition {
     autotile?: TerrainAutotileTiles;
 }
 
-const wangTileIds = (outer: TerrainAutotileTiles, innerCorners: readonly number[]): readonly number[] => [
+type TerrainAutotileOuterTiles = Omit<
+    TerrainAutotileTiles,
+    "innerTopLeft" | "innerTopRight" | "innerBottomLeft" | "innerBottomRight"
+>;
+
+const wangTileIds = (outer: TerrainAutotileOuterTiles, innerCorners: readonly number[]): readonly number[] => [
     ...innerCorners,
     outer.topLeft,
     outer.top,
@@ -119,6 +124,10 @@ const TERRAIN_FAMILIES: readonly TerrainFamilyDefinition[] = [
             bottomLeft: 128,
             bottom: 129,
             bottomRight: 130,
+            innerTopLeft: 34,
+            innerTopRight: 33,
+            innerBottomLeft: 2,
+            innerBottomRight: 1,
         },
         tileIds: wangTileIds(
             {
@@ -155,6 +164,10 @@ const TERRAIN_FAMILIES: readonly TerrainFamilyDefinition[] = [
             bottomLeft: 137,
             bottom: 138,
             bottomRight: 139,
+            innerTopLeft: 43,
+            innerTopRight: 42,
+            innerBottomLeft: 11,
+            innerBottomRight: 10,
         },
         tileIds: wangTileIds(
             {
@@ -211,6 +224,10 @@ const TERRAIN_FAMILIES: readonly TerrainFamilyDefinition[] = [
             bottomLeft: 320,
             bottom: 321,
             bottomRight: 322,
+            innerTopLeft: 226,
+            innerTopRight: 225,
+            innerBottomLeft: 194,
+            innerBottomRight: 193,
         },
         tileIds: wangTileIds(
             {
@@ -277,6 +294,10 @@ const TERRAIN_FAMILIES: readonly TerrainFamilyDefinition[] = [
             bottomLeft: 719,
             bottom: 720,
             bottomRight: 721,
+            innerTopLeft: 625,
+            innerTopRight: 624,
+            innerBottomLeft: 593,
+            innerBottomRight: 592,
         },
         tileIds: wangTileIds(
             {
@@ -412,6 +433,12 @@ export function getBuiltInTerrainTileIds(): readonly number[] {
 
 export function getBuiltInTerrainAsset(tileId: number): BuiltInTerrainAsset | undefined {
     return BUILT_IN_TERRAIN_ASSETS.find((asset) => asset.tileId === tileId);
+}
+
+/** Returns contour metadata only for a verified shape-ready terrain family. */
+export function getBuiltInTerrainAutotile(tileId: number): TerrainAutotileTiles | undefined {
+    return TERRAIN_FAMILIES.find((family) => family.autotile !== undefined && family.tileIds.includes(tileId))
+        ?.autotile;
 }
 
 export function searchBuiltInTerrainAssets(search: BuiltInTerrainSearch = {}): readonly BuiltInTerrainAsset[] {

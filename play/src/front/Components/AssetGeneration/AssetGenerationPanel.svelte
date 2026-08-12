@@ -198,7 +198,6 @@
             if (generated === undefined) throw new Error("The provider returned no image.");
             const normalized = await normalizeGeneratedRaster(generated.blob, generation.outputSize, {
                 removeOpaqueEdgeBackground: true,
-                fitMapObjectToGrid: target === "environment-object" && generation.animation === undefined,
             });
             if (candidateUrl !== "") URL.revokeObjectURL(candidateUrl);
             candidate = normalized;
@@ -383,7 +382,7 @@
                 ? " Create exactly one seamless top-down 2D floor or terrain texture that fills the entire image. Do not include furniture, props, gutters, text, borders, perspective scenery, or multiple tiles."
                 : generationTarget.startsWith("woka-") || generationTarget === "complete-woka"
                   ? ` Use the ${BRANDING.name} Woka sprite-sheet layout: four rows ordered down, left, right, up; three aligned frames per row; transparent background; no text, border, shadow, or scenery.`
-                  : " Isolate the object on a transparent background, using a readable top-down 2D game perspective and no text or border.";
+                  : " Isolate the object on one flat electric-magenta #FF00FF background, using a readable top-down 2D game perspective and no text or border. The #FF00FF matte must not appear anywhere on the object, including its outline, highlights, shadows, texture, reflections, or semi-transparent edges.";
         const animationRule =
             animation === undefined
                 ? ""
@@ -598,7 +597,7 @@
                 imageSource={candidateUrl}
                 imageAlt="Generated asset preview"
                 animation={candidateProvenance?.animation}
-                classNames="mx-auto h-[240px] w-[240px] max-w-full object-contain [image-rendering:pixelated]"
+                classNames={`mx-auto h-[240px] w-[240px] max-w-full object-contain ${outputSize?.pixelated === true ? "[image-rendering:pixelated]" : ""}`}
             />
             {#if stagedWoka && wokaStage === "idle-frame"}
                 <p class="mt-2 text-center text-xs text-white/70">
