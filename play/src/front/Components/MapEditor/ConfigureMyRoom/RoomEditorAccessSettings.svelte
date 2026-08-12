@@ -245,21 +245,13 @@
 
             <div class="overflow-x-auto rounded-lg border border-white/10">
                 <table class="w-full min-w-[42rem] border-collapse text-left text-sm">
-                    <thead class="bg-black/20">
-                        <tr>
-                            <th class="p-3">{$LL.mapEditor.settings.editorAccess.roleLabel()}</th>
-                            {#each modes as mode (mode)}
-                                <th class="p-3">{modeLabel(mode)}</th>
-                            {/each}
-                        </tr>
-                    </thead>
                     <tbody>
                         {#each roles as role (role)}
                             <tr class="border-t border-white/10 align-top">
-                                <th class="p-3 font-normal">
+                                <td class="bg-transparent p-3 font-normal text-inherit">
                                     <strong class="block">{roleLabel(role)}</strong>
                                     <span class="opacity-70">{roleDescription(role)}</span>
-                                </th>
+                                </td>
                                 {#each modes as mode (mode)}
                                     <td class="p-3">
                                         <label class="flex cursor-pointer items-center gap-2">
