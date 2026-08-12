@@ -17,7 +17,10 @@ describe("MapEditorMenuItem", () => {
 
     it("keeps login gating and exposes a creation loading state", () => {
         expect(mapEditorMenuItemSource).toContain('new CustomEvent("workadventure:open-login-overlay")');
+        expect(mapEditorMenuItemSource).toContain("if (!$mapEditorActivated && !requireLogin()) return;");
+        expect(mapEditorMenuItemSource).toContain("oncreatenew: localUserStore.isLogged() ? createNewWorld : undefined");
         expect(mapEditorWorldPickerSource).toContain("disabled={creatingWorld}");
+        expect(mapEditorWorldPickerSource).toContain("{#if oncreatenew !== undefined}");
         expect(mapEditorWorldPickerSource).toContain("$LL.actionbar.mapEditorCreating()");
         expect(mapEditorMenuItemSource).toContain("warningMessageStore.addWarningMessage");
     });

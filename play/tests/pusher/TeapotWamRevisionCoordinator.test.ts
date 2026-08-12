@@ -28,7 +28,7 @@ async function setup() {
 }
 
 describe("TeapotWamRevisionCoordinator", () => {
-    it("does not grant or execute map editing for guests", async () => {
+    it("allows a guest only when the legacy root-room policy grants edit access", async () => {
         const { coordinator, identity, identityResolver } = await setup();
         const join = {
             roomId: "https://play.test/~/world.wam",
@@ -38,8 +38,8 @@ describe("TeapotWamRevisionCoordinator", () => {
             isLogged: false,
         };
 
-        await expect(coordinator.resolveJoinAccess(join)).resolves.toMatchObject({ canEdit: false });
-        expect(identityResolver).toHaveBeenCalledWith(identity.id, false);
+        await expect(coordinator.resolveJoinAccess(join)).resolves.toMatchObject({ canEdit: true });
+        expect(identityResolver).toHaveBeenCalledWith(identity.id, true);
         await expect(
             coordinator.begin({
                 commandId: "guest-command",
@@ -48,7 +48,8 @@ describe("TeapotWamRevisionCoordinator", () => {
                 legacyCanEdit: true,
                 isLogged: false,
             }),
-        ).rejects.toThrow("Map editing requires login");
+        ).resolves.toBeUndefined();
+        await coordinator.acknowledgeFailure("guest-command");
     });
 
     it("holds the shared map lease until the durable WAM acknowledgement", async () => {

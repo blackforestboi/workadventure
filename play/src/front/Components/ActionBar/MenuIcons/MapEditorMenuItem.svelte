@@ -7,7 +7,7 @@
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import { isCalendarVisibleStore } from "../../../Stores/CalendarStore";
-    import { mapEditorModeStore, mapExplorationModeStore } from "../../../Stores/MapEditorStore";
+    import { mapEditorActivated, mapEditorModeStore, mapExplorationModeStore } from "../../../Stores/MapEditorStore";
     import { mapEditorMenuVisibleStore, openedMenuStore } from "../../../Stores/MenuStore";
     import { isTodoListVisibleStore } from "../../../Stores/TodoListStore";
     import { warningMessageStore } from "../../../Stores/ErrorStore";
@@ -64,7 +64,7 @@
     }
 
     function toggleWorldPicker(): void {
-        if (!requireLogin()) return;
+        if (!$mapEditorActivated && !requireLogin()) return;
         if (closeFloatingUi !== undefined) {
             closeWorldPicker();
             return;
@@ -77,7 +77,7 @@
             MapEditorWorldPicker,
             {
                 onthisworld: openThisWorld,
-                oncreatenew: createNewWorld,
+                oncreatenew: localUserStore.isLogged() ? createNewWorld : undefined,
                 onclose: closeWorldPicker,
             },
             { placement: "bottom-start" },

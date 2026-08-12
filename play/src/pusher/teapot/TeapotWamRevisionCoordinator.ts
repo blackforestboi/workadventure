@@ -127,10 +127,10 @@ export class TeapotWamRevisionCoordinator {
         if (input.actorIdentifier.trim().length === 0) {
             throw new TeapotAuthorizationError("Room access requires a stable user identity");
         }
-        const isLogged = input.isLogged !== false;
+        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit;
         const [mapId, identity] = await Promise.all([
             this.mapUrlResolver.resolve(input.roomId, input.authToken),
-            this.identityResolver(input.actorIdentifier, isLogged),
+            this.identityResolver(input.actorIdentifier, isAuthoringSession),
         ]);
         const dataServices = this.services();
         const joinAccess = {
@@ -142,7 +142,7 @@ export class TeapotWamRevisionCoordinator {
         };
         await dataServices.roomAccess.assertCanView(joinAccess);
         const [canEdit, canAdmin] = await Promise.all([
-            isLogged
+            isAuthoringSession
                 ? this.isAllowed(() =>
                       dataServices.roomAccess.assertCanEdit({
                           actorId: identity.id,
@@ -152,7 +152,7 @@ export class TeapotWamRevisionCoordinator {
                               successfulJoin: true,
                               legacyCanEdit: input.legacyCanEdit,
                               legacyCanAdmin: input.managementUiAccess,
-                              isLogged,
+                              isLogged: isAuthoringSession,
                           },
                       }),
                   )
@@ -172,7 +172,8 @@ export class TeapotWamRevisionCoordinator {
 
     public async begin(input: BeginWamMutationInput): Promise<void> {
         if (input.commandId.trim().length === 0) throw new Error("Map commands require a command ID");
-        if (input.isLogged === false) throw new TeapotAuthorizationError("Map editing requires login");
+        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit;
+        if (!isAuthoringSession) throw new TeapotAuthorizationError("Map editing requires login");
         const duplicate = this.pending.get(input.commandId);
         if (duplicate !== undefined) {
             if (duplicate.roomId !== input.roomId || duplicate.actorIdentifier !== input.actorIdentifier) {
@@ -209,7 +210,7 @@ export class TeapotWamRevisionCoordinator {
                     successfulJoin: true,
                     legacyCanEdit: input.legacyCanEdit,
                     legacyCanAdmin: input.legacyCanAdmin,
-                    isLogged: input.isLogged,
+                    isLogged: isAuthoringSession,
                 },
             });
         } catch (error: unknown) {

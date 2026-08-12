@@ -91,10 +91,11 @@ class LocalAdmin implements AdminInterface {
         let canRecord = false;
         const roomUrl = new URL(playUri);
         const match = /\/~\/(.+)/.exec(roomUrl.pathname);
+        const isRootRoom = roomUrl.pathname === new URL(START_ROOM_URL, roomUrl.origin).pathname;
         if (
             match &&
             ENABLE_MAP_EDITOR &&
-            (MAP_EDITOR_ALLOW_ALL_USERS ||
+            ((MAP_EDITOR_ALLOW_ALL_USERS && (accessToken !== undefined || isRootRoom)) ||
                 MAP_EDITOR_ALLOWED_USERS.includes(userIdentifier) ||
                 tags?.includes("admin") ||
                 tags?.includes("editor"))

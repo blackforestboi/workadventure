@@ -43,19 +43,21 @@
         <IconMapEditor class="h-5 w-5" />
         {$LL.actionbar.mapEditorThisWorld()}
     </button>
-    <button
-        type="button"
-        class="flex w-full items-center gap-2 rounded p-2 text-left text-sm font-semibold transition-colors hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
-        data-testid="map-editor-create-new"
-        disabled={creatingWorld}
-        onclick={createNewWorld}
-    >
-        {#if creatingWorld}
-            <IconLoader class="h-5 w-5 animate-spin" />
-            {$LL.actionbar.mapEditorCreating()}
-        {:else}
-            <IconPlus class="h-5 w-5" />
-            {$LL.actionbar.mapEditorCreateNew()}
-        {/if}
-    </button>
+    {#if oncreatenew !== undefined}
+        <button
+            type="button"
+            class="flex w-full items-center gap-2 rounded p-2 text-left text-sm font-semibold transition-colors hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
+            data-testid="map-editor-create-new"
+            disabled={creatingWorld}
+            onclick={createNewWorld}
+        >
+            {#if creatingWorld}
+                <IconLoader class="h-5 w-5 animate-spin" />
+                {$LL.actionbar.mapEditorCreating()}
+            {:else}
+                <IconPlus class="h-5 w-5" />
+                {$LL.actionbar.mapEditorCreateNew()}
+            {/if}
+        </button>
+    {/if}
 </nav>

@@ -471,7 +471,7 @@ export class IoSocketController {
                         throw new Error("User cannot access this world", { cause: e });
                     }
 
-                    const legacyCanEdit = isLogged && (userData.canEdit ?? false);
+                    const legacyCanEdit = userData.canEdit ?? false;
                     const legacyCanAdmin = memberTags.includes("admin");
                     try {
                         const roomAccess = await teapotWamRevisionCoordinator.resolveJoinAccess({
