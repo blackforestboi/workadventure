@@ -83,8 +83,8 @@ export class CustomEntityCollectionService {
                     tags,
                     depthOffset,
                     collisionGrid,
-                    animation,
-                    defaultSizeInTiles,
+                    animation: animation ?? entityToModify.animation,
+                    defaultSizeInTiles: defaultSizeInTiles ?? entityToModify.defaultSizeInTiles,
                 };
                 await fileSystem.writeStringAsFile(
                     this.getEntityCollectionFileVirtualPath(),

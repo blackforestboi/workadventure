@@ -16,7 +16,6 @@ if [ ! -e "$seed_marker" ]; then
     fi
 
     touch "$seed_marker"
-    chown -R node:node /maps
 fi
 
 # The original starter fixture is shared with local development and therefore
@@ -52,6 +51,13 @@ if [ ! -f "$entity_collection_file" ]; then
     printf '%s' '{"version":"1.0","collection":[],"collectionName":"custom entities","tags":[]}' > "$entity_collection_file"
     chown node:node "$entity_collection_file"
 fi
+
+# A persistent volume can outlive the image version that created it. In
+# particular, older backups or manual restores can leave generated entities
+# owned by root. The server runs as `node`, so repair this writable asset area
+# on every start instead of only during first-volume setup.
+mkdir -p /maps/assets/entities
+chown -R node:node /maps/assets/entities
 
 # Railway mounts a new persistent volume as root-owned. The bootstrap needs
 # that privilege, but the map-storage server must still run unprivileged.

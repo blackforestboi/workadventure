@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideation: Terrain Types Catalogue</title>
+  <style>
+    :root { --ink:#17251d; --muted:#526257; --paper:#f6f5ee; --card:#fffefa; --line:#d8ded5; --accent:#1e6b4d; --soft:#e6f1e9; --warm:#fff0d8; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { width:min(960px, calc(100% - 32px)); margin:0 auto; padding:44px 0 72px; }
+    header { border-bottom:1px solid var(--line); padding-bottom:26px; }
+    .eyebrow { color:var(--accent); font-size:.76rem; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }
+    h1 { font-size:clamp(2rem, 5vw, 3.2rem); line-height:1.1; margin:.2rem 0 .7rem; }
+    h2 { margin:42px 0 14px; font-size:1.45rem; }
+    h3 { margin:0; font-size:1.1rem; }
+    p { max-width:74ch; }
+    .meta, .stats { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .chip { display:inline-block; padding:4px 9px; border:1px solid #b8d5c1; border-radius:999px; background:var(--soft); color:#195138; font-size:.8rem; font-weight:700; }
+    nav { margin:22px 0; padding:14px 16px; border:1px solid var(--line); background:var(--card); border-radius:12px; }
+    nav a { color:var(--accent); text-decoration:none; font-weight:700; margin-right:14px; white-space:nowrap; }
+    .note { padding:14px 16px; border-radius:12px; background:var(--warm); color:#5c430d; }
+    article { margin:18px 0; padding:20px; border:1px solid var(--line); border-radius:14px; background:var(--card); }
+    dl { display:grid; grid-template-columns:130px 1fr; gap:6px 16px; margin:14px 0 0; }
+    dt { color:var(--muted); font-size:.8rem; font-weight:800; letter-spacing:.07em; }
+    dd { margin:0; }
+    .terrain-list { columns:3 15rem; column-gap:28px; padding-left:20px; }
+    .terrain-list li { break-inside:avoid; margin:2px 0; }
+    table { width:100%; border-collapse:collapse; background:var(--card); }
+    th, td { padding:9px 10px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); }
+    th { font-size:.8rem; letter-spacing:.06em; color:var(--muted); }
+    code { padding:1px 4px; border-radius:4px; background:#edf0e9; }
+    footer { margin-top:52px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:.9rem; }
+    @media (max-width:600px) { main { width:min(100% - 24px, 960px); padding-top:28px; } dl { grid-template-columns:1fr; gap:2px; } dd { margin-bottom:9px; } .terrain-list { columns:1; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Terrain library</div>
+    <h1>Terrain Types Catalogue</h1>
+    <p>A comprehensive, tile-set-ready palette for a WorkAdventure-style world. The practical model is <strong>base surface + state overlay + traversal tag + elevation/layer</strong>, which gives map makers variety without creating a near-duplicate tile for every weather condition.</p>
+    <div class="meta"><span>Date: <time datetime="2026-08-12">2026-08-12</time></span><span>Topic: terrain-types-catalogue</span><span>Mode: repo-grounded</span></div>
+    <div class="stats"><span class="chip">~150 base surfaces</span><span class="chip">16 reusable states</span><span class="chip">8 traversal tags</span></div>
+  </header>
+
+  <nav aria-label="Contents"><a href="#grounding-context">Grounding Context</a><a href="#topic-axes">Topic Axes</a><a href="#ranked-ideas">Catalogue</a><a href="#rejection-summary">Guardrails</a></nav>
+
+  <section id="grounding-context">
+    <h2>Grounding Context</h2>
+    <p>WorkAdventure maps are orthogonal 32×32-pixel tile maps. They support transparent tiles for material transitions, multiple visual layers, and a per-tile <code>collides</code> flag. That supports a palette in which a shoreline, cliff edge, or hazardous ground is visually distinct and mechanically tagged without confusing it with a prop.</p>
+    <p class="note"><strong>Terminology:</strong> terrain is a navigable surface; a prop is a discrete object placed on it (tree, boulder, bench, crate, fence); a biome is a themed combination of terrain, props, lighting, weather, and sound (for example, “haunted swamp”).</p>
+  </section>
+
+  <section id="topic-axes">
+    <h2>Topic Axes</h2>
+    <ul>
+      <li>Natural ground and vegetation cover</li>
+      <li>Water, wet ground, and shorelines</li>
+      <li>Rock, elevation, and subterranean ground</li>
+      <li>Built, civic, and interior surfaces</li>
+      <li>Hazardous, fantastical, and science-fiction surfaces</li>
+    </ul>
+  </section>
+
+  <section id="ranked-ideas">
+    <h2>Ranked Ideas</h2>
+    <p>These are ordered by the most generally useful sets to create first, not by aesthetic preference. Entries are deliberately surfaces, not scenery.</p>
+    <div class="note"><strong>Traversal tags:</strong> <code>W</code> walkable, <code>S</code> slow, <code>B</code> blocked, <code>SW</code> swimmable, <code>CL</code> climbable or one-way slope, <code>H</code> hazardous, <code>C</code> conditional, <code>I</code> interactive/scriptable.</div>
+
+    <article id="idea-1"><h3>1. Natural ground and low vegetation</h3>
+      <ul class="terrain-list">
+        <li>Short turf</li><li>Tall grass</li><li>Wildflower meadow</li><li>Prairie sod</li><li>Steppe grass</li><li>Savanna grass</li><li>Heather moor</li><li>Moss-and-lichen ground</li><li>Forest floor</li><li>Leaf litter</li><li>Pine needles</li><li>Packed earth</li><li>Loose earth</li><li>Hardpan</li><li>Cracked earth</li><li>Clay pan</li><li>Peat ground</li><li>Loam</li><li>Fine sand</li><li>Coarse sand</li><li>Dune sand</li><li>Shingle beach</li><li>Gravel</li><li>Pebble field</li><li>Salt flat</li><li>Badlands soil</li><li>Farm soil</li><li>Pasture</li><li>Orchard ground</li><li>Vineyard rows</li><li>Rice paddy</li><li>Reed bed</li><li>Sedge meadow</li><li>Dry scrub</li><li>Thorn scrub</li><li>Chaparral ground</li><li>Bracken ground</li><li>Fern understory</li><li>Bamboo-grove ground</li><li>Jungle understory</li>
+      </ul>
+      <dl><dt>Axis</dt><dd>Natural ground and vegetation cover</dd><dt>Basis</dt><dd><code>direct:</code> Map tiles can use transparency for material transitions; vegetation remains an overlay or prop unless it changes passage.</dd><dt>Rationale</dt><dd>These cover familiar outdoor scenes while giving each surface a visible and/or mechanical role.</dd><dt>Downsides</dt><dd>Dense vegetation needs clear collision and occlusion conventions.</dd><dt>Confidence</dt><dd>95%</dd><dt>Complexity</dt><dd>Medium</dd></dl>
+    </article>
+
+    <article id="idea-2"><h3>2. Water, wetlands, and coastal ground</h3>
+      <ul class="terrain-list">
+        <li>Puddle</li><li>Shallow stream</li><li>Deep stream</li><li>River ford</li><li>River channel</li><li>Rapids</li><li>Waterfall lip</li><li>Pond</li><li>Vernal pool</li><li>Lake shallows</li><li>Lake depths</li><li>Reservoir</li><li>Canal water</li><li>Coastal shallows</li><li>Open sea</li><li>Tidal flat</li><li>Tidal creek</li><li>Tide pool</li><li>Lagoon</li><li>Estuary</li><li>River delta</li><li>Coral reef</li><li>Seagrass bed</li><li>Kelp bed</li><li>Freshwater marsh</li><li>Salt marsh</li><li>Swamp water</li><li>Bog pool</li><li>Fen</li><li>Mudflat</li><li>Muddy riverbank</li><li>Flooded grassland</li><li>Flooded forest</li><li>Mangrove mud</li>
+      </ul>
+      <dl><dt>Axis</dt><dd>Water, wet ground, and shorelines</dd><dt>Basis</dt><dd><code>reasoned:</code> Shallow/deep and still/flowing distinctions are needed to make crossing, swimming, currents, and shore transitions unambiguous.</dd><dt>Rationale</dt><dd>Water is a dominant map boundary and deserves more than one generic blue tile.</dd><dt>Downsides</dt><dd>Animated water and edge transitions increase art cost.</dd><dt>Confidence</dt><dd>94%</dd><dt>Complexity</dt><dd>Medium</dd></dl>
+    </article>
+
+    <article id="idea-3"><h3>3. Rock, elevation, volcanic, and underground surfaces</h3>
+      <ul class="terrain-list">
+        <li>Smooth bedrock</li><li>Rock slab</li><li>Slick rock</li><li>Fractured rock</li><li>Granite slab</li><li>Sandstone shelf</li><li>Limestone pavement</li><li>Basalt plain</li><li>Obsidian field</li><li>Rock outcrop</li><li>Boulder field</li><li>Scree slope</li><li>Talus fan</li><li>Glacial moraine</li><li>Mountain slope</li><li>Hill crest</li><li>Plateau top</li><li>Mesa top</li><li>Valley floor</li><li>Canyon floor</li><li>Gorge floor</li><li>Ravine floor</li><li>Karst sinkhole</li><li>Volcanic ash</li><li>Cinder field</li><li>Lava crust</li><li>Molten lava</li><li>Geothermal basin</li><li>Geyser field</li><li>Travertine terrace</li><li>Natural cave floor</li><li>Limestone cavern</li><li>Basalt cavern</li><li>Crystal cavern floor</li><li>Volcanic tube</li><li>Grotto sand</li><li>Dripstone chamber</li><li>Root-choked tunnel</li><li>Deep chasm ledge</li>
+      </ul>
+      <dl><dt>Axis</dt><dd>Rock, elevation, and subterranean ground</dd><dt>Basis</dt><dd><code>direct:</code> WorkAdventure renders multiple layers around a floor layer, allowing terrain below characters and cliff/wall art above them.</dd><dt>Rationale</dt><dd>Elevation needs surface tiles plus an explicit elevation/edge rule; art alone cannot determine one-way descents, falling, bridges, or underpasses.</dd><dt>Downsides</dt><dd>Requires a consistent height convention across tilesets.</dd><dt>Confidence</dt><dd>92%</dd><dt>Complexity</dt><dd>High</dd></dl>
+    </article>
+
+    <article id="idea-4"><h3>4. Built, civic, industrial, and interior surfaces</h3>
+      <ul class="terrain-list">
+        <li>Dirt trail</li><li>Gravel lane</li><li>Cobblestone street</li><li>Flagstone path</li><li>Brick pavement</li><li>Asphalt road</li><li>Road shoulder</li><li>Rail bed</li><li>Station platform</li><li>Boardwalk planks</li><li>Wooden bridge deck</li><li>Stone bridge deck</li><li>Metal catwalk</li><li>Steel grating</li><li>Sewer walkway</li><li>Sewer channel bed</li><li>Rooftop tar</li><li>Rooftop tiles</li><li>Courtyard mosaic</li><li>Marble floor</li><li>Stone floor</li><li>Wood-plank floor</li><li>Ceramic tile</li><li>Carpet</li><li>Rough concrete</li><li>Polished concrete</li><li>Factory floor</li><li>Warehouse floor</li><li>Spaceship hull plating</li><li>Terraforming mesh</li><li>Nanite-metal ground</li>
+      </ul>
+      <dl><dt>Axis</dt><dd>Built, civic, and interior surfaces</dd><dt>Basis</dt><dd><code>direct:</code> The existing product is used for collaborative virtual worlds, including offices, onboarding, training, and events.</dd><dt>Rationale</dt><dd>Built surfaces make the terrain palette useful for social maps as well as adventure maps.</dd><dt>Downsides</dt><dd>Tracks, bridges, stairs, walls, doors, and furniture must stay separate when they are discrete structures rather than the floor itself.</dd><dt>Confidence</dt><dd>93%</dd><dt>Complexity</dt><dd>Medium</dd></dl>
+    </article>
+
+    <article id="idea-5"><h3>5. Snow, ice, hazards, and damaged ground</h3>
+      <ul class="terrain-list">
+        <li>Packed snow</li><li>Powder snow</li><li>Wind-scoured snow</li><li>Slush</li><li>Sheet ice</li><li>Frozen lake</li><li>Glacier ice</li><li>Sea ice</li><li>Crevasse rim</li><li>Avalanche debris</li><li>Landslide debris</li><li>Quicksand</li><li>Deep mud</li><li>Tar pit</li><li>Acid-pool edge</li><li>Toxic sludge</li><li>Radioactive waste ground</li><li>Burning coals</li><li>Scorched earth</li><li>Siege-scorched paving</li><li>Razor-rock field</li><li>Thorny bramble ground</li><li>Electrified floor</li><li>Void/chasm</li>
+      </ul>
+      <dl><dt>Axis</dt><dd>Hazardous and stateful ground</dd><dt>Basis</dt><dd><code>reasoned:</code> A visual surface should not imply a rule by itself: slow, damaging, slippery, blocked, and conditional need reusable mechanics tags.</dd><dt>Rationale</dt><dd>This enables danger and seasonal variety without duplicating every ordinary surface.</dd><dt>Downsides</dt><dd>Accessibility requires clear visual language for hazards.</dd><dt>Confidence</dt><dd>91%</dd><dt>Complexity</dt><dd>Medium</dd></dl>
+    </article>
+
+    <article id="idea-6"><h3>6. Ruins, fantasy, and otherworldly ground</h3>
+      <ul class="terrain-list">
+        <li>Broken flagstones</li><li>Overgrown paving</li><li>Collapsed masonry</li><li>Sunken courtyard</li><li>Weathered temple floor</li><li>Carved stone dais</li><li>Ancient road</li><li>Mosaic ruin</li><li>Crumbling brickwork</li><li>Rubble field</li><li>Shattered marble</li><li>Archaeological trench</li><li>Buried city street</li><li>Forgotten shrine floor</li><li>Catacomb floor</li><li>Crypt floor</li><li>Ossuary floor</li><li>Glowing mushroom floor</li><li>Bioluminescent moss</li><li>Fairy-ring grass</li><li>Enchanted flower field</li><li>Corrupted blight</li><li>Bone field</li><li>Blood-soaked earth</li><li>Shadow-mist floor</li><li>Dream-cloud surface</li><li>Starfield void</li><li>Floating-island soil</li><li>Aether crystal plain</li><li>Mana-veined stone</li><li>Arcane rune floor</li><li>Portal residue ground</li><li>Alien biomass</li><li>Iridescent alien sand</li><li>Zero-gravity platform</li>
+      </ul>
+      <dl><dt>Axis</dt><dd>Hazardous, fantastical, and science-fiction surfaces</dd><dt>Basis</dt><dd><code>reasoned:</code> These are useful surface archetypes because they change the navigable world itself, not merely its decoration.</dd><dt>Rationale</dt><dd>They let a shared terrain framework support fantasy, horror, and science-fiction maps.</dd><dt>Downsides</dt><dd>Style packs should remain opt-in; a default palette should start more neutral.</dd><dt>Confidence</dt><dd>88%</dd><dt>Complexity</dt><dd>High</dd></dl>
+    </article>
+
+    <article id="idea-7"><h3>7. Reusable states, transitions, and mechanics</h3>
+      <p><strong>State overlays:</strong> lush; dry; damp; wet/puddled; muddy; flooded; frosted; snow-dusted; snow-covered; ice-coated; leaf-covered; overgrown; burned/charred; contaminated; cracked; rubble-strewn.</p>
+      <p><strong>Transition tiles:</strong> create edges, corners, and directional variants for shorelines, wet-to-dry ground, sand-to-grass, path-to-ground, rock-to-soil, cliffs, walls, and bridges. These are variants of their adjoining surfaces, not new terrain families.</p>
+      <dl><dt>Axis</dt><dd>All axes</dd><dt>Basis</dt><dd><code>direct:</code> Tile transparency supports visual transitions; tile collision is an explicit per-tile property.</dd><dt>Rationale</dt><dd>Composability controls asset growth and makes a single palette work across seasons and story states.</dd><dt>Downsides</dt><dd>Requires a small, documented tag vocabulary and careful editor UX.</dd><dt>Confidence</dt><dd>98%</dd><dt>Complexity</dt><dd>Medium</dd></dl>
+    </article>
+  </section>
+
+  <section id="rejection-summary">
+    <h2>Rejection Summary</h2>
+    <table><thead><tr><th>Considered type</th><th>Decision</th></tr></thead><tbody>
+      <tr><td>Forest, jungle, desert, tundra, city, cave, ruins</td><td>Biome/palette, not a terrain type; build each from surface, props, ambience, and overlays.</td></tr>
+      <tr><td>Trees, bushes, flowers, crops, mushrooms, roots, boulders, crates, fences, buildings, vehicles</td><td>Props or structures; use collision, layering, and interaction data where needed.</td></tr>
+      <tr><td>Snowy grass, wet grass, burned grass, mossy stone, cracked concrete</td><td>State/detail overlays on a base terrain, unless their mechanics differ materially.</td></tr>
+      <tr><td>Slippery, damaging, slow, swimmable, climbable, one-way, conveyor/current, opaque, blocked</td><td>Traversal/mechanics tags, not terrain variants.</td></tr>
+      <tr><td>Walls, doors, stairs, rail tracks, bridges</td><td>Structures unless the floor tile itself determines passage; bridges and stairs additionally require explicit elevation/layer behavior.</td></tr>
+    </tbody></table>
+  </section>
+
+  <footer class="composition-signal">Composed 2026-08-12T00:00Z by ce-ideate from the user prompt and local WorkAdventure map documentation.</footer>
+</main>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { createCenteredMap } from "@workadventure/map-editor";
 import { ITiledMap } from "@workadventure/tiled-map-type-guard";
 
 import {
@@ -11,7 +12,6 @@ import {
 import { getTeapotDataServices } from "./TeapotDataRuntime";
 
 const WORLD_SIZE = 9;
-const WORLD_ORIGIN = -Math.floor(WORLD_SIZE / 2);
 const GROUND_GID = 1;
 const ENTRY_GID = 2;
 const EXIT_GID = 3;
@@ -132,9 +132,11 @@ export class TeapotWorldCreationService {
 }
 
 export function createBlankInfiniteWorldTemplate(sourceRoomUrl: string | undefined, playUrl: string) {
-    const ground = Array.from({ length: WORLD_SIZE * WORLD_SIZE }, () => GROUND_GID);
+    const floor = Array.from({ length: WORLD_SIZE * WORLD_SIZE }, () => GROUND_GID);
     const entry = Array.from({ length: WORLD_SIZE * WORLD_SIZE }, () => 0);
     const exit = Array.from({ length: WORLD_SIZE * WORLD_SIZE }, () => 0);
+    const collisions = Array.from({ length: WORLD_SIZE * WORLD_SIZE }, () => 0);
+    const walls = Array.from({ length: WORLD_SIZE * WORLD_SIZE }, () => 0);
     entry[Math.floor(WORLD_SIZE / 2) * WORLD_SIZE + 2] = ENTRY_GID;
     exit[Math.floor(WORLD_SIZE / 2) * WORLD_SIZE + WORLD_SIZE - 3] = EXIT_GID;
 
@@ -146,96 +148,92 @@ export function createBlankInfiniteWorldTemplate(sourceRoomUrl: string | undefin
         height: WORLD_SIZE,
         x: 0,
         y: 0,
-        startx: WORLD_ORIGIN,
-        starty: WORLD_ORIGIN,
         offsetx: 0,
         offsety: 0,
         opacity: 1,
         visible: true,
-        data: [],
-        chunks: [{ x: WORLD_ORIGIN, y: WORLD_ORIGIN, width: WORLD_SIZE, height: WORLD_SIZE, data }],
+        data,
         ...(properties === undefined ? {} : { properties }),
     });
 
-    const map = ITiledMap.parse({
-        compressionlevel: -1,
-        height: WORLD_SIZE,
-        width: WORLD_SIZE,
-        infinite: true,
-        nextlayerid: 5,
-        nextobjectid: 1,
-        orientation: "orthogonal",
-        renderorder: "right-down",
-        tiledversion: "1.9.2",
-        tileheight: 32,
-        tilewidth: 32,
-        type: "map",
-        version: "1.9",
-        properties: [
-            { name: "workadventure:coordinateSystem", type: "string", value: "centered-v1" },
-            { name: "workadventure:chunkOriginX", type: "int", value: WORLD_ORIGIN },
-            { name: "workadventure:chunkOriginY", type: "int", value: WORLD_ORIGIN },
-            { name: "workadventure:tileOffsetX", type: "float", value: 0 },
-            { name: "workadventure:tileOffsetY", type: "float", value: 0 },
-        ],
-        layers: [
-            layer(1, "ground", ground),
-            layer(2, "start", entry),
-            layer(
-                3,
-                "exit",
-                exit,
-                sourceRoomUrl === undefined ? undefined : [{ name: "exitUrl", type: "string", value: sourceRoomUrl }],
-            ),
-            {
-                id: 4,
-                name: "floorLayer",
-                type: "objectgroup",
-                draworder: "topdown",
-                opacity: 1,
-                visible: true,
-                x: 0,
-                y: 0,
-                objects: [],
-            },
-        ],
-        tilesets: [
-            {
-                firstgid: GROUND_GID,
-                name: "Basic dirt",
-                image: "../assets/dirt.png",
-                imagewidth: 32,
-                imageheight: 32,
-                tilewidth: 32,
-                tileheight: 32,
-                tilecount: 1,
-                columns: 1,
-                margin: 0,
-                spacing: 0,
-                properties: [
-                    {
-                        name: "tilesetCopyright",
-                        type: "string",
-                        value: "Liberated Pixel Cup terrain assets (CC BY-SA 3.0 / GPL 3.0)",
-                    },
-                ],
-            },
-            {
-                firstgid: ENTRY_GID,
-                name: "Entry and exit",
-                image: "../assets/entry-exit.png",
-                imagewidth: 64,
-                imageheight: 32,
-                tilewidth: 32,
-                tileheight: 32,
-                tilecount: 2,
-                columns: 2,
-                margin: 0,
-                spacing: 0,
-                tiles: [{ id: 0, properties: [{ name: "start", type: "bool", value: true }] }],
-            },
-        ],
-    });
+    const map = createCenteredMap(
+        ITiledMap.parse({
+            compressionlevel: -1,
+            height: WORLD_SIZE,
+            width: WORLD_SIZE,
+            infinite: false,
+            nextlayerid: 7,
+            nextobjectid: 1,
+            orientation: "orthogonal",
+            renderorder: "right-down",
+            tiledversion: "1.9.2",
+            tileheight: 32,
+            tilewidth: 32,
+            type: "map",
+            version: "1.9",
+            layers: [
+                layer(1, "floor", floor),
+                layer(2, "start", entry),
+                layer(
+                    3,
+                    "exit",
+                    exit,
+                    sourceRoomUrl === undefined
+                        ? undefined
+                        : [{ name: "exitUrl", type: "string", value: sourceRoomUrl }],
+                ),
+                layer(4, "collisions", collisions),
+                layer(5, "walls", walls),
+                {
+                    id: 6,
+                    name: "floorLayer",
+                    type: "objectgroup",
+                    draworder: "topdown",
+                    opacity: 1,
+                    visible: true,
+                    x: 0,
+                    y: 0,
+                    objects: [],
+                },
+            ],
+            tilesets: [
+                {
+                    firstgid: GROUND_GID,
+                    name: "Basic dirt",
+                    image: "../assets/dirt.png",
+                    imagewidth: 32,
+                    imageheight: 32,
+                    tilewidth: 32,
+                    tileheight: 32,
+                    tilecount: 1,
+                    columns: 1,
+                    margin: 0,
+                    spacing: 0,
+                    properties: [
+                        {
+                            name: "tilesetCopyright",
+                            type: "string",
+                            value: "Liberated Pixel Cup terrain assets (CC BY-SA 3.0 / GPL 3.0)",
+                        },
+                    ],
+                },
+                {
+                    firstgid: ENTRY_GID,
+                    name: "Entry and exit",
+                    image: "../assets/entry-exit.png",
+                    imagewidth: 64,
+                    imageheight: 32,
+                    tilewidth: 32,
+                    tileheight: 32,
+                    tilecount: 2,
+                    columns: 2,
+                    margin: 0,
+                    spacing: 0,
+                    tiles: [{ id: 0, properties: [{ name: "start", type: "bool", value: true }] }],
+                },
+            ],
+        }),
+    );
 
     const playBase = new URL(playUrl);
     const wam = {

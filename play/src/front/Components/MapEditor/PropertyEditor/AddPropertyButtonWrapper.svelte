@@ -262,12 +262,10 @@
 {#if property === "openWebsite" && subProperty === "klaxoon"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.klaxoon.label()}
-        descriptionText={applicationManager.klaxoonToolActivated
-            ? $LL.mapEditor.properties.klaxoon.description()
-            : $LL.mapEditor.properties.klaxoon.disabled()}
+        descriptionText={$LL.mapEditor.properties.klaxoon.description()}
         img={klaxoonSvg}
         style={`z-index: 170;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.klaxoonToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -277,12 +275,10 @@
 {#if property === "openWebsite" && subProperty === "youtube"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.youtube.label()}
-        descriptionText={applicationManager.youtubeToolActivated
-            ? $LL.mapEditor.properties.youtube.description()
-            : $LL.mapEditor.properties.youtube.disabled()}
+        descriptionText={$LL.mapEditor.properties.youtube.description()}
         img={youtubeSvg}
         style={`z-index: 160;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.youtubeToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -292,12 +288,10 @@
 {#if property === "openWebsite" && subProperty === "googleDrive"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.googleDrive.label()}
-        descriptionText={applicationManager.googleDriveToolActivated
-            ? $LL.mapEditor.properties.googleDrive.description()
-            : $LL.mapEditor.properties.googleDrive.disabled()}
+        descriptionText={$LL.mapEditor.properties.googleDrive.description()}
         img={googleDriveSvg}
         style={`z-index: 150;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.googleDriveToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -307,12 +301,10 @@
 {#if property === "openWebsite" && subProperty === "googleDocs"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.googleDocs.label()}
-        descriptionText={applicationManager.googleDocsToolActivated
-            ? $LL.mapEditor.properties.googleDocs.description()
-            : $LL.mapEditor.properties.googleDocs.disabled()}
+        descriptionText={$LL.mapEditor.properties.googleDocs.description()}
         img={googleDocsSvg}
         style={`z-index: 140;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.googleDocsToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -322,12 +314,10 @@
 {#if property === "openWebsite" && subProperty === "googleSheets"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.googleSheets.label()}
-        descriptionText={applicationManager.googleSheetsToolActivated
-            ? $LL.mapEditor.properties.googleSheets.description()
-            : $LL.mapEditor.properties.googleSheets.disabled()}
+        descriptionText={$LL.mapEditor.properties.googleSheets.description()}
         img={googleSheetsSvg}
         style={`z-index: 130;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.googleSheetsToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -337,12 +327,10 @@
 {#if property === "openWebsite" && subProperty === "googleSlides"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.googleSlides.label()}
-        descriptionText={applicationManager.googleSlidesToolActivated
-            ? $LL.mapEditor.properties.googleSlides.description()
-            : $LL.mapEditor.properties.googleSlides.disabled()}
+        descriptionText={$LL.mapEditor.properties.googleSlides.description()}
         img={googleSlidesSvg}
         style={`z-index: 120;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.googleSlidesToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -352,12 +340,10 @@
 {#if property === "openWebsite" && subProperty === "eraser"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.eraser.label()}
-        descriptionText={applicationManager.eraserToolActivated
-            ? $LL.mapEditor.properties.eraser.description()
-            : $LL.mapEditor.properties.eraser.disabled()}
+        descriptionText={$LL.mapEditor.properties.eraser.description()}
         img={eraserSvg}
         style={`z-index: 110;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.eraserToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -368,12 +354,10 @@
 {#if property === "openWebsite" && subProperty === "excalidraw"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.excalidraw.label()}
-        descriptionText={applicationManager.excalidrawToolActivated
-            ? $LL.mapEditor.properties.excalidraw.description()
-            : $LL.mapEditor.properties.excalidraw.disabled()}
+        descriptionText={$LL.mapEditor.properties.excalidraw.description()}
         img={excalidrawSvg}
         style={`z-index: 100;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.excalidrawToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -384,12 +368,10 @@
 {#if property === "openWebsite" && subProperty === "cards"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.cards.label()}
-        descriptionText={applicationManager.cardsToolActivated
-            ? $LL.mapEditor.properties.cards.description()
-            : $LL.mapEditor.properties.cards.disabled()}
+        descriptionText={$LL.mapEditor.properties.cards.description()}
         img={cardsPng}
         style={`z-index: 100;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.cardsToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}
@@ -400,12 +382,10 @@
 {#if property === "openWebsite" && subProperty === "tldraw"}
     <AddPropertyButton
         headerText={$LL.mapEditor.properties.tldraw.label()}
-        descriptionText={applicationManager.tldrawToolActivated
-            ? $LL.mapEditor.properties.tldraw.description()
-            : $LL.mapEditor.properties.tldraw.disabled()}
+        descriptionText={$LL.mapEditor.properties.tldraw.description()}
         img={tldrawsJpeg}
         style={`z-index: 100;${isActive ? "background-color: #4156f6;" : ""}`}
-        disabled={!applicationManager.tldrawToolActivated || disabled}
+        {disabled}
         onclick={(event) => {
             onclick?.(event);
         }}

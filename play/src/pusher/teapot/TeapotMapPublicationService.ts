@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { isCenteredMap } from "@workadventure/map-editor";
 import { ITiledMap } from "@workadventure/tiled-map-type-guard";
 
 import {
@@ -31,7 +32,7 @@ export class TeapotMapPublicationService {
         if (!response.ok) throw new TeapotMapPublicationError("The current map could not be read", 502);
         const parsedMap = ITiledMap.safeParse(await response.json());
         if (!parsedMap.success) throw new TeapotMapPublicationError("The current map is not valid TMJ", 502);
-        this.assertSupportedProfile(parsedMap.data);
+        assertTeapotMapPublicationProfile(parsedMap.data);
         return parsedMap.data;
     }
 
@@ -63,7 +64,7 @@ export class TeapotMapPublicationService {
     }): Promise<TeapotMapPublicationResult> {
         const parsedMap = ITiledMap.safeParse(input.map);
         if (!parsedMap.success) throw new TeapotMapPublicationError("The submitted TMJ is invalid", 400);
-        this.assertSupportedProfile(parsedMap.data);
+        assertTeapotMapPublicationProfile(parsedMap.data);
         const content = JSON.stringify(parsedMap.data);
         if (Buffer.byteLength(content) > MAX_TMJ_BYTES) {
             throw new TeapotMapPublicationError("The submitted TMJ is too large", 413);
@@ -94,6 +95,8 @@ export class TeapotMapPublicationService {
                         );
                     }
                     const original = await originalResponse.text();
+                    const parsedOriginalMap = parseStoredMap(original);
+                    assertTeapotMapSchemaTransition(parsedOriginalMap, parsedMap.data);
                     originalForCompensation = original;
                     const originalChecksum = digest(original);
                     const revisionPath = `/.teapot-revisions/${digest(input.mapUrl).slice(0, 24)}/revision-${input.expectedRevision}-${originalChecksum.slice(0, 16)}.tmj`;
@@ -141,15 +144,6 @@ export class TeapotMapPublicationService {
         }
 
         return { ...committed.value, revision: committed.revision };
-    }
-
-    private assertSupportedProfile(map: ITiledMap): void {
-        if (map.orientation !== "orthogonal" || map.infinite === true) {
-            throw new TeapotMapPublicationError("Only finite orthogonal maps can be published", 400);
-        }
-        if (map.tilesets.some((tileset) => "source" in tileset || !("image" in tileset))) {
-            throw new TeapotMapPublicationError("Every tileset must be embedded and use one raster image", 400);
-        }
     }
 
     private resolveMapStorageTarget(mapUrl: string): {
@@ -217,6 +211,25 @@ export class TeapotMapPublicationService {
     }
 }
 
+export function assertTeapotMapPublicationProfile(map: ITiledMap): void {
+    if (map.orientation !== "orthogonal" || (map.infinite === true && !isCenteredMap(map))) {
+        throw new TeapotMapPublicationError("Only finite or centered infinite orthogonal maps can be published", 400);
+    }
+    if (map.tilesets.some((tileset) => "source" in tileset || !("image" in tileset))) {
+        throw new TeapotMapPublicationError("Every tileset must be embedded and use one raster image", 400);
+    }
+}
+
+/** A map created in the centered authoring profile must retain that profile on every subsequent save. */
+export function assertTeapotMapSchemaTransition(currentMap: ITiledMap, submittedMap: ITiledMap): void {
+    if (isCenteredInfiniteMap(currentMap) && !isCenteredInfiniteMap(submittedMap)) {
+        throw new TeapotMapPublicationError(
+            "A centered infinite map must remain centered and infinite when published",
+            400,
+        );
+    }
+}
+
 export class TeapotMapPublicationError extends Error {
     public constructor(
         message: string,
@@ -229,6 +242,20 @@ export class TeapotMapPublicationError extends Error {
 
 function digest(content: string): string {
     return createHash("sha256").update(content).digest("hex");
+}
+
+function isCenteredInfiniteMap(map: ITiledMap): boolean {
+    return map.infinite === true && isCenteredMap(map);
+}
+
+function parseStoredMap(content: string): ITiledMap {
+    try {
+        const parsedMap = ITiledMap.safeParse(JSON.parse(content));
+        if (parsedMap.success) return parsedMap.data;
+    } catch {
+        // Handled by the common error below.
+    }
+    throw new TeapotMapPublicationError("The current map is not valid TMJ", 502);
 }
 
 export const teapotMapPublicationService = new TeapotMapPublicationService();

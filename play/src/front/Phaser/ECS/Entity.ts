@@ -26,6 +26,7 @@ import { SpeechDomElement } from "../Entity/SpeechDomElement";
 import LL from "../../../i18n/i18n-svelte";
 import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
 import { reverseEntityCollisionGrid, scaleEntityCollisionGrid } from "../Game/MapEditor/Entities/EntityCollisionGrid";
+import { getEntityDisplaySize } from "../../Utils/EntityPrefabSize";
 
 import Sprite = Phaser.GameObjects.Sprite;
 import Graphics = Phaser.GameObjects.Graphics;
@@ -264,13 +265,30 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
         return reverseEntityCollisionGrid(this.getCollisionGrid());
     }
 
-    public updatePrefabMetadata(collisionGrid: number[][] | undefined, depthOffset: number | undefined): void {
+    public updatePrefabMetadata(
+        metadata: Pick<EntityPrefab, "name" | "tags"> &
+            Partial<Pick<EntityPrefab, "animation" | "collisionGrid" | "defaultSizeInTiles" | "depthOffset">>,
+    ): void {
+        const previousSizeInTiles = this.prefab.defaultSizeInTiles;
         this.prefab = {
             ...this.prefab,
-            collisionGrid,
-            depthOffset,
+            ...metadata,
         };
-        this.setDepth(this.y + this.displayHeight + (depthOffset ?? 0));
+
+        if (
+            metadata.defaultSizeInTiles !== undefined &&
+            metadata.defaultSizeInTiles !== previousSizeInTiles &&
+            this.width > 0 &&
+            this.height > 0
+        ) {
+            const displaySize = getEntityDisplaySize(this.width, this.height, metadata.defaultSizeInTiles);
+            this.entityData.width = displaySize.width;
+            this.entityData.height = displaySize.height;
+            this.setDisplaySize(displaySize.width, displaySize.height);
+            this.updateDebugActivationZone();
+        }
+
+        this.setDepth(this.y + this.displayHeight + (this.prefab.depthOffset ?? 0));
     }
 
     public setFollowOutlineColor(color: number): void {

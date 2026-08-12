@@ -52,7 +52,10 @@
     let previewPadding = $state(24);
     let defaultSizeInTiles = $state(defaultSizeInTilesCustomEntity ?? 1);
     let collisionGridSizeIndex = $state(
-        Math.max(0, ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultSizeInTiles)),
+        Math.max(
+            0,
+            ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultSizeInTiles),
+        ),
     );
     let imageResizeObserver: ResizeObserver | undefined;
     const hasCollisionAreas = $derived(collisionGrid.some((row) => row.some((cell) => cell === 1)));

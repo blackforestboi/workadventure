@@ -21,7 +21,8 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
     }
 
     execute(): Promise<void> {
-        const { id, name, tags, depthOffset, collisionGrid, defaultSizeInTiles } = this.modifyCustomEntityMessage;
+        const { id, name, tags, animation, depthOffset, collisionGrid, defaultSizeInTiles } =
+            this.modifyCustomEntityMessage;
         this.entitiesCollectionManager.modifyCustomEntity(
             id,
             name,
@@ -29,8 +30,16 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             depthOffset,
             collisionGrid,
             defaultSizeInTiles,
+            animation,
         );
-        this.entitiesManager.updateEntitiesPrefabMetadata(id, collisionGrid, depthOffset);
+        this.entitiesManager.updateEntitiesPrefabMetadata(id, {
+            name,
+            tags,
+            collisionGrid,
+            depthOffset,
+            defaultSizeInTiles,
+            ...(animation === undefined ? {} : { animation }),
+        });
         this.gameFrontWrapper.recomputeEntitiesCollisionGrid();
         return super.execute();
     }

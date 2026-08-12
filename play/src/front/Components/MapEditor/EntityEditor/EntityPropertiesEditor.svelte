@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { EntityDataProperties, EntityDataPropertiesKeys, EntityDataProperty } from "@workadventure/map-editor";
+    import { PersonalAreaAccessClaimMode } from "@workadventure/map-editor";
     import { onDestroy } from "svelte";
     import type { ApplicationDefinitionInterface } from "@workadventure/messages";
     import { v4 as uuid } from "uuid";
@@ -19,6 +20,21 @@
     import TextArea from "../../Input/TextArea.svelte";
     import InputSwitch from "../../Input/InputSwitch.svelte";
     import OpenFilePropertyEditor from "../PropertyEditor/OpenFilePropertyEditor.svelte";
+    import JitsiRoomPropertyEditor from "../PropertyEditor/JitsiRoomPropertyEditor.svelte";
+    import LivekitRoomPropertyEditor from "../PropertyEditor/LivekitRoomPropertyEditor.svelte";
+    import SilentPropertyEditor from "../PropertyEditor/SilentPropertyEditor.svelte";
+    import SpeakerMegaphonePropertyEditor from "../PropertyEditor/SpeakerMegaphonePropertyEditor.svelte";
+    import ListenerMegaphonePropertyEditor from "../PropertyEditor/ListenerMegaphonePropertyEditor.svelte";
+    import StartPropertyEditor from "../PropertyEditor/StartPropertyEditor.svelte";
+    import ExitPropertyEditor from "../PropertyEditor/ExitPropertyEditor.svelte";
+    import MatrixRoomPropertyEditor from "../PropertyEditor/MatrixRoomPropertyEditor.svelte";
+    import FocusablePropertyEditor from "../PropertyEditor/FocusablePropertyEditor.svelte";
+    import HighlightPropertyEditor from "../PropertyEditor/HighlightPropertyEditor.svelte";
+    import TooltipPropertyButton from "../PropertyEditor/TooltipPropertyButton.svelte";
+    import LockableAreaPropertyEditor from "../PropertyEditor/LockableAreaPropertyEditor.svelte";
+    import MaxUsersInAreaPropertyEditor from "../PropertyEditor/MaxUsersInAreaPropertyEditor.svelte";
+    import PersonalAreaPropertyEditor from "../PropertyEditor/PersonalAreaPropertyEditor.svelte";
+    import RightsPropertyEditor from "../PropertyEditor/RightsPropertyEditor.svelte";
     import type { Entity } from "../../../Phaser/ECS/Entity";
     import { gameManager } from "../../../Phaser/Game/GameManager";
 
@@ -134,6 +150,46 @@
         let buttonLabel: string;
         let policy: string | undefined;
         switch (type) {
+            case "personalAreaPropertyData":
+                return {
+                    id,
+                    type,
+                    accessClaimMode: PersonalAreaAccessClaimMode.enum.dynamic,
+                    allowedTags: [],
+                    ownerId: null,
+                };
+            case "restrictedRightsPropertyData":
+                return { id, type, readTags: [], writeTags: [] };
+            case "silent":
+                return { id, type, hideButtonLabel: true };
+            case "speakerMegaphone":
+                return { id, type, name: "MySpeakerZone1", chatEnabled: false, seeAttendees: false };
+            case "listenerMegaphone":
+                return { id, type, speakerZoneName: "", chatEnabled: false, allowTalking: false };
+            case "start":
+                return { id, type, isDefault: true };
+            case "exit":
+                return { id, type, url: "", areaName: "" };
+            case "matrixRoomPropertyData":
+                return { id, type, shouldOpenAutomatically: false, displayName: "" };
+            case "focusable":
+                return { id, type, zoom_margin: 0.5, hideButtonLabel: true };
+            case "highlight":
+                return {
+                    id,
+                    type,
+                    opacity: 0.6,
+                    gradientWidth: 10,
+                    duration: 250,
+                    color: "#000000",
+                    hideButtonLabel: true,
+                };
+            case "tooltipPropertyData":
+                return { id, type, content: "", duration: 2 };
+            case "lockableAreaPropertyData":
+                return { id, type, allowedTags: [] };
+            case "maxUsersInAreaPropertyData":
+                return { id, type, maxUsers: 15 };
             case "jitsiRoomProperty":
                 return {
                     id,
@@ -212,6 +268,10 @@
                         placeholder =
                             "https://member.workadventu.re?tenant=<your cards tenant>&learning=<Your cards learning>";
                         buttonLabel = $LL.mapEditor.properties.cards.label();
+                        break;
+                    case "tldraw":
+                        placeholder = "https://tldraw.com/";
+                        buttonLabel = $LL.mapEditor.properties.tldraw.label();
                         break;
                     default:
                         placeholder = "https://workadventu.re";
@@ -293,12 +353,53 @@
             <IconArrowLeft font-size="12" class="cursor-pointer" />
             <span class="ml-1 cursor-pointer">{$LL.mapEditor.entityEditor.itemPicker.backToSelectObject()}</span>
         </p>
-        <div class="properties-buttons flex flex-row m-2">
+        <div class="properties-buttons flex flex-row flex-wrap m-2">
+            <AddPropertyButtonWrapper
+                property="personalAreaPropertyData"
+                onclick={() => onAddProperty("personalAreaPropertyData")}
+            />
+            <AddPropertyButtonWrapper
+                property="restrictedRightsPropertyData"
+                onclick={() => onAddProperty("restrictedRightsPropertyData")}
+            />
+            <AddPropertyButtonWrapper property="silent" onclick={() => onAddProperty("silent")} />
+            <AddPropertyButtonWrapper
+                property="livekitRoomProperty"
+                onclick={() => onAddProperty("livekitRoomProperty")}
+            />
+            <AddPropertyButtonWrapper property="speakerMegaphone" onclick={() => onAddProperty("speakerMegaphone")} />
+            <AddPropertyButtonWrapper property="listenerMegaphone" onclick={() => onAddProperty("listenerMegaphone")} />
+            <AddPropertyButtonWrapper property="start" onclick={() => onAddProperty("start")} />
+            <AddPropertyButtonWrapper property="exit" onclick={() => onAddProperty("exit")} />
+            <AddPropertyButtonWrapper
+                property="jitsiRoomProperty"
+                onclick={() => {
+                    onAddProperty("jitsiRoomProperty");
+                }}
+            />
             <AddPropertyButtonWrapper
                 property="playAudio"
                 onclick={() => {
                     onAddProperty("playAudio");
                 }}
+            />
+            <AddPropertyButtonWrapper
+                property="matrixRoomPropertyData"
+                onclick={() => onAddProperty("matrixRoomPropertyData")}
+            />
+            <AddPropertyButtonWrapper property="focusable" onclick={() => onAddProperty("focusable")} />
+            <AddPropertyButtonWrapper property="highlight" onclick={() => onAddProperty("highlight")} />
+            <AddPropertyButtonWrapper
+                property="tooltipPropertyData"
+                onclick={() => onAddProperty("tooltipPropertyData")}
+            />
+            <AddPropertyButtonWrapper
+                property="lockableAreaPropertyData"
+                onclick={() => onAddProperty("lockableAreaPropertyData")}
+            />
+            <AddPropertyButtonWrapper
+                property="maxUsersInAreaPropertyData"
+                onclick={() => onAddProperty("maxUsersInAreaPropertyData")}
             />
         </div>
         <div class="properties-buttons flex flex-row flex-wrap m-2">
@@ -372,6 +473,13 @@
             />
             <AddPropertyButtonWrapper
                 property="openWebsite"
+                subProperty="cards"
+                onclick={() => {
+                    onAddProperty("openWebsite", "cards");
+                }}
+            />
+            <AddPropertyButtonWrapper
+                property="openWebsite"
                 subProperty="tldraw"
                 onclick={() => {
                     onAddProperty("openWebsite", "tldraw");
@@ -440,6 +548,105 @@
                         {#if properties[i].type === "playAudio"}
                             <PlayAudioPropertyEditor
                                 bind:property={properties[i]}
+                                onclose={() => {
+                                    onDeleteProperty(property.id);
+                                }}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "personalAreaPropertyData"}
+                            <PersonalAreaPropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "restrictedRightsPropertyData"}
+                            <RightsPropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "silent"}
+                            <SilentPropertyEditor onclose={() => onDeleteProperty(property.id)} />
+                        {:else if properties[i].type === "livekitRoomProperty"}
+                            <LivekitRoomPropertyEditor
+                                bind:property={properties[i]}
+                                hasHighlightProperty={properties.some((property) => property.type === "highlight")}
+                                shouldDisableDisableChatButton={properties.some(
+                                    (property) => property.type === "matrixRoomPropertyData",
+                                )}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                                onhighlightareaonenter={() => onAddProperty("highlight")}
+                            />
+                        {:else if properties[i].type === "speakerMegaphone"}
+                            <SpeakerMegaphonePropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "listenerMegaphone"}
+                            <ListenerMegaphonePropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "start"}
+                            <StartPropertyEditor
+                                bind:property={properties[i]}
+                                startAreaName={entityName}
+                                updateStartAreaNameCallback={(name) => {
+                                    entityName = name;
+                                    onUpdateName();
+                                }}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "exit"}
+                            <ExitPropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "matrixRoomPropertyData"}
+                            <MatrixRoomPropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "focusable"}
+                            <FocusablePropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "highlight"}
+                            <HighlightPropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "tooltipPropertyData"}
+                            <TooltipPropertyButton
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "lockableAreaPropertyData"}
+                            <LockableAreaPropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "maxUsersInAreaPropertyData"}
+                            <MaxUsersInAreaPropertyEditor
+                                bind:property={properties[i]}
+                                onclose={() => onDeleteProperty(property.id)}
+                                onchange={() => onUpdateProperty(properties[i])}
+                            />
+                        {:else if properties[i].type === "jitsiRoomProperty"}
+                            <JitsiRoomPropertyEditor
+                                bind:property={properties[i]}
+                                isArea={false}
                                 onclose={() => {
                                     onDeleteProperty(property.id);
                                 }}

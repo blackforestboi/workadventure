@@ -1,4 +1,8 @@
-import { CustomEntityDirection, type UploadEntityMessage } from "@workadventure/messages";
+import {
+    CustomEntityDirection,
+    type ModifyCustomEntityMessage,
+    type UploadEntityMessage,
+} from "@workadventure/messages";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fileSystemMock = vi.hoisted(() => ({
@@ -106,6 +110,52 @@ describe("CustomEntityCollectionService", () => {
             collection: { animation?: unknown }[];
         };
         expect(persistedCollection.collection[0]?.animation).toEqual(animation);
+    });
+
+    it("persists the default width used for newly placed entities", async () => {
+        const service = new CustomEntityCollectionService("maps.example.test");
+
+        await service.uploadEntity({ ...uploadEntityMessage, defaultSizeInTiles: 0.5 });
+
+        const persistedCollection = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as {
+            collection: { defaultSizeInTiles?: number }[];
+        };
+        expect(persistedCollection.collection[0]?.defaultSizeInTiles).toBe(0.5);
+    });
+
+    it("keeps a saved asset update available to every map client", async () => {
+        const service = new CustomEntityCollectionService("maps.example.test");
+        await service.uploadEntity({ ...uploadEntityMessage, defaultSizeInTiles: 1 });
+        fileSystemMock.readFileAsString.mockResolvedValueOnce(
+            fileSystemMock.writeStringAsFile.mock.calls[0][1] as string,
+        );
+        const update: ModifyCustomEntityMessage = {
+            id: uploadEntityMessage.id,
+            name: "Updated tree",
+            tags: ["Nature", "Large"],
+            collisionGrid: [[1]],
+            depthOffset: -8,
+            defaultSizeInTiles: 4,
+        };
+
+        await service.modifyEntity(update);
+
+        const persistedCollection = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[1][1] as string) as {
+            collection: {
+                name: string;
+                tags: string[];
+                collisionGrid?: number[][];
+                depthOffset?: number;
+                defaultSizeInTiles?: number;
+            }[];
+        };
+        expect(persistedCollection.collection[0]).toMatchObject({
+            name: "Updated tree",
+            tags: ["Nature", "Large"],
+            collisionGrid: [[1]],
+            depthOffset: -8,
+            defaultSizeInTiles: 4,
+        });
     });
 
     it("serializes collection updates across service instances for the same map", async () => {

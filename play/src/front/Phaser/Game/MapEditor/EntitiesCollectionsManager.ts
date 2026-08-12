@@ -163,6 +163,7 @@ export class EntitiesCollectionsManager {
         depthOffset?: number,
         collisionGrid?: number[][],
         defaultSizeInTiles?: number,
+        animation?: EntityPrefab["animation"],
     ): void {
         this.entitiesPrefabsStore.update((currentEntitiesPrefabs) => {
             const indexOfCustomEntity = currentEntitiesPrefabs.findIndex((entityPrefab) => entityPrefab.id === id);
@@ -173,7 +174,9 @@ export class EntitiesCollectionsManager {
                     tags,
                     depthOffset,
                     collisionGrid,
-                    defaultSizeInTiles,
+                    defaultSizeInTiles:
+                        defaultSizeInTiles ?? currentEntitiesPrefabs[indexOfCustomEntity].defaultSizeInTiles,
+                    animation: animation ?? currentEntitiesPrefabs[indexOfCustomEntity].animation,
                 };
             }
             return currentEntitiesPrefabs;
@@ -189,7 +192,8 @@ export class EntitiesCollectionsManager {
                             tags,
                             depthOffset,
                             collisionGrid,
-                            defaultSizeInTiles,
+                            defaultSizeInTiles: defaultSizeInTiles ?? entity.defaultSizeInTiles,
+                            animation: animation ?? entity.animation,
                         });
                     }
                     resolve(existingEntitiesPrefabsMap);

@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import type { EntityData, WAMEntityData } from "@workadventure/map-editor";
+import type { EntityData, EntityPrefab, WAMEntityData } from "@workadventure/map-editor";
 import { AreaDataProperties, EntityDataProperties, EntityDimensions, EntityPrefabRef } from "@workadventure/map-editor";
 import type { Observable } from "rxjs";
 import { Subject } from "rxjs";
@@ -198,14 +198,14 @@ export class EntitiesManager extends EventEmitter {
 
     public updateEntitiesPrefabMetadata(
         modifiedEntityPrefabId: string,
-        collisionGrid: number[][] | undefined,
-        depthOffset: number | undefined,
+        metadata: Pick<EntityPrefab, "name" | "tags"> &
+            Partial<Pick<EntityPrefab, "animation" | "collisionGrid" | "defaultSizeInTiles" | "depthOffset">>,
     ): void {
         const entities = this.getEntities();
         for (const entity of entities.values()) {
             const entityPrefab = entity.getPrefab();
             if (entityPrefab.id === modifiedEntityPrefabId) {
-                entity.updatePrefabMetadata(collisionGrid, depthOffset);
+                entity.updatePrefabMetadata(metadata);
             }
         }
     }

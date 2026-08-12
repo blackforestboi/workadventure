@@ -97,7 +97,7 @@ export class ActivatablesManager {
                 if (this.selectedActivatableObjectByDistance instanceof Entity) {
                     for (const property of this.selectedActivatableObjectByDistance.getEntityData().properties) {
                         if (property.type === "entityDescriptionProperties") continue;
-                        if (property.triggerMessage) {
+                        if ("triggerMessage" in property && property.triggerMessage) {
                             triggerMessage = property.triggerMessage;
                             break;
                         }

@@ -1,7 +1,9 @@
 // @vitest-environment node
 
-import { isCenteredMap } from "@workadventure/map-editor";
+import { getMapWorldBounds, getTileLayerWorldOrigin, isCenteredMap } from "@workadventure/map-editor";
 import { describe, expect, it, vi } from "vitest";
+
+import { getTerrainModeOptions } from "../../src/front/Components/MapEditor/FloorEditor/FloorEditorModes";
 
 vi.mock("../../src/pusher/enums/EnvironmentVariable", () => ({
     FRONT_URL: "https://play.example.test/",
@@ -15,6 +17,10 @@ import {
     createBlankInfiniteWorldTemplate,
     TeapotWorldCreationService,
 } from "../../src/pusher/teapot/TeapotWorldCreationService";
+import {
+    assertTeapotMapPublicationProfile,
+    assertTeapotMapSchemaTransition,
+} from "../../src/pusher/teapot/TeapotMapPublicationService";
 
 describe("TeapotWorldCreationService", () => {
     it("builds a centered infinite dirt canvas with visible entry and exit tiles", () => {
@@ -25,7 +31,23 @@ describe("TeapotWorldCreationService", () => {
 
         expect(map.infinite).toBe(true);
         expect(isCenteredMap(map)).toBe(true);
-        expect(layerByName.get("ground")?.chunks?.[0]?.data).toEqual(Array(81).fill(1));
+        expect(() => assertTeapotMapPublicationProfile(map)).not.toThrow();
+        expect(getMapWorldBounds(map)).toEqual({ x: -144, y: -144, width: 288, height: 288 });
+        for (const layer of tileLayers) {
+            expect(getTileLayerWorldOrigin(map, layer)).toEqual({ x: -144, y: -144 });
+        }
+        expect(layerByName.get("floor")?.chunks?.[0]?.data).toEqual(Array(81).fill(1));
+        expect(layerByName.get("collisions")?.chunks?.[0]?.data).toEqual(Array(81).fill(0));
+        expect(layerByName.get("walls")?.chunks?.[0]?.data).toEqual(Array(81).fill(0));
+        expect(
+            Object.fromEntries(getTerrainModeOptions(tileLayers).map((mode) => [mode.id, mode.layer])),
+        ).toMatchObject({
+            floor: "floor",
+            collision: "collisions",
+            walls: "walls",
+            start: "start",
+            exit: "exit",
+        });
         const startData = layerByName.get("start")?.chunks?.[0]?.data;
         const exitData = layerByName.get("exit")?.chunks?.[0]?.data;
         expect(Array.isArray(startData) ? startData.filter(Boolean) : []).toEqual([2]);
@@ -49,6 +71,27 @@ describe("TeapotWorldCreationService", () => {
                 { url: "https://play.example.test/collections/OfficeCollection.json", type: "file" },
             ],
         });
+    });
+
+    it("rejects non-centered infinite maps from the publication path", () => {
+        const { map } = createBlankInfiniteWorldTemplate(undefined, "https://play.example.test/");
+        const malformed = structuredClone(map);
+        malformed.properties = [];
+
+        expect(() => assertTeapotMapPublicationProfile(malformed)).toThrow(
+            "Only finite or centered infinite orthogonal maps can be published",
+        );
+    });
+
+    it("does not let later publications change a centered world into another map type", () => {
+        const { map } = createBlankInfiniteWorldTemplate(undefined, "https://play.example.test/");
+        const replacement = structuredClone(map);
+        replacement.infinite = false;
+        replacement.properties = [];
+
+        expect(() => assertTeapotMapSchemaTransition(map, replacement)).toThrow(
+            "A centered infinite map must remain centered and infinite when published",
+        );
     });
 
     it("uploads one validated room archive and grants the creator admin access", async () => {
