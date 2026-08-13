@@ -16,6 +16,13 @@ import {
     EntityPermissions,
     UpdateWAMMetadataCommand,
     UpdateWAMSettingCommand,
+    CreateVegetationBatchCommand,
+    DeleteVegetationBatchCommand,
+    DeleteVegetationPresetCommand,
+    UpsertVegetationPresetCommand,
+    vegetationPlacementPlanFromMessage,
+    vegetationPresetFromMessage,
+    vegetationPresetToMessage,
 } from "@workadventure/map-editor";
 import type {
     EditMapCommandMessage,
@@ -42,6 +49,7 @@ import { hookManager } from "./Modules/HookManager";
 import { UpdateEntityMapStorageCommand } from "./Commands/Entity/UpdateEntityMapStorageCommand";
 import { isModifyAreaMessageOnlyClaim } from "./Services/isModifyAreaMessageOnlyClaim";
 import { persistTerrainMutation } from "./Services/TerrainPersistenceService";
+import { assertVegetationPrefabReferences } from "./Services/VegetationPrefabResolver";
 
 /**
  * List of commands that can be executed even if the user does not have edit rights on the map
@@ -56,6 +64,8 @@ const COMMANDS_ACCESSIBLE_WITHOUT_CAN_EDIT = new Set<string>([
     "deleteCustomEntityMessage",
     "uploadFileMessage",
     "modifyAreaMessage",
+    "createVegetationBatchMessage",
+    "deleteVegetationBatchMessage",
 ]);
 
 const mapStorageServer: MapStorageServer = {
@@ -396,6 +406,111 @@ const mapStorageServer: MapStorageServer = {
                     }
                     case "modifyTerrainMessage": {
                         await persistTerrainMutation(wamFile, mapUrl, editMapMessage.modifyTerrainMessage);
+                        break;
+                    }
+                    case "upsertVegetationPresetMessage": {
+                        const message = editMapMessage.upsertVegetationPresetMessage;
+                        if (message.expectedMapRevision && message.expectedMapRevision !== wamFile.getLastCommandId()) {
+                            throw new Error("Vegetation preset was based on a stale map revision");
+                        }
+                        if (!message.preset) throw new Error("Vegetation preset payload is missing");
+                        const preset = vegetationPresetFromMessage(message.preset);
+                        await assertVegetationPrefabReferences(
+                            wamFile,
+                            mapUrl,
+                            preset.species.map(({ prefabRef }) => prefabRef),
+                        );
+                        const command = await mapsManager.executeAtomicCommand(
+                            mapKey,
+                            mapUrl.host,
+                            (candidate) =>
+                                new UpsertVegetationPresetCommand(
+                                    candidate.getWam(),
+                                    preset,
+                                    message.expectedRevision,
+                                    commandId,
+                                ),
+                        );
+                        // eslint-disable-next-line require-atomic-updates
+                        message.preset = vegetationPresetToMessage(command.preset);
+                        break;
+                    }
+                    case "deleteVegetationPresetMessage": {
+                        const message = editMapMessage.deleteVegetationPresetMessage;
+                        if (message.expectedMapRevision && message.expectedMapRevision !== wamFile.getLastCommandId()) {
+                            throw new Error("Vegetation preset deletion was based on a stale map revision");
+                        }
+                        await mapsManager.executeAtomicCommand(
+                            mapKey,
+                            mapUrl.host,
+                            (candidate) =>
+                                new DeleteVegetationPresetCommand(
+                                    candidate.getWam(),
+                                    message.presetId,
+                                    message.expectedRevision,
+                                    commandId,
+                                ),
+                        );
+                        break;
+                    }
+                    case "createVegetationBatchMessage": {
+                        const message = editMapMessage.createVegetationBatchMessage;
+                        if (message.expectedMapRevision && message.expectedMapRevision !== wamFile.getLastCommandId()) {
+                            throw new Error("Vegetation batch was based on a stale map revision");
+                        }
+                        if (!message.plan) throw new Error("Vegetation placement plan is missing");
+                        const plan = vegetationPlacementPlanFromMessage(message.plan);
+                        const preset = wamFile.getVegetationPresets()?.presets.find(({ id }) => id === plan.presetId);
+                        if (!preset || preset.revision !== plan.presetRevision) {
+                            throw new Error("Vegetation preset revision is stale or missing");
+                        }
+                        await assertVegetationPrefabReferences(
+                            wamFile,
+                            mapUrl,
+                            plan.placements.map(({ prefabRef }) => prefabRef),
+                        );
+                        for (const placement of plan.placements) {
+                            if (
+                                entityCommandPermissions &&
+                                !entityCommandPermissions.canEdit(
+                                    { x: placement.x, y: placement.y - placement.height * 0.5 },
+                                    placement.width,
+                                    placement.height,
+                                )
+                            )
+                                throw new Error(`User ${userUUID} cannot place vegetation entity ${placement.id}`);
+                        }
+                        await mapsManager.executeAtomicCommand(
+                            mapKey,
+                            mapUrl.host,
+                            (candidate) => new CreateVegetationBatchCommand(candidate, plan, commandId),
+                        );
+                        break;
+                    }
+                    case "deleteVegetationBatchMessage": {
+                        const message = editMapMessage.deleteVegetationBatchMessage;
+                        if (message.expectedMapRevision && message.expectedMapRevision !== wamFile.getLastCommandId()) {
+                            throw new Error("Vegetation delete batch was based on a stale map revision");
+                        }
+                        for (const id of message.entityIds) {
+                            const entity = wamFile.getGameMapEntities().getEntity(id);
+                            if (!entity) throw new Error(`Vegetation entity ${id} does not exist`);
+                            if (
+                                entityCommandPermissions &&
+                                !entityCommandPermissions.canEdit(
+                                    getEntityCenterCoordinates(entity, {
+                                        width: entity.width ?? 0,
+                                        height: entity.height ?? 0,
+                                    }),
+                                )
+                            )
+                                throw new Error(`User ${userUUID} cannot delete vegetation entity ${id}`);
+                        }
+                        await mapsManager.executeAtomicCommand(
+                            mapKey,
+                            mapUrl.host,
+                            (candidate) => new DeleteVegetationBatchCommand(candidate, message.entityIds, commandId),
+                        );
                         break;
                     }
                     default: {

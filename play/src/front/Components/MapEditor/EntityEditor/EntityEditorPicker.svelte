@@ -133,6 +133,7 @@
                     previewOffsetX: customEntity.previewOffsetX,
                     previewOffsetY: customEntity.previewOffsetY,
                     color: customEntity.color,
+                    vegetation: customEntity.vegetation,
                 },
             });
         } catch (error) {
@@ -480,7 +481,6 @@
                                 description={pickedEntity.type === "Custom"
                                     ? "Edit the asset and paint the areas players cannot cross."
                                     : "Edit this built-in asset. Saving creates a custom copy for this room."}
-                                closeForm={pickedEntity.type === "Custom" ? showCustomAssets : clearEntitySelection}
                                 removeEntity={({ entityId }) => {
                                     removeEntity(entityId);
                                 }}

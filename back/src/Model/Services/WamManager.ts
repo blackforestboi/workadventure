@@ -9,6 +9,12 @@ import {
     UpdateEntityCommand,
     UpdateWAMMetadataCommand,
     UpdateWAMSettingCommand,
+    CreateVegetationBatchCommand,
+    DeleteVegetationBatchCommand,
+    DeleteVegetationPresetCommand,
+    UpsertVegetationPresetCommand,
+    vegetationPlacementPlanFromMessage,
+    vegetationPresetFromMessage,
     WamFile,
 } from "@workadventure/map-editor";
 import type { EditMapCommandMessage } from "@workadventure/messages";
@@ -175,6 +181,45 @@ export class WamManager {
             case "deleteEntityMessage": {
                 const message = editMapMessage.deleteEntityMessage;
                 await new DeleteEntityCommand(wamFile, message.id, editMapCommandMessage.id).execute();
+                break;
+            }
+            case "upsertVegetationPresetMessage": {
+                const message = editMapMessage.upsertVegetationPresetMessage;
+                if (!message.preset) break;
+                await new UpsertVegetationPresetCommand(
+                    wamFile.getWam(),
+                    vegetationPresetFromMessage(message.preset),
+                    message.expectedRevision,
+                    editMapCommandMessage.id,
+                ).execute();
+                break;
+            }
+            case "deleteVegetationPresetMessage": {
+                const message = editMapMessage.deleteVegetationPresetMessage;
+                await new DeleteVegetationPresetCommand(
+                    wamFile.getWam(),
+                    message.presetId,
+                    message.expectedRevision,
+                    editMapCommandMessage.id,
+                ).execute();
+                break;
+            }
+            case "createVegetationBatchMessage": {
+                const message = editMapMessage.createVegetationBatchMessage;
+                if (!message.plan) break;
+                await new CreateVegetationBatchCommand(
+                    wamFile,
+                    vegetationPlacementPlanFromMessage(message.plan),
+                    editMapCommandMessage.id,
+                ).execute();
+                break;
+            }
+            case "deleteVegetationBatchMessage": {
+                await new DeleteVegetationBatchCommand(
+                    wamFile,
+                    editMapMessage.deleteVegetationBatchMessage.entityIds,
+                    editMapCommandMessage.id,
+                ).execute();
                 break;
             }
             case "updateWAMSettingsMessage": {

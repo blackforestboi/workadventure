@@ -45,6 +45,10 @@ Run this after every deploy and after every restore.
 - A rejected or malformed Woka leaves the prior avatar selected. Cancel and out-of-order generation results do not replace a newer candidate.
 - Browser A generates a transparent map object, places it, waits for the server acknowledgement, reloads, and still sees it. A forced map-storage rejection retains the draft and retry reuses the same command/entity IDs.
 - Browser A paints a small floor region and publishes revision N+1. Browser B sees the update. A stale expected revision is rejected without changing the map.
+- Browser A uploads or generates an object, marks it as a tree, bush, or grass asset, and confirms it appears under Terrain → Vegetation after reload. Place one specimen and verify Browser B receives an ordinary editable entity with the authored collision and depth behavior.
+- Browser A saves a Forest or Grassland mix, previews a region, and records its placed/skipped counts. Resampling changes the layout; reopening the same saved seed does not. Confirm once and verify Browser B receives identical stable entity IDs and positions. One undo removes the entire fill without affecting unrelated entities.
+- While a vegetation preview is open, Browser B adds a blocking entity inside the region. Confirmation must reject the whole stale batch and create zero partial instances. Also verify selections above 64×64 tiles or plans above 500 accepted instances are rejected before submission.
+- Attempt to delete a vegetation prefab referenced by either a saved mix or a placed instance. The operation must fail without deleting the mix or instance; deleting an unreferenced prefab succeeds.
 - An MCP client lists capabilities, validates and drafts a structured proposal. The browser inbox shows client/tool identity, change summary, preview, expected revision, expiry, and any paid cost. Deny and expiry are terminal; approve can be used once; the applied proposal is visible to Browser B.
 - Restart `play`, `back`, and `map-storage`, then repeat reconnect checks for identity, admission, active Woka, map object, and map revision.
 

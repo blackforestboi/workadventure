@@ -209,6 +209,7 @@ export class EntitiesManager extends EventEmitter {
                     | "previewPadding"
                     | "previewOffsetX"
                     | "previewOffsetY"
+                    | "vegetation"
                 >
             >,
     ): void {

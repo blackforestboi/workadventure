@@ -288,6 +288,17 @@ export const EntityDataProperties = z.array(EntityDataProperty);
 
 export const CollisionGrid = z.array(z.array(z.number()));
 
+export const VegetationCategory = z.enum(["tree", "bush", "grass", "other"]);
+
+/** Optional semantic metadata layered on top of the existing entity prefab contract. */
+export const VegetationProfile = z.object({
+    version: z.literal(1),
+    category: VegetationCategory,
+    sourceAssetId: z.string().min(1).max(128).optional(),
+    providerId: z.string().min(1).max(80).optional(),
+    modelId: z.string().min(1).max(160).optional(),
+});
+
 /**
  * A single looping horizontal frame strip. Placement dimensions deliberately
  * live outside this source-image contract.
@@ -343,6 +354,7 @@ export const EntityRawPrefab = z.object({
     previewPadding: z.number().int().min(-64).max(64).optional(),
     previewOffsetX: z.number().int().min(-512).max(512).optional(),
     previewOffsetY: z.number().int().min(-512).max(512).optional(),
+    vegetation: VegetationProfile.optional(),
 });
 
 export const EntityPrefabType = z.union([z.literal("Default"), z.literal("Custom")]);
@@ -355,6 +367,114 @@ export const EntityPrefab = EntityRawPrefab.extend({
 export const EntityPrefabRef = z.object({
     collectionName: z.string(),
     id: z.string(),
+});
+
+export const VegetationPresetSpecies = z.object({
+    prefabRef: EntityPrefabRef,
+    weight: z.number().finite().positive(),
+});
+
+export const VegetationPreset = z
+    .object({
+        version: z.literal(1),
+        id: z.string().min(1),
+        name: z.string().min(1),
+        revision: z.number().int().positive(),
+        density: z.number().finite().positive().max(1),
+        minimumSpacing: z.number().finite().nonnegative(),
+        species: z.array(VegetationPresetSpecies).min(1),
+    })
+    .superRefine((preset, context) => {
+        const references = new Set<string>();
+        for (const [index, species] of preset.species.entries()) {
+            const key = `${species.prefabRef.collectionName}\u0000${species.prefabRef.id}`;
+            if (references.has(key)) {
+                context.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ["species", index, "prefabRef"],
+                    message: "Vegetation preset species must use unique prefab references",
+                });
+            }
+            references.add(key);
+        }
+    });
+
+export const VegetationPresetCollection = z
+    .object({
+        version: z.literal(1),
+        presets: z.array(VegetationPreset),
+    })
+    .superRefine((collection, context) => {
+        const ids = new Set<string>();
+        for (const [index, preset] of collection.presets.entries()) {
+            if (ids.has(preset.id)) {
+                context.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ["presets", index, "id"],
+                    message: "Vegetation preset IDs must be unique",
+                });
+            }
+            ids.add(preset.id);
+        }
+    });
+
+export const VegetationRectangle = z.object({
+    x: z.number().int(),
+    y: z.number().int(),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+});
+
+export const VegetationPlanningSpecies = z.object({
+    prefabRef: EntityPrefabRef,
+    footprintWidth: z.number().int().positive(),
+    footprintHeight: z.number().int().positive(),
+    blocking: z.boolean(),
+});
+
+export const VegetationBlockedCellReason = z.enum(["void", "start", "exit", "collision", "entity"]);
+
+export const VegetationBlockedCell = z.object({
+    x: z.number().int(),
+    y: z.number().int(),
+    reason: VegetationBlockedCellReason,
+});
+
+export const VegetationPlacementSkipReason = z.enum([
+    "density",
+    "footprint",
+    "void",
+    "start",
+    "exit",
+    "collision",
+    "entity",
+    "spacing",
+]);
+
+export const VegetationResolvedPlacement = z.object({
+    id: z.string().min(1),
+    prefabRef: EntityPrefabRef,
+    x: z.number().finite(),
+    y: z.number().finite(),
+    width: z.number().finite().positive(),
+    height: z.number().finite().positive(),
+});
+
+export const VegetationSkippedCandidate = z.object({
+    x: z.number().int(),
+    y: z.number().int(),
+    reason: VegetationPlacementSkipReason,
+});
+
+export const VegetationPlacementPlan = z.object({
+    version: z.literal(1),
+    presetId: z.string().min(1),
+    presetRevision: z.number().int().positive(),
+    seed: z.string(),
+    rectangle: VegetationRectangle,
+    placements: z.array(VegetationResolvedPlacement),
+    skipped: z.array(VegetationSkippedCandidate),
+    digest: z.string().regex(/^[a-f0-9]{32}$/),
 });
 
 export const EntityCollection = z.object({
@@ -472,6 +592,7 @@ export const WAMFileFormat = z.object({
     entities: z.record(z.string(), WAMEntityData),
     areas: z.array(AreaData),
     entityCollections: z.array(CollectionUrl),
+    vegetationPresets: VegetationPresetCollection.optional(),
     lastCommandId: z.string().optional(),
     settings: WAMSettings.optional(),
     metadata: WAMMetadata.optional().describe("Contains metadata about the map (name, description, copyright, etc.)"),
@@ -494,6 +615,19 @@ export type EntityRawPrefab = z.infer<typeof EntityRawPrefab>;
 export type EntityPrefab = z.infer<typeof EntityPrefab>;
 export type EntityPrefabType = z.infer<typeof EntityPrefabType>;
 export type VisualAssetAnimation = z.infer<typeof VisualAssetAnimation>;
+export type VegetationCategory = z.infer<typeof VegetationCategory>;
+export type VegetationProfile = z.infer<typeof VegetationProfile>;
+export type VegetationPresetSpecies = z.infer<typeof VegetationPresetSpecies>;
+export type VegetationPreset = z.infer<typeof VegetationPreset>;
+export type VegetationPresetCollection = z.infer<typeof VegetationPresetCollection>;
+export type VegetationRectangle = z.infer<typeof VegetationRectangle>;
+export type VegetationPlanningSpecies = z.infer<typeof VegetationPlanningSpecies>;
+export type VegetationBlockedCellReason = z.infer<typeof VegetationBlockedCellReason>;
+export type VegetationBlockedCell = z.infer<typeof VegetationBlockedCell>;
+export type VegetationPlacementSkipReason = z.infer<typeof VegetationPlacementSkipReason>;
+export type VegetationResolvedPlacement = z.infer<typeof VegetationResolvedPlacement>;
+export type VegetationSkippedCandidate = z.infer<typeof VegetationSkippedCandidate>;
+export type VegetationPlacementPlan = z.infer<typeof VegetationPlacementPlan>;
 export type EntityCollection = z.infer<typeof EntityCollection>;
 export type EntityCollectionRaw = z.infer<typeof EntityCollectionRaw>;
 export type CollectionUrl = z.infer<typeof CollectionUrl>;

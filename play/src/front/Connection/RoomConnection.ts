@@ -68,6 +68,8 @@ import type {
     SayMessage,
     FilterType,
     UploadFileMessage,
+    VegetationPlacementPlanMessage,
+    VegetationPresetMessage,
     MapStorageJwtAnswer,
     DeleteRecordingAnswer,
     StartRecordingAnswer,
@@ -1400,6 +1402,92 @@ export class RoomConnection implements RoomConnection {
                             deleteEntityMessage: {
                                 id,
                             },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    public emitMapEditorCreateVegetationBatch(
+        commandId: string,
+        plan: VegetationPlacementPlanMessage,
+        expectedMapRevision?: string,
+    ): void {
+        this.send({
+            message: {
+                $case: "editMapCommandMessage",
+                editMapCommandMessage: {
+                    id: commandId,
+                    editMapMessage: {
+                        message: {
+                            $case: "createVegetationBatchMessage",
+                            createVegetationBatchMessage: { plan, expectedMapRevision },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    public emitMapEditorUpsertVegetationPreset(
+        commandId: string,
+        preset: VegetationPresetMessage,
+        expectedRevision: number,
+        expectedMapRevision?: string,
+    ): void {
+        this.send({
+            message: {
+                $case: "editMapCommandMessage",
+                editMapCommandMessage: {
+                    id: commandId,
+                    editMapMessage: {
+                        message: {
+                            $case: "upsertVegetationPresetMessage",
+                            upsertVegetationPresetMessage: { preset, expectedRevision, expectedMapRevision },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    public emitMapEditorDeleteVegetationPreset(
+        commandId: string,
+        presetId: string,
+        expectedRevision: number,
+        expectedMapRevision?: string,
+    ): void {
+        this.send({
+            message: {
+                $case: "editMapCommandMessage",
+                editMapCommandMessage: {
+                    id: commandId,
+                    editMapMessage: {
+                        message: {
+                            $case: "deleteVegetationPresetMessage",
+                            deleteVegetationPresetMessage: { presetId, expectedRevision, expectedMapRevision },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    public emitMapEditorDeleteVegetationBatch(
+        commandId: string,
+        entityIds: string[],
+        expectedMapRevision?: string,
+    ): void {
+        this.send({
+            message: {
+                $case: "editMapCommandMessage",
+                editMapCommandMessage: {
+                    id: commandId,
+                    editMapMessage: {
+                        message: {
+                            $case: "deleteVegetationBatchMessage",
+                            deleteVegetationBatchMessage: { entityIds, expectedMapRevision },
                         },
                     },
                 },

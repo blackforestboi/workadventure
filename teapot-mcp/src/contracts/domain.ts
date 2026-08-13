@@ -20,6 +20,76 @@ const HttpUrl = z
     "Only HTTP(S) URLs are accepted",
   );
 
+export const TeapotVegetationCategory = z.enum([
+  "tree",
+  "bush",
+  "grass",
+  "other",
+]);
+
+export const TeapotVegetationSpecies = z
+  .object({
+    collectionName: SafeName,
+    prefabId: z.string().trim().min(1).max(200),
+    name: SafeName,
+    category: TeapotVegetationCategory,
+    blocking: z.boolean(),
+    footprintWidth: z.number().finite().positive().max(512),
+    footprintHeight: z.number().finite().positive().max(512),
+  })
+  .strict();
+
+export const TeapotVegetationRectangle = z
+  .object({
+    x: z.number().int().min(-1_000_000).max(1_000_000),
+    y: z.number().int().min(-1_000_000).max(1_000_000),
+    width: z.number().int().positive().max(64),
+    height: z.number().int().positive().max(64),
+  })
+  .strict();
+
+export const TeapotVegetationPreset = z
+  .object({
+    id: z.string().trim().min(1).max(200),
+    name: SafeName,
+    revision: z.number().int().positive(),
+    density: z.number().finite().positive().max(1),
+    minimumSpacing: z.number().finite().nonnegative().max(16),
+    species: z
+      .array(
+        z
+          .object({
+            collectionName: SafeName,
+            prefabId: z.string().trim().min(1).max(200),
+            weight: z.number().finite().positive(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(64),
+  })
+  .strict();
+
+export const TeapotVegetationFillPreview = z
+  .object({
+    mapRevision: z.string().min(1).max(200),
+    presetId: z.string().min(1).max(200),
+    presetRevision: z.number().int().positive(),
+    seed: z.string().min(1).max(200),
+    rectangle: TeapotVegetationRectangle,
+    acceptedCount: z.number().int().nonnegative().max(500),
+    skippedCount: z.number().int().nonnegative().max(4_096),
+    digest: z.string().regex(/^[0-9a-f]{32}$/),
+  })
+  .strict();
+
+export type TeapotVegetationCategory = z.infer<typeof TeapotVegetationCategory>;
+export type TeapotVegetationSpecies = z.infer<typeof TeapotVegetationSpecies>;
+export type TeapotVegetationPreset = z.infer<typeof TeapotVegetationPreset>;
+export type TeapotVegetationFillPreview = z.infer<
+  typeof TeapotVegetationFillPreview
+>;
+
 export const TeapotInteractionProperty = z.discriminatedUnion("kind", [
   z
     .object({
@@ -378,6 +448,17 @@ export const TEAPOT_AUTHORING_VOCABULARY = {
       "96x128 transparent PNG Woka sheet (3 columns x 4 directional rows, 3 walk frames per row)",
     generatedEntity:
       "transparent raster accepted through the owner-scoped custom entity catalog",
+  },
+  vegetation: {
+    categories: ["tree", "bush", "grass", "other"],
+    selection: "tile-aligned rectangle up to 64x64 tiles",
+    maximumAcceptedInstances: 500,
+    deterministicPreview:
+      "The same map revision, preset revision, rectangle, and seed resolves to the same concrete placements and digest.",
+    approval:
+      "Agents may inspect semantic species and presets and draft a resolved fill, but applying it uses the existing explicit browser approval and one-time token lifecycle.",
+    privacy:
+      "Results expose stable map-owned prefab references and semantic metadata, never private generated-asset URLs or another owner's records.",
   },
   elementTypes: [
     {

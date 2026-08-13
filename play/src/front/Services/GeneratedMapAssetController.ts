@@ -3,7 +3,11 @@ import type { VisualAssetAnimation } from "@workadventure/map-editor";
 
 import type { AssetGenerationProviderId } from "./AssetGeneration/AssetGenerationTypes";
 import type { GeneratedAssetLocalRecord, GeneratedAssetLocalStore } from "./GeneratedAssetLocalStore";
-import type { TeapotGeneratedAssetApi, TeapotGeneratedAssetView } from "./TeapotGeneratedAssetApi";
+import type {
+    TeapotGeneratedAssetApi,
+    TeapotGeneratedAssetKind,
+    TeapotGeneratedAssetView,
+} from "./TeapotGeneratedAssetApi";
 
 const MAX_DISPLAY_NAME_LENGTH = 80;
 
@@ -62,6 +66,7 @@ export class GeneratedMapAssetController {
         private readonly localStore: LocalStore,
         private readonly remoteApi: RemoteApi,
         private readonly listener: SnapshotListener,
+        private readonly assetKind: TeapotGeneratedAssetKind = "map-entity",
     ) {}
 
     public async hydrate(signal?: AbortSignal): Promise<void> {
@@ -79,7 +84,7 @@ export class GeneratedMapAssetController {
             this.local.filter((record) => record.syncStatus !== "synced").map((record) => this.sync(record, signal)),
         );
         try {
-            this.remote = await this.remoteApi.list("map-entity", signal);
+            this.remote = await this.remoteApi.list(this.assetKind, signal);
             this.warning = undefined;
             this.emit();
         } catch (reason: unknown) {
@@ -158,7 +163,7 @@ export class GeneratedMapAssetController {
             const remote = await this.remoteApi.upload(
                 pending.png,
                 pending.name,
-                "map-entity",
+                this.assetKind,
                 { source: "generated", ...pending.provenance, animation: pending.animation },
                 signal,
             );

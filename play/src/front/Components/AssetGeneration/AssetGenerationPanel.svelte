@@ -394,9 +394,11 @@
                 ? " Create exactly one seamless top-down 2D floor or terrain texture that fills the entire image. Do not include furniture, props, gutters, text, borders, perspective scenery, or multiple tiles."
                 : generationTarget === "terrain-surface"
                   ? " Create one square, top-down terrain-surface source on a transparent background. Keep the complete specimen inside the canvas with no text, frame, shadow, floor, scenery, or detached elements."
-                  : generationTarget.startsWith("woka-") || generationTarget === "complete-woka"
-                    ? ` Use the ${BRANDING.name} Woka sprite-sheet layout: four rows ordered down, left, right, up; three aligned frames per row; transparent background; no text, border, shadow, or scenery.`
-                    : " Isolate the object on one flat electric-magenta #FF00FF background, using a readable top-down 2D game perspective and no text or border. The #FF00FF matte must not appear anywhere on the object, including its outline, highlights, shadows, texture, reflections, or semi-transparent edges.";
+                  : generationTarget === "vegetation"
+                    ? " Create one isolated top-down vegetation specimen on a transparent background. Keep the full tree, bush, grass clump, or plant inside the canvas with no text, frame, floor, scenery, or detached elements. Preserve the visual style requested by the user."
+                    : generationTarget.startsWith("woka-") || generationTarget === "complete-woka"
+                      ? ` Use the ${BRANDING.name} Woka sprite-sheet layout: four rows ordered down, left, right, up; three aligned frames per row; transparent background; no text, border, shadow, or scenery.`
+                      : " Isolate the object on one flat electric-magenta #FF00FF background, using a readable top-down 2D game perspective and no text or border. The #FF00FF matte must not appear anywhere on the object, including its outline, highlights, shadows, texture, reflections, or semi-transparent edges.";
         const animationRule =
             animation === undefined
                 ? ""

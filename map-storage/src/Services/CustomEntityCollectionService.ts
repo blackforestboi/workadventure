@@ -5,6 +5,8 @@ import {
     ENTITY_COLLECTION_FILE,
     EntityCollectionRaw,
     EntityRawPrefab,
+    VegetationProfile,
+    VisualAssetAnimation,
     entityUploadSupportedFormatForMapStorage,
     mapCustomEntityDirectionToDirection,
 } from "@workadventure/map-editor";
@@ -71,7 +73,6 @@ export class CustomEntityCollectionService {
             name,
             tags,
             depthOffset,
-            animation,
             defaultSizeInTiles,
             defaultHeightInTiles,
             previewPadding,
@@ -82,6 +83,8 @@ export class CustomEntityCollectionService {
         if (modifyCustomEntityMessage.collisionGrid) {
             collisionGrid = CollisionGrid.parse(modifyCustomEntityMessage.collisionGrid);
         }
+        const parsedAnimation = VisualAssetAnimation.optional().parse(modifyCustomEntityMessage.animation);
+        const parsedVegetation = VegetationProfile.optional().parse(modifyCustomEntityMessage.vegetation);
         await this.withEntityCollectionLock(async () => {
             const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
             const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
@@ -94,12 +97,13 @@ export class CustomEntityCollectionService {
                     tags,
                     depthOffset,
                     collisionGrid,
-                    animation: animation ?? entityToModify.animation,
+                    animation: parsedAnimation ?? entityToModify.animation,
                     defaultSizeInTiles: defaultSizeInTiles ?? entityToModify.defaultSizeInTiles,
                     defaultHeightInTiles: defaultHeightInTiles ?? entityToModify.defaultHeightInTiles,
                     previewPadding: previewPadding ?? entityToModify.previewPadding,
                     previewOffsetX: previewOffsetX ?? entityToModify.previewOffsetX,
                     previewOffsetY: previewOffsetY ?? entityToModify.previewOffsetY,
+                    vegetation: parsedVegetation ?? entityToModify.vegetation,
                 };
                 await fileSystem.writeStringAsFile(
                     this.getEntityCollectionFileVirtualPath(),

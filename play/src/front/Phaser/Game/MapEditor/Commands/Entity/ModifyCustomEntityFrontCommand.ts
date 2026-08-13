@@ -31,6 +31,7 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             previewPadding,
             previewOffsetX,
             previewOffsetY,
+            vegetation,
         } = this.modifyCustomEntityMessage;
         this.entitiesCollectionManager.modifyCustomEntity(
             id,
@@ -44,6 +45,7 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             previewPadding,
             previewOffsetX,
             previewOffsetY,
+            vegetation,
         );
         this.entitiesManager.updateEntitiesPrefabMetadata(id, {
             name,
@@ -56,6 +58,7 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
             previewOffsetX,
             previewOffsetY,
             ...(animation === undefined ? {} : { animation }),
+            ...(vegetation === undefined ? {} : { vegetation }),
         });
         return super.execute();
     }

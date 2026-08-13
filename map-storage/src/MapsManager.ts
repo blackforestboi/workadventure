@@ -89,6 +89,29 @@ class MapsManager {
         }
     }
 
+    public async executeAtomicCommand<T extends Command>(
+        mapKey: string,
+        domain: string,
+        createCommand: (wamFile: WamFile) => T,
+    ): Promise<T> {
+        const current = this.getWamFile(mapKey);
+        if (!current) throw new Error(`Could not find WAM file with key "${mapKey}"`);
+        const candidate = new WamFile(structuredClone(current.getWam()));
+        const command = createCommand(candidate);
+        const updatedWamFile = await command.execute();
+        candidate.updateLastCommandIdProperty(command.commandId);
+        WAMFileFormat.parse(candidate.getWam());
+        await fileSystem.writeStringAsFile(mapKey, JSON.stringify(candidate.getWam()));
+        this.loadedMaps.set(mapKey, candidate);
+        this.mapLastChangeTimestamp.set(mapKey, +new Date());
+        if (updatedWamFile !== undefined) {
+            this.mapListService
+                .updateWAMFileInCache(domain, mapKey.replace(domain, ""), updatedWamFile)
+                .catch((error) => console.error(error));
+        }
+        return command;
+    }
+
     public getCommandsNewerThan(mapKey: string, commandId: string | undefined): EditMapCommandMessage[] {
         // shouldn't we just apply every command on this list to the new client?
         const queue = this.loadedMapsCommandsQueue.get(mapKey);

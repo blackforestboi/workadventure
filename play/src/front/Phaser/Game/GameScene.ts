@@ -640,6 +640,7 @@ export class GameScene extends DirtyScene {
     }
 
     public getCustomEntityCollectionUrl() {
+        if (this.wamUrlFile === undefined) throw new Error("This map has no WAM URL");
         return getCustomEntityCollectionUrl(this.wamUrlFile, PUBLIC_MAP_STORAGE_PREFIX);
     }
 

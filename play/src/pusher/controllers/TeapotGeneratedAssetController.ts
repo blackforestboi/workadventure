@@ -29,7 +29,7 @@ const animationQuery = z
 
 const uploadQuery = z.object({
     name: z.string().min(1).max(80),
-    kind: z.enum(["map-entity", "reference", "terrain-surface"]),
+    kind: z.enum(["map-entity", "reference", "terrain-surface", "vegetation"]),
     source: z.enum(["generated", "imported"]).default("generated"),
     providerId: z.string().max(80).optional(),
     modelId: z.string().max(160).optional(),
@@ -38,7 +38,7 @@ const uploadQuery = z.object({
     gridRows: z.coerce.number().int().positive().optional(),
     tilePixelSize: z.coerce.number().int().positive().optional(),
 });
-const listQuery = z.object({ kind: z.enum(["map-entity", "reference", "terrain-surface"]) });
+const listQuery = z.object({ kind: z.enum(["map-entity", "reference", "terrain-surface", "vegetation"]) });
 const assetParams = z.object({ assetId: z.string().min(1).max(128) });
 
 export class TeapotGeneratedAssetController extends BaseHttpController {

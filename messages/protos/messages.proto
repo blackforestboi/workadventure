@@ -256,7 +256,86 @@ message EditMapMessage {
     ModifiyWAMMetadataMessage modifiyWAMMetadataMessage = 12;
     UploadFileMessage uploadFileMessage = 13;
     ModifyTerrainMessage modifyTerrainMessage = 14;
+    UpsertVegetationPresetMessage upsertVegetationPresetMessage = 15;
+    DeleteVegetationPresetMessage deleteVegetationPresetMessage = 16;
+    CreateVegetationBatchMessage createVegetationBatchMessage = 17;
+    DeleteVegetationBatchMessage deleteVegetationBatchMessage = 18;
   }
+}
+
+message VegetationPrefabReferenceMessage {
+  string collectionName = 1;
+  string prefabId = 2;
+}
+
+message VegetationPresetSpeciesMessage {
+  VegetationPrefabReferenceMessage prefabRef = 1;
+  double weight = 2;
+}
+
+message VegetationPresetMessage {
+  uint32 version = 1;
+  string id = 2;
+  string name = 3;
+  uint32 revision = 4;
+  double density = 5;
+  double minimumSpacing = 6;
+  repeated VegetationPresetSpeciesMessage species = 7;
+}
+
+message UpsertVegetationPresetMessage {
+  VegetationPresetMessage preset = 1;
+  uint32 expectedRevision = 2;
+  optional string expectedMapRevision = 3;
+}
+
+message DeleteVegetationPresetMessage {
+  string presetId = 1;
+  uint32 expectedRevision = 2;
+  optional string expectedMapRevision = 3;
+}
+
+message VegetationRectangleMessage {
+  sint32 x = 1;
+  sint32 y = 2;
+  uint32 width = 3;
+  uint32 height = 4;
+}
+
+message VegetationResolvedPlacementMessage {
+  string id = 1;
+  VegetationPrefabReferenceMessage prefabRef = 2;
+  double x = 3;
+  double y = 4;
+  double width = 5;
+  double height = 6;
+}
+
+message VegetationSkippedCandidateMessage {
+  sint32 x = 1;
+  sint32 y = 2;
+  string reason = 3;
+}
+
+message VegetationPlacementPlanMessage {
+  uint32 version = 1;
+  string presetId = 2;
+  uint32 presetRevision = 3;
+  string seed = 4;
+  VegetationRectangleMessage rectangle = 5;
+  repeated VegetationResolvedPlacementMessage placements = 6;
+  repeated VegetationSkippedCandidateMessage skipped = 7;
+  string digest = 8;
+}
+
+message CreateVegetationBatchMessage {
+  VegetationPlacementPlanMessage plan = 1;
+  optional string expectedMapRevision = 2;
+}
+
+message DeleteVegetationBatchMessage {
+  repeated string entityIds = 1;
+  optional string expectedMapRevision = 2;
 }
 
 message ModifyTerrainMessage {
@@ -393,6 +472,7 @@ message UploadEntityMessage {
   optional double defaultHeightInTiles = 13;
   optional int32 previewOffsetX = 14;
   optional int32 previewOffsetY = 15;
+  optional google.protobuf.Value vegetation = 16;
 }
 
 message UploadFileMessage {
@@ -416,6 +496,7 @@ message ModifyCustomEntityMessage {
   optional double defaultHeightInTiles = 9;
   optional int32 previewOffsetX = 10;
   optional int32 previewOffsetY = 11;
+  optional google.protobuf.Value vegetation = 12;
 }
 
 message DeleteCustomEntityMessage {

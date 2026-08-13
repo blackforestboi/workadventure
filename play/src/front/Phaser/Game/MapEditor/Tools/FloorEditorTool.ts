@@ -15,6 +15,9 @@ import {
     waterUnderlayLayerName,
     worldToTileCoordinates,
     WIDE_ELEVATION_BRUSH_RADIUS,
+    normalizeVegetationRectangle,
+    planVegetation,
+    type VegetationPlacementPlan,
 } from "@workadventure/map-editor";
 import type { EditMapCommandMessage } from "@workadventure/messages";
 import type { ITiledMap, ITiledMapLayer, ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
@@ -41,6 +44,7 @@ import {
     type MapEditorFloorState,
     type MapEditorFloorTilesetAsset,
 } from "../../../../Stores/MapEditorFloorStore";
+import { mapEditorVegetationStore } from "../../../../Stores/MapEditorVegetationStore";
 import {
     BUILT_IN_TERRAIN_TILESET,
     getBuiltInTerrainAutotile,
@@ -124,6 +128,10 @@ export class FloorEditorTool extends MapEditorTool {
     private liquidStrokeSeed: { layer: string; x: number; y: number } | undefined;
     private liquidStrokePrevious: { layer: string; x: number; y: number } | undefined;
     private shapeOutline: GameObjects.Graphics | undefined;
+    private vegetationSelectionStart: { layer: string; x: number; y: number } | undefined;
+    private vegetationGhosts: GameObjects.Arc[] = [];
+    private vegetationStateUnsubscriber: Unsubscriber | undefined;
+    private vegetationSelectionActive = false;
     private hoveredTile: { layer: string; x: number; y: number } | undefined;
     private hoverTilePreview: GameObjects.Image | undefined;
     private hoverOutline: GameObjects.Graphics | undefined;
@@ -171,6 +179,10 @@ export class FloorEditorTool extends MapEditorTool {
         this.hoverOutline = undefined;
         this.shapeOutline?.destroy();
         this.shapeOutline = undefined;
+        this.clearVegetationGhosts();
+        this.vegetationSelectionStart = undefined;
+        this.vegetationStateUnsubscriber?.();
+        this.vegetationStateUnsubscriber = undefined;
         mapEditorFloorStateStore.set(undefined);
     }
 
@@ -197,6 +209,11 @@ export class FloorEditorTool extends MapEditorTool {
         this.scene.getGameMapFrontWrapper().getEntitiesManager().makeAllEntitiesNonInteractive();
         this.bindPointerEvents();
         this.installActionSubscription();
+        this.vegetationStateUnsubscriber = mapEditorVegetationStore.subscribe((state) => {
+            this.vegetationSelectionActive = state.selectionMode === true && state.selectedPreset !== undefined;
+            if (!this.vegetationSelectionActive) this.vegetationSelectionStart = undefined;
+            this.renderVegetationGhosts(state.preview);
+        });
         this.setState({ status: "idle", error: undefined });
         this.updateCursor();
         this.refreshPathOverlay();
@@ -214,6 +231,9 @@ export class FloorEditorTool extends MapEditorTool {
         this.shapeOutline = undefined;
         this.actionUnsubscriber?.();
         this.actionUnsubscriber = undefined;
+        this.vegetationStateUnsubscriber?.();
+        this.vegetationStateUnsubscriber = undefined;
+        this.clearVegetationGhosts();
     }
 
     public subscribeToGameMapFrontWrapperEvents(_gameMapFrontWrapper: GameMapFrontWrapper): void {}
@@ -503,6 +523,10 @@ export class FloorEditorTool extends MapEditorTool {
             if (this.shapeStart === undefined) this.clearHoverPreview();
             return;
         }
+        if (this.vegetationSelectionStart !== undefined && pointer.leftButtonDown()) {
+            this.showShapeOutline(this.vegetationSelectionStart, tile);
+            return;
+        }
         if (this.shapeStart !== undefined && this.shapeBrush !== undefined && pointer.leftButtonDown()) {
             this.shapeEnd = tile;
             this.showShapeOutline(this.shapeStart, tile);
@@ -540,6 +564,11 @@ export class FloorEditorTool extends MapEditorTool {
         }
         const tile = this.getTileAtPointer(pointer);
         if (tile === undefined) return;
+        if (this.vegetationSelectionActive) {
+            this.vegetationSelectionStart = tile;
+            this.showShapeOutline(tile, tile);
+            return;
+        }
         if (get(mapEditorFloorStateStore)?.toolMode === "elevation") {
             this.painting = true;
             this.lastPaintedTileKey = undefined;
@@ -581,6 +610,11 @@ export class FloorEditorTool extends MapEditorTool {
 
     private handlePointerUp(pointer: Phaser.Input.Pointer): void {
         this.stopPanning(pointer);
+        if (this.vegetationSelectionStart !== undefined) {
+            const end = this.getTileAtPointer(pointer);
+            if (end !== undefined) this.finishVegetationSelection(end);
+            return;
+        }
         if (this.shapeStart !== undefined && this.shapeEnd !== undefined && this.shapeBrush !== undefined) {
             this.finishShapeDrag();
             return;
@@ -821,6 +855,76 @@ export class FloorEditorTool extends MapEditorTool {
         this.shapeEnd = undefined;
         this.shapeBrush = undefined;
         this.shapeOutline?.clear();
+    }
+
+    private finishVegetationSelection(end: { layer: string; x: number; y: number }): void {
+        const start = this.vegetationSelectionStart;
+        this.vegetationSelectionStart = undefined;
+        this.shapeOutline?.clear();
+        if (start === undefined) return;
+        const state = get(mapEditorVegetationStore);
+        if (state.selectedPreset === undefined) return;
+        const prefabs = get(this.scene.getEntitiesCollectionsManager().getEntitiesPrefabsStore());
+        const byReference = new Map(prefabs.map((prefab) => [`${prefab.collectionName}\0${prefab.id}`, prefab]));
+        const selectedSpecies = state.selectedPreset.species.map(({ prefabRef }) => {
+            const prefab = byReference.get(`${prefabRef.collectionName}\0${prefabRef.id}`);
+            if (prefab === undefined) throw new Error(`Vegetation prefab ${prefabRef.id} is unavailable`);
+            return {
+                prefabRef,
+                footprintWidth: Math.max(1, Math.ceil(prefab.defaultSizeInTiles ?? 1)),
+                footprintHeight: Math.max(1, Math.ceil(prefab.defaultHeightInTiles ?? 1)),
+                blocking: prefab.collisionGrid?.some((row) => row.some((cell) => cell !== 0)) ?? false,
+            };
+        });
+        try {
+            const preview = planVegetation({
+                preset: state.selectedPreset,
+                seed: crypto.randomUUID(),
+                rectangle: normalizeVegetationRectangle({
+                    startX: start.x,
+                    startY: start.y,
+                    endX: end.x,
+                    endY: end.y,
+                }),
+                species: selectedSpecies,
+                tileWidth: this.publishedMap?.tilewidth ?? 32,
+                tileHeight: this.publishedMap?.tileheight ?? 32,
+            });
+            mapEditorVegetationStore.set({
+                status: "preview",
+                selectedPreset: state.selectedPreset,
+                preview,
+                selectionMode: false,
+            });
+        } catch (error) {
+            mapEditorVegetationStore.set({
+                ...state,
+                status: "selecting",
+                error: error instanceof Error ? error.message : "The vegetation preview could not be created.",
+            });
+        }
+    }
+
+    private renderVegetationGhosts(preview: VegetationPlacementPlan | undefined): void {
+        this.clearVegetationGhosts();
+        if (preview === undefined) return;
+        for (const placement of preview.placements) {
+            const marker = this.scene.add.circle(
+                placement.x,
+                placement.y - placement.height * 0.5,
+                Math.max(3, Math.min(placement.width, placement.height) * 0.22),
+                0x22c55e,
+                0.42,
+            );
+            marker.setDepth(DEPTH_OVERLAY_INDEX);
+            marker.setStrokeStyle(1, 0x86efac, 0.9);
+            this.vegetationGhosts.push(marker);
+        }
+    }
+
+    private clearVegetationGhosts(): void {
+        for (const ghost of this.vegetationGhosts) ghost.destroy();
+        this.vegetationGhosts = [];
     }
 
     private showShapeOutline(

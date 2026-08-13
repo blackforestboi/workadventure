@@ -4,6 +4,7 @@ import type {
     EntityPrefab,
     EntityPrefabType,
     EntityRawPrefab,
+    VegetationProfile,
 } from "@workadventure/map-editor";
 import type { Readable, Writable } from "svelte/store";
 import { derived, writable } from "svelte/store";
@@ -104,6 +105,7 @@ export class EntitiesCollectionsManager {
                                 previewPadding: entity.previewPadding,
                                 previewOffsetX: entity.previewOffsetX,
                                 previewOffsetY: entity.previewOffsetY,
+                                vegetation: entity.vegetation,
                                 type: entity.type,
                             });
                             entity.tags.forEach((tag: string) => tagSet.add(tag));
@@ -178,6 +180,7 @@ export class EntitiesCollectionsManager {
         previewPadding?: number,
         previewOffsetX?: number,
         previewOffsetY?: number,
+        vegetation?: VegetationProfile,
     ): void {
         const updatePrefab = (entity: EntityPrefab): EntityPrefab => ({
             ...entity,
@@ -191,6 +194,7 @@ export class EntitiesCollectionsManager {
             previewPadding: previewPadding ?? entity.previewPadding,
             previewOffsetX: previewOffsetX ?? entity.previewOffsetX,
             previewOffsetY: previewOffsetY ?? entity.previewOffsetY,
+            vegetation: vegetation ?? entity.vegetation,
         });
         this.currentCollection.collection = this.currentCollection.collection.map((entity) =>
             entity.id === id ? updatePrefab(entity) : entity,

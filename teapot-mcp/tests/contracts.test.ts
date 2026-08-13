@@ -4,6 +4,8 @@ import {
   TeapotMapPatch,
   TeapotPaidGenerationCompletionResult,
   TeapotPaidGenerationRequest,
+  TeapotVegetationFillPreview,
+  TeapotVegetationPreset,
   canonicalJson,
   digestCanonicalJson,
   validateTeapotPatchContract,
@@ -209,6 +211,31 @@ describe("Teapot MCP authoring contracts", () => {
       TeapotPaidGenerationRequest.safeParse({
         ...request,
         output: { ...request.output, width: 256, height: 256 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("exposes bounded semantic vegetation presets and deterministic preview receipts", () => {
+    expect(
+      TeapotVegetationPreset.safeParse({
+        id: "forest",
+        name: "Forest",
+        revision: 2,
+        density: 0.5,
+        minimumSpacing: 1.5,
+        species: [{ collectionName: "nature", prefabId: "pine", weight: 3 }],
+      }).success,
+    ).toBe(true);
+    expect(
+      TeapotVegetationFillPreview.safeParse({
+        mapRevision: "revision-7",
+        presetId: "forest",
+        presetRevision: 2,
+        seed: "seed-1",
+        rectangle: { x: 0, y: 0, width: 65, height: 1 },
+        acceptedCount: 1,
+        skippedCount: 0,
+        digest: "0".repeat(32),
       }).success,
     ).toBe(false);
   });

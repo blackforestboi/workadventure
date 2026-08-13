@@ -130,6 +130,7 @@
                     previewPadding: customEditedEntity.previewPadding,
                     previewOffsetX: customEditedEntity.previewOffsetX,
                     previewOffsetY: customEditedEntity.previewOffsetY,
+                    vegetation: customEditedEntity.vegetation,
                     color: "",
                     animation: customEditedEntity.animation,
                 },
@@ -242,7 +243,6 @@
             isUploadForm
             disabled={uploadDraft?.status === "submitting"}
             customEntity={customEntityToUpload}
-            closeForm={closeToCustomAssets}
             applyEntityModifications={(customModifiedEntity) =>
                 processFileToUpload(customModifiedEntity).catch((e) => console.error(e))}
         />

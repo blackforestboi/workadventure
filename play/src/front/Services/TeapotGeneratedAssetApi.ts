@@ -11,7 +11,7 @@ const TeapotGeneratedAssetViewSchema = z.object({
     id: z.string(),
     name: z.string(),
     url: z.string(),
-    kind: z.enum(["map-entity", "reference", "terrain-surface"]),
+    kind: z.enum(["map-entity", "reference", "terrain-surface", "vegetation"]),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),

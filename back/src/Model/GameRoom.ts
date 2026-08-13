@@ -1436,6 +1436,10 @@ export class GameRoom implements BrothersFinder {
             editMapMessageCase === "createEntityMessage" ||
             editMapMessageCase === "deleteEntityMessage" ||
             editMapMessageCase === "deleteCustomEntityMessage" ||
+            editMapMessageCase === "upsertVegetationPresetMessage" ||
+            editMapMessageCase === "deleteVegetationPresetMessage" ||
+            editMapMessageCase === "createVegetationBatchMessage" ||
+            editMapMessageCase === "deleteVegetationBatchMessage" ||
             editMapMessageCase === "modifiyWAMMetadataMessage"
         );
     }

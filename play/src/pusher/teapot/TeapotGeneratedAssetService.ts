@@ -19,7 +19,7 @@ const ASSET_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_NAME_LENGTH = 80;
 
-export type TeapotGeneratedAssetKind = "map-entity" | "reference" | "terrain-surface";
+export type TeapotGeneratedAssetKind = "map-entity" | "reference" | "terrain-surface" | "vegetation";
 
 export type TeapotTerrainSurfaceGrid = {
     columns: 5;
@@ -107,13 +107,15 @@ export class TeapotGeneratedAssetService {
                 kind,
                 mediaType: "image/png",
                 // Generated reference outputs remain owner-private. Input reference images never reach this service.
-                published: kind !== "reference",
+                published: kind !== "reference" && kind !== "vegetation",
                 catalogName:
                     kind === "map-entity"
                         ? "Generated map entities"
                         : kind === "terrain-surface"
                           ? "Generated terrain surfaces"
-                          : "Generated references",
+                          : kind === "vegetation"
+                            ? "Generated vegetation"
+                            : "Generated references",
                 metadata: {
                     name,
                     sha256: validated.sha256,
@@ -169,7 +171,7 @@ export class TeapotGeneratedAssetService {
         if (
             asset === null ||
             asset.ownerId !== owner.id ||
-            asset.kind !== "reference" ||
+            (asset.kind !== "reference" && asset.kind !== "vegetation") ||
             asset.mediaType !== "image/png" ||
             asset.published ||
             asset.deletedAt !== null
@@ -189,7 +191,7 @@ export class TeapotGeneratedAssetService {
             id: asset.id,
             name: readString(asset.metadata, "name") ?? "Generated asset",
             url:
-                kind !== "reference"
+                kind !== "reference" && kind !== "vegetation"
                     ? `${this.publicPusherUrl}/teapot/generated-assets/${encodeURIComponent(asset.id)}.png`
                     : `${this.publicPusherUrl}/teapot/generated-assets/private/${encodeURIComponent(asset.id)}.png`,
             kind,

@@ -1,5 +1,11 @@
 import * as Phaser from "phaser";
-import type { AreaData, EntityData, WAMEntityData } from "@workadventure/map-editor";
+import {
+    vegetationPlacementPlanFromMessage,
+    vegetationPresetFromMessage,
+    type AreaData,
+    type EntityData,
+    type WAMEntityData,
+} from "@workadventure/map-editor";
 import * as Sentry from "@sentry/svelte";
 import type { EditMapCommandMessage } from "@workadventure/messages";
 import type { Unsubscriber } from "svelte/store";
@@ -18,6 +24,14 @@ import {
 import { TexturesHelper } from "../../../Helpers/TexturesHelper";
 import { CopyEntityEventData, EntitiesManagerEvent } from "../../GameMap/EntitiesManager";
 import { CreateEntityFrontCommand } from "../Commands/Entity/CreateEntityFrontCommand";
+import {
+    CreateVegetationBatchFrontCommand,
+    DeleteVegetationBatchFrontCommand,
+} from "../Commands/Entity/CreateVegetationBatchFrontCommand";
+import {
+    DeleteVegetationPresetFrontCommand,
+    UpsertVegetationPresetFrontCommand,
+} from "../Commands/Vegetation/VegetationPresetFrontCommand";
 import { DeleteCustomEntityFrontCommand } from "../Commands/Entity/DeleteCustomEntityFrontCommand";
 import { DeleteEntityFrontCommand } from "../Commands/Entity/DeleteEntityFrontCommand";
 import { ModifyCustomEntityFrontCommand } from "../Commands/Entity/ModifyCustomEntityFrontCommand";
@@ -139,6 +153,78 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                         commandId,
                         this.entitiesManager,
                         { width: createEntityMessage.width, height: createEntityMessage.height },
+                    ),
+                );
+                break;
+            }
+            case "createVegetationBatchMessage": {
+                const message = editMapCommandMessage.editMapMessage.message.createVegetationBatchMessage;
+                if (!message.plan) return;
+                const plan = vegetationPlacementPlanFromMessage(message.plan);
+                await this.mapEditorModeManager.executeLocalCommand(
+                    new CreateVegetationBatchFrontCommand(
+                        this.scene.getGameMap().getWamFile()!,
+                        plan,
+                        commandId,
+                        this.entitiesManager,
+                    ),
+                );
+                break;
+            }
+            case "upsertVegetationPresetMessage": {
+                const message = editMapCommandMessage.editMapMessage.message.upsertVegetationPresetMessage;
+                if (!message.preset) return;
+                await this.mapEditorModeManager.executeLocalCommand(
+                    new UpsertVegetationPresetFrontCommand(
+                        this.scene.getGameMap().getWamFile()!.getWam(),
+                        vegetationPresetFromMessage(message.preset),
+                        message.expectedRevision,
+                        commandId,
+                    ),
+                );
+                break;
+            }
+            case "deleteVegetationPresetMessage": {
+                const message = editMapCommandMessage.editMapMessage.message.deleteVegetationPresetMessage;
+                await this.mapEditorModeManager.executeLocalCommand(
+                    new DeleteVegetationPresetFrontCommand(
+                        this.scene.getGameMap().getWamFile()!.getWam(),
+                        message.presetId,
+                        message.expectedRevision,
+                        commandId,
+                    ),
+                );
+                break;
+            }
+            case "deleteVegetationBatchMessage": {
+                const message = editMapCommandMessage.editMapMessage.message.deleteVegetationBatchMessage;
+                const placements = message.entityIds.map((id) => {
+                    const entity = this.scene.getGameMap().getWamFile()!.getGameMapEntities().getEntity(id);
+                    if (!entity) throw new Error(`Vegetation entity ${id} does not exist`);
+                    return {
+                        id,
+                        prefabRef: entity.prefabRef,
+                        x: entity.x,
+                        y: entity.y,
+                        width: entity.width ?? 1,
+                        height: entity.height ?? 1,
+                    };
+                });
+                await this.mapEditorModeManager.executeLocalCommand(
+                    new DeleteVegetationBatchFrontCommand(
+                        this.scene.getGameMap().getWamFile()!,
+                        {
+                            version: 1,
+                            presetId: "undo",
+                            presetRevision: 1,
+                            seed: "",
+                            rectangle: { x: 0, y: 0, width: 1, height: 1 },
+                            placements,
+                            skipped: [],
+                            digest: "00000000000000000000000000000000",
+                        },
+                        commandId,
+                        this.entitiesManager,
                     ),
                 );
                 break;

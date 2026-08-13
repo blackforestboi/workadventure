@@ -26,6 +26,10 @@ export class WamFile {
         return this.gameMapEntities;
     }
 
+    public getVegetationPresets(): WAMFileFormat["vegetationPresets"] {
+        return this.wam.vegetationPresets;
+    }
+
     public onEnterArea(callback: AreaChangeCallback): void {
         this.gameMapAreas.onEnterArea(callback);
     }

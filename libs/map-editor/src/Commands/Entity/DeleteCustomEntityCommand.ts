@@ -15,7 +15,20 @@ export class DeleteCustomEntityCommand extends Command {
     }
 
     execute(): Promise<void> {
-        this.wamFile?.getGameMapEntities().deleteCustomEntities(this.deleteCustomEntityMessage.id);
+        if (this.wamFile !== undefined) {
+            const referencedByPreset = this.wamFile
+                .getVegetationPresets()
+                ?.presets.some((preset) =>
+                    preset.species.some(({ prefabRef }) => prefabRef.id === this.deleteCustomEntityMessage.id),
+                );
+            const referencedByEntity =
+                this.wamFile.getGameMapEntities().findEntitiesByPrefabId(this.deleteCustomEntityMessage.id).length > 0;
+            if (referencedByPreset || referencedByEntity) {
+                throw new Error(
+                    `Vegetation prefab ${this.deleteCustomEntityMessage.id} cannot be deleted while it is in use`,
+                );
+            }
+        }
         return Promise.resolve();
     }
 }

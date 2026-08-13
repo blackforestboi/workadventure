@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { EntityPrefab } from "@workadventure/map-editor";
+    import type { EntityPrefab, VegetationCategory } from "@workadventure/map-editor";
     import { onDestroy } from "svelte";
     import LL from "../../../../../i18n/i18n-svelte";
     import EntityImage from "../EntityItem/EntityImage.svelte";
@@ -8,6 +8,8 @@
     import Select from "../../../Input/Select.svelte";
     import Input from "../../../Input/Input.svelte";
     import Button from "../../../UI/Button.svelte";
+    import { ENTITY_SIZE_TILE_OPTIONS, MAP_TILE_SIZE } from "../../../../Utils/EntityPrefabSize";
+    import EntityEditorTabs from "../EntityEditorTabs.svelte";
     import EntityEditionCollisionGrid from "./EntityEditionCollisionGrid.svelte";
     import { initializeCollisionGrid, resizeCollisionGrid } from "./CollisionGridResizer";
     import {
@@ -16,8 +18,6 @@
         getOpaqueImageBounds,
         type OpaqueImageBounds,
     } from "./OpaqueImageBounds";
-    import { ENTITY_SIZE_TILE_OPTIONS, MAP_TILE_SIZE } from "../../../../Utils/EntityPrefabSize";
-    import EntityEditorTabs from "../EntityEditorTabs.svelte";
 
     interface Props {
         customEntity: EntityPrefab;
@@ -28,7 +28,6 @@
         showHeader?: boolean;
         onSaveReady?: (save: (() => Promise<void>) | undefined) => void;
         onSaveStatusChange?: (status: "idle" | "saving" | "saved") => void;
-        closeForm?: () => void;
         removeEntity?: (payload: { entityId: string }) => void;
         applyEntityModifications?: (entity: EntityPrefab) => void | Promise<void>;
     }
@@ -42,7 +41,6 @@
         showHeader = true,
         onSaveReady,
         onSaveStatusChange,
-        closeForm = () => {},
         removeEntity = () => {},
         applyEntityModifications = () => {},
     }: Props = $props();
@@ -57,6 +55,7 @@
         previewPadding: initialPreviewPadding,
         previewOffsetX: initialPreviewOffsetX,
         previewOffsetY: initialPreviewOffsetY,
+        vegetation: initialVegetation,
     } = $state((() => customEntity)());
     let inputTagOptions: InputTagOption[] | undefined = $state(tags.map((tag) => ({ value: tag, label: tag })));
     let collisionGrid = $state(customEntityCollisionGrid ? customEntityCollisionGrid.map((row) => [...row]) : []);
@@ -80,6 +79,8 @@
     let previewOffsetStartY = 0;
     let defaultSizeInTiles = $state(defaultSizeInTilesCustomEntity ?? 1);
     let defaultHeightInTiles = $state(defaultHeightInTilesCustomEntity ?? 1);
+    let isVegetation = $state(initialVegetation !== undefined);
+    let vegetationCategory = $state<VegetationCategory>(initialVegetation?.category ?? "tree");
     let collisionGridWidthIndex = $state(
         Math.max(
             0,
@@ -145,18 +146,28 @@
             previewPadding,
             previewOffsetX,
             previewOffsetY,
+            vegetation: isVegetation
+                ? {
+                      ...initialVegetation,
+                      version: 1,
+                      category: vegetationCategory,
+                  }
+                : undefined,
         };
     }
 
     async function save(): Promise<void> {
         if (saveStatus === "saving") return;
-        saveFeedbackTimeout && clearTimeout(saveFeedbackTimeout);
+        if (saveFeedbackTimeout !== undefined) clearTimeout(saveFeedbackTimeout);
         saveStatus = "saving";
         try {
             await applyEntityModifications(getModifiedCustomEntity());
+            // eslint-disable-next-line require-atomic-updates
             saveStatus = "saved";
+            // eslint-disable-next-line require-atomic-updates
             saveFeedbackTimeout = setTimeout(() => (saveStatus = "idle"), 1600);
         } catch (error) {
+            // eslint-disable-next-line require-atomic-updates
             saveStatus = "idle";
             console.error("The asset could not be saved.", error);
         }
@@ -304,7 +315,7 @@
 
     onDestroy(() => {
         imageResizeObserver?.disconnect();
-        saveFeedbackTimeout && clearTimeout(saveFeedbackTimeout);
+        if (saveFeedbackTimeout !== undefined) clearTimeout(saveFeedbackTimeout);
     });
 </script>
 
@@ -412,6 +423,29 @@
                             placeholder={$LL.mapEditor.entityEditor.customEntityEditorForm.writeTag()}
                         />
                     </div>
+                    <fieldset class="rounded-lg border border-solid border-contrast-300 p-3">
+                        <label class="flex cursor-pointer items-center gap-2" for="is-vegetation">
+                            <input id="is-vegetation" type="checkbox" bind:checked={isVegetation} />
+                            <span><b>Vegetation asset</b></span>
+                        </label>
+                        <p class="mb-3 mt-1 text-xs text-gray-300">
+                            Makes this asset available for individual placement and procedural vegetation fills.
+                        </p>
+                        {#if isVegetation}
+                            <label class="mb-2 block text-sm" for="vegetation-category">Vegetation type</label>
+                            <select
+                                id="vegetation-category"
+                                data-testid="vegetation-category"
+                                class="w-full rounded-md border border-solid border-contrast-400 bg-contrast px-2 py-2 text-white"
+                                bind:value={vegetationCategory}
+                            >
+                                <option value="tree">Tree</option>
+                                <option value="bush">Bush</option>
+                                <option value="grass">Grass</option>
+                                <option value="other">Other vegetation</option>
+                            </select>
+                        {/if}
+                    </fieldset>
                 </section>
             {:else if activeEditorTab === "style"}
                 <section class="flex flex-col gap-4" aria-label="Style">
