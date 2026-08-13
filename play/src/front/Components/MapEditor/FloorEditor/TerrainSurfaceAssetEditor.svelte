@@ -96,8 +96,8 @@
         try {
             const prepared = await prepareTerrainSurfaceSource(blob);
             if (sourceUrl !== "") URL.revokeObjectURL(sourceUrl);
-            sourceBlob = blob;
-            sourceUrl = URL.createObjectURL(blob);
+            sourceBlob = prepared.blob;
+            sourceUrl = URL.createObjectURL(prepared.blob);
             sourceWidth = prepared.width;
             sourceHeight = prepared.height;
             crop = prepared.crop;

@@ -10,6 +10,7 @@ import {
     TERRAIN_SURFACE_VARIATION_CELLS,
     terrainSurfaceTilePixelSize,
 } from "../../../../src/front/Components/MapEditor/FloorEditor/TerrainSurfaceAssetLayout";
+import { removeEdgeConnectedTerrainBackground } from "../../../../src/front/Components/MapEditor/FloorEditor/TerrainSurfaceAssetRaster";
 
 describe("terrain surface asset layout", () => {
     it("measures alpha content and proposes a centered native-resolution 5×5 crop", () => {
@@ -35,6 +36,49 @@ describe("terrain surface asset layout", () => {
         expect(TERRAIN_SURFACE_VARIATION_CELLS).toHaveLength(5);
     });
 
+    it("makes a solid edge-connected surface background transparent", () => {
+        const width = 5;
+        const height = 5;
+        const pixels = new Uint8ClampedArray(width * height * 4);
+        for (let index = 0; index < width * height; index += 1) {
+            pixels.set([23, 36, 58, 255], index * 4);
+        }
+        for (let row = 1; row < 4; row += 1) {
+            for (let column = 1; column < 4; column += 1) {
+                pixels.set([181, 117, 62, 255], (row * width + column) * 4);
+            }
+        }
+
+        const transparent = removeEdgeConnectedTerrainBackground(pixels, width, height);
+
+        expect(transparent[3]).toBe(0);
+        expect(transparent[(2 * width + 2) * 4 + 3]).toBe(255);
+    });
+
+    it("preserves matching colours enclosed inside the surface", () => {
+        const width = 5;
+        const height = 5;
+        const pixels = new Uint8ClampedArray(width * height * 4);
+        for (let index = 0; index < width * height; index += 1) pixels.set([23, 36, 58, 255], index * 4);
+        for (let row = 1; row < 4; row += 1) {
+            for (let column = 1; column < 4; column += 1) pixels.set([181, 117, 62, 255], (row * width + column) * 4);
+        }
+        pixels.set([23, 36, 58, 255], (2 * width + 2) * 4);
+
+        const transparent = removeEdgeConnectedTerrainBackground(pixels, width, height);
+
+        expect(transparent[(2 * width + 2) * 4 + 3]).toBe(255);
+    });
+
+    it("does not erase a uniformly opaque seamless surface", () => {
+        const pixels = new Uint8ClampedArray(5 * 5 * 4);
+        for (let index = 0; index < 25; index += 1) pixels.set([181, 117, 62, 255], index * 4);
+
+        const unchanged = removeEdgeConnectedTerrainBackground(pixels, 5, 5);
+
+        expect(unchanged.every((value, index) => value === pixels[index])).toBe(true);
+    });
+
     it("reuses the existing generation flow and makes human review authoritative", () => {
         expect(floorEditorSource).toContain("Create surface");
         expect(floorEditorSource).toContain("<TerrainSurfaceAssetEditor");
@@ -45,6 +89,7 @@ describe("terrain surface asset layout", () => {
         expect(surfaceEditorSource).toContain("Surface variations");
         expect(surfaceEditorSource).toContain("Approve surface asset");
         expect(surfaceEditorSource).toContain("cropTerrainSurfaceSource(sourceBlob, crop)");
+        expect(surfaceEditorSource).toContain("sourceBlob = prepared.blob");
         expect(surfaceEditorSource).not.toContain("outputSize=");
         expect(surfaceEditorSource).not.toContain("32×32");
         expect(surfaceEditorSource).not.toContain("image-rendering:pixelated");
