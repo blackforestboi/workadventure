@@ -10,7 +10,7 @@ import {
     TERRAIN_SURFACE_VARIATION_CELLS,
     terrainSurfaceTilePixelSize,
 } from "../../../../src/front/Components/MapEditor/FloorEditor/TerrainSurfaceAssetLayout";
-import { removeEdgeConnectedTerrainBackground } from "../../../../src/front/Components/MapEditor/FloorEditor/TerrainSurfaceAssetRaster";
+import { removeEdgeConnectedBackground } from "../../../../src/front/Services/AssetGeneration/EdgeConnectedBackground";
 
 describe("terrain surface asset layout", () => {
     it("measures alpha content and proposes a centered native-resolution 5×5 crop", () => {
@@ -49,7 +49,7 @@ describe("terrain surface asset layout", () => {
             }
         }
 
-        const transparent = removeEdgeConnectedTerrainBackground(pixels, width, height);
+        const transparent = removeEdgeConnectedBackground(pixels, width, height);
 
         expect(transparent[3]).toBe(0);
         expect(transparent[(2 * width + 2) * 4 + 3]).toBe(255);
@@ -65,7 +65,7 @@ describe("terrain surface asset layout", () => {
         }
         pixels.set([23, 36, 58, 255], (2 * width + 2) * 4);
 
-        const transparent = removeEdgeConnectedTerrainBackground(pixels, width, height);
+        const transparent = removeEdgeConnectedBackground(pixels, width, height);
 
         expect(transparent[(2 * width + 2) * 4 + 3]).toBe(255);
     });
@@ -74,7 +74,7 @@ describe("terrain surface asset layout", () => {
         const pixels = new Uint8ClampedArray(5 * 5 * 4);
         for (let index = 0; index < 25; index += 1) pixels.set([181, 117, 62, 255], index * 4);
 
-        const unchanged = removeEdgeConnectedTerrainBackground(pixels, 5, 5);
+        const unchanged = removeEdgeConnectedBackground(pixels, 5, 5);
 
         expect(unchanged.every((value, index) => value === pixels[index])).toBe(true);
     });

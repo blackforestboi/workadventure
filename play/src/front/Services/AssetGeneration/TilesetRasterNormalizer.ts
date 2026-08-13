@@ -1,6 +1,7 @@
 import type { VisualAssetAnimation } from "@workadventure/map-editor";
 
 import { AssetGenerationError } from "./AssetGenerationError";
+import { cleanTilesetCanvas } from "./EdgeConnectedBackground";
 
 const TILE_SIZE = 32;
 const MAX_DIMENSION = 2048;
@@ -68,6 +69,7 @@ export async function normalizeTilesetRaster(blob: Blob, animation?: VisualAsset
             TILE_SIZE,
             TILE_SIZE,
         );
+        cleanTilesetCanvas(context, TILE_SIZE, TILE_SIZE);
         return await new Promise<Blob>((resolve, reject) => {
             canvas.toBlob((normalized) => {
                 if (normalized === null)

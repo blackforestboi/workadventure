@@ -45,6 +45,7 @@ import {
     type MapEditorFloorTilesetAsset,
 } from "../../../../Stores/MapEditorFloorStore";
 import { mapEditorVegetationStore } from "../../../../Stores/MapEditorVegetationStore";
+import { cleanLoadedTilesetSpriteSheet } from "../../../../Services/AssetGeneration/EdgeConnectedBackground";
 import {
     BUILT_IN_TERRAIN_TILESET,
     getBuiltInTerrainAutotile,
@@ -1596,6 +1597,7 @@ export class FloorEditorTool extends MapEditorTool {
             const image = await loadImage(url);
             this.scene.textures.addSpriteSheet(textureKey, image, { frameWidth: 32, frameHeight: 32 });
         }
+        cleanLoadedTilesetSpriteSheet(this.scene.textures, textureKey);
         this.runtimeTilesets.push({ firstGid, tileCount, textureKey });
 
         if (!this.scene.Terrains.some((terrain) => terrain.firstgid === firstGid)) {
