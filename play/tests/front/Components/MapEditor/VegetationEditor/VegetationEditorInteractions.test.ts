@@ -40,6 +40,21 @@ describe("vegetation editor interactions", () => {
         expect(pointerDownFunction).toContain("this.getVegetationTileAtPointer(pointer)");
     });
 
+    it("renders area previews with the selected vegetation artwork instead of circles", () => {
+        const renderFunction = floorEditorToolSource.slice(
+            floorEditorToolSource.indexOf("private renderVegetationGhosts("),
+            floorEditorToolSource.indexOf("private clearVegetationGhosts("),
+        );
+
+        expect(renderFunction).toContain("TexturesHelper.loadEntityTexture");
+        expect(renderFunction).toContain("this.scene.add.sprite");
+        expect(renderFunction).toContain("placement.prefabRef");
+        expect(renderFunction).toContain("setDisplaySize(placement.width, placement.height)");
+        expect(renderFunction).toContain("setAlpha(0.7)");
+        expect(renderFunction).toContain("vegetationGhostGeneration");
+        expect(renderFunction).not.toContain("this.scene.add.circle");
+    });
+
     it("keeps mix controls above a list that fills the remaining panel height", () => {
         expect(vegetationEditorSource).toMatch(/Area mix[\s\S]*Search vegetation/u);
         expect(vegetationEditorSource).toContain('data-testid="vegetation-list"');

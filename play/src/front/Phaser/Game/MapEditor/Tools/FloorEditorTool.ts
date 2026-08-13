@@ -52,6 +52,7 @@ import {
     getBuiltInWaterFillTileId,
 } from "../../../../Services/BuiltInTerrainCatalog";
 import { DEPTH_OVERLAY_INDEX } from "../../DepthIndexes";
+import { TexturesHelper } from "../../../Helpers/TexturesHelper";
 import {
     appendDefaultCollisionRegions,
     appendWaterCollisionRegions,
@@ -134,7 +135,8 @@ export class FloorEditorTool extends MapEditorTool {
     private liquidStrokePrevious: { layer: string; x: number; y: number } | undefined;
     private shapeOutline: GameObjects.Graphics | undefined;
     private vegetationSelectionStart: { layer: string; x: number; y: number } | undefined;
-    private vegetationGhosts: GameObjects.Arc[] = [];
+    private vegetationGhosts: GameObjects.Sprite[] = [];
+    private vegetationGhostGeneration = 0;
     private vegetationStateUnsubscriber: Unsubscriber | undefined;
     private vegetationSelectionActive = false;
     private hoveredTile: { layer: string; x: number; y: number } | undefined;
@@ -934,23 +936,41 @@ export class FloorEditorTool extends MapEditorTool {
     private renderVegetationGhosts(preview: VegetationPlacementPlan | undefined): void {
         this.clearVegetationGhosts();
         if (preview === undefined) return;
+        const generation = this.vegetationGhostGeneration;
+        const prefabs = get(this.scene.getEntitiesCollectionsManager().getEntitiesPrefabsStore());
+        const prefabsByReference = new Map(
+            prefabs.map((prefab) => [`${prefab.collectionName}\0${prefab.id}`, prefab] as const),
+        );
+        const textureLoads = new Map<string, Promise<void>>();
         for (const placement of preview.placements) {
-            const marker = this.scene.add.circle(
-                placement.x,
-                placement.y - placement.height * 0.5,
-                Math.max(3, Math.min(placement.width, placement.height) * 0.22),
-                0x22c55e,
-                0.42,
-            );
-            marker.setDepth(DEPTH_OVERLAY_INDEX);
-            marker.setStrokeStyle(1, 0x86efac, 0.9);
-            this.vegetationGhosts.push(marker);
+            const prefab = prefabsByReference.get(`${placement.prefabRef.collectionName}\0${placement.prefabRef.id}`);
+            if (prefab === undefined) continue;
+            let textureLoad = textureLoads.get(prefab.imagePath);
+            if (textureLoad === undefined) {
+                textureLoad = TexturesHelper.loadEntityTexture(this.scene, prefab, prefab.imagePath);
+                textureLoads.set(prefab.imagePath, textureLoad);
+            }
+            textureLoad
+                .then(() => {
+                    if (generation !== this.vegetationGhostGeneration) return;
+                    const sprite = this.scene.add.sprite(placement.x, placement.y, prefab.imagePath).setOrigin(0);
+                    sprite.setDisplaySize(placement.width, placement.height);
+                    sprite.setAlpha(0.7);
+                    sprite.setDepth(placement.y + placement.height + (prefab.depthOffset ?? 0));
+                    TexturesHelper.playEntityAnimation(sprite, prefab);
+                    this.scene.getGameRenderLayers().addWorldObject(sprite);
+                    this.vegetationGhosts.push(sprite);
+                    this.scene.markDirty();
+                })
+                .catch((error) => console.error("Could not load vegetation preview", error));
         }
     }
 
     private clearVegetationGhosts(): void {
+        this.vegetationGhostGeneration += 1;
         for (const ghost of this.vegetationGhosts) ghost.destroy();
         this.vegetationGhosts = [];
+        this.scene.markDirty();
     }
 
     private showShapeOutline(
