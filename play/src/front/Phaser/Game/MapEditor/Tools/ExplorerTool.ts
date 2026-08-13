@@ -28,6 +28,8 @@ import Pointer = Phaser.Input.Pointer;
 import GameObject = Phaser.GameObjects.GameObject;
 
 const logger = debug("explorer-tool");
+const EXPLORER_KEYBOARD_BASE_SPEED = 10;
+const EXPLORER_KEYBOARD_SPEED_UP_MULTIPLIER = 2.5;
 
 export class ExplorerTool implements MapEditorTool {
     private downIsPressed = false;
@@ -42,6 +44,7 @@ export class ExplorerTool implements MapEditorTool {
     private mapExplorationEntitiesSubscribe: Unsubscriber | undefined;
     private enableUserInputsStoreSubscribe: Unsubscriber | undefined;
     private zoomLevelBeforeExplorerMode: number | undefined;
+    private readonly shiftKey: Phaser.Input.Keyboard.Key | undefined;
 
     private keyDownHandler = (event: KeyboardEvent) => {
         if (!get(enableUserInputsStore)) return;
@@ -142,12 +145,15 @@ export class ExplorerTool implements MapEditorTool {
         private mapEditorModeManager: MapEditorModeManager,
         private readonly scene: GameScene,
     ) {
+        this.shiftKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
         this.entitiesManager = this.scene.getGameMapFrontWrapper().getEntitiesManager();
     }
 
     public update(time: number, dt: number): void {
         if (!get(enableUserInputsStore)) return;
-        const factorToMove = 10 * (1 / waScaleManager.zoomModifier);
+        const factorToMove =
+            (EXPLORER_KEYBOARD_BASE_SPEED * (this.shiftKey?.isDown ? EXPLORER_KEYBOARD_SPEED_UP_MULTIPLIER : 1)) /
+            waScaleManager.zoomModifier;
         if (this.downIsPressed) {
             this.scene.getCameraManager().scrollCamera(0, factorToMove);
         }

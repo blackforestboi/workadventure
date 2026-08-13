@@ -79,6 +79,21 @@ describe("map editor movement routing", () => {
         );
     });
 
+    it("accelerates explore keyboard panning while Shift is held", () => {
+        expect(explorerToolSource).toContain("const EXPLORER_KEYBOARD_BASE_SPEED = 10;");
+        expect(explorerToolSource).toContain("const EXPLORER_KEYBOARD_SPEED_UP_MULTIPLIER = 2.5;");
+        expect(explorerToolSource).toMatch(
+            /this\.shiftKey = this\.scene\.input\.keyboard\?\.addKey\(Phaser\.Input\.Keyboard\.KeyCodes\.SHIFT\);/,
+        );
+        expect(explorerToolSource).toMatch(
+            /const factorToMove =\s*\(EXPLORER_KEYBOARD_BASE_SPEED \*\s*\(this\.shiftKey\?\.isDown \? EXPLORER_KEYBOARD_SPEED_UP_MULTIPLIER : 1\)\) \/\s*waScaleManager\.zoomModifier;/,
+        );
+        expect(explorerToolSource).toContain("scrollCamera(0, factorToMove);");
+        expect(explorerToolSource).toContain("scrollCamera(0, -factorToMove);");
+        expect(explorerToolSource).toContain("scrollCamera(-factorToMove, 0);");
+        expect(explorerToolSource).toContain("scrollCamera(factorToMove, 0);");
+    });
+
     it("does not advertise or activate panning until the pointer is actually dragged", () => {
         expect(mapEditorModeManagerSource).toMatch(/this\.scene\.input\.setDefaultCursor\("auto"\);/);
         expect(explorerToolSource).toMatch(
