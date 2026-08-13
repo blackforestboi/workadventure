@@ -21,6 +21,7 @@ import {
 import { z } from "zod";
 import type { ITiledMap, ITiledMapLayer, ITiledMapObject, ITiledMapTileset } from "@workadventure/tiled-map-type-guard";
 import {
+    BUILT_IN_ENTITY_COLLECTIONS,
     type AreaData,
     EntityPermissions,
     type EntityPrefabType,
@@ -1841,6 +1842,13 @@ export class GameScene extends DirtyScene {
                 type: "Default",
             }),
         );
+        const configuredUrls = new Set(
+            collectionDescriptors.map(({ url }) => new URL(url, window.location.href).toString()),
+        );
+        for (const collection of BUILT_IN_ENTITY_COLLECTIONS) {
+            const url = new URL(collection.urlPath, window.location.href).toString();
+            if (!configuredUrls.has(url)) collectionDescriptors.push({ url, type: "Default" });
+        }
         collectionDescriptors.push({ url: customEntityCollectionUrl, type: "Custom" });
 
         this.entitiesCollectionsManager.loadCollections(collectionDescriptors);

@@ -244,6 +244,10 @@ export function createBlankInfiniteWorldTemplate(sourceRoomUrl: string | undefin
         entityCollections: [
             { url: new URL("/collections/FurnitureCollection.json", playBase).toString(), type: "file" },
             { url: new URL("/collections/OfficeCollection.json", playBase).toString(), type: "file" },
+            {
+                url: new URL("/collections/CraftpixNature/CraftpixNatureCollection.json", playBase).toString(),
+                type: "file",
+            },
         ],
         lastCommandId: randomUUID(),
     };

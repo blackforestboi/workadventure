@@ -1,0 +1,4973 @@
+{
+    "version": "1.0.0",
+    "collectionName": "Craftpix Nature & Ruins",
+    "tags": ["craftpix", "nature", "vegetation", "outdoor", "pixel art"],
+    "collection": [
+        {
+            "id": "craftpix-forest-beige-green-mushroom1",
+            "name": "Beige Green Mushroom \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/beige-green-mushroom1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-beige-green-mushroom1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-beige-green-mushroom2",
+            "name": "Beige Green Mushroom \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/beige-green-mushroom2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-beige-green-mushroom2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-beige-green-mushroom3",
+            "name": "Beige Green Mushroom \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/beige-green-mushroom3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-beige-green-mushroom3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-blue-green-balls-tree1",
+            "name": "Blue-Green Balls Tree \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/blue-green-balls-tree1.png",
+            "direction": "Down",
+            "color": "blue-green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-blue-green-balls-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-blue-green-balls-tree2",
+            "name": "Blue-Green Balls Tree \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/blue-green-balls-tree2.png",
+            "direction": "Down",
+            "color": "blue-green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-blue-green-balls-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-blue-green-balls-tree3",
+            "name": "Blue-Green Balls Tree \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/blue-green-balls-tree3.png",
+            "direction": "Down",
+            "color": "blue-green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-blue-green-balls-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-chanterelles1",
+            "name": "Chanterelles \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/chanterelles1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-chanterelles1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-chanterelles2",
+            "name": "Chanterelles \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/chanterelles2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-chanterelles2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-chanterelles3",
+            "name": "Chanterelles \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/chanterelles3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-chanterelles3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-curved-tree1",
+            "name": "Curved Tree \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/curved-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-curved-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-curved-tree2",
+            "name": "Curved Tree \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/curved-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-curved-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-curved-tree3",
+            "name": "Curved Tree \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/curved-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-curved-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-ent-man",
+            "name": "Ent Guardian \u2014 Oak",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/ent-man.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-ent-man",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-ent-woman",
+            "name": "Ent Guardian \u2014 Willow",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/ent-woman.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-ent-woman",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-light-balls-tree1",
+            "name": "Light Balls Tree \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/light-balls-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-light-balls-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-light-balls-tree2",
+            "name": "Light Balls Tree \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/light-balls-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-light-balls-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-light-balls-tree3",
+            "name": "Light Balls Tree \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/light-balls-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-light-balls-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-living-gazebo1",
+            "name": "Living Gazebo \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/living-gazebo1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-living-gazebo1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-living-gazebo2",
+            "name": "Living Gazebo \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/living-gazebo2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-living-gazebo2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-luminous-tree1",
+            "name": "Luminous Tree \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/luminous-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-luminous-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-luminous-tree2",
+            "name": "Luminous Tree \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/luminous-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-luminous-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-luminous-tree3",
+            "name": "Luminous Tree \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/luminous-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-luminous-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-luminous-tree4",
+            "name": "Luminous Tree \u2014 Variant 4",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/luminous-tree4.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-luminous-tree4",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-mega-tree1",
+            "name": "Mega Tree \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/mega-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 8.0,
+            "defaultHeightInTiles": 8.0,
+            "collisionGrid": [
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-mega-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-mega-tree2",
+            "name": "Mega Tree \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/mega-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-mega-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-swirling-tree1",
+            "name": "Swirling Tree \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/swirling-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-swirling-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-swirling-tree2",
+            "name": "Swirling Tree \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/swirling-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-swirling-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-swirling-tree3",
+            "name": "Swirling Tree \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/swirling-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-swirling-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-tree-idol-deer",
+            "name": "Tree Idol Deer",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/tree-idol-deer.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-tree-idol-deer",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-tree-idol-dragon",
+            "name": "Tree Idol Dragon",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/tree-idol-dragon.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 8.0,
+            "defaultHeightInTiles": 8.0,
+            "collisionGrid": [
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-tree-idol-dragon",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-tree-idol-human",
+            "name": "Tree Idol Human",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/tree-idol-human.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-tree-idol-human",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-tree-idol-wolf",
+            "name": "Tree Idol Wolf",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/tree-idol-wolf.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-tree-idol-wolf",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-white-red-mushroom1",
+            "name": "White-Red Mushroom \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/white-red-mushroom1.png",
+            "direction": "Down",
+            "color": "white-red",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-white-red-mushroom1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-white-red-mushroom2",
+            "name": "White-Red Mushroom \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/white-red-mushroom2.png",
+            "direction": "Down",
+            "color": "white-red",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-white-red-mushroom2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-white-red-mushroom3",
+            "name": "White-Red Mushroom \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "imagePath": "assets/forest/white-red-mushroom3.png",
+            "direction": "Down",
+            "color": "white-red",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-forest-white-red-mushroom3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-white-tree1",
+            "name": "White Tree \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/white-tree1.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-white-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-white-tree2",
+            "name": "White Tree \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/white-tree2.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-white-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-willow1",
+            "name": "Willow \u2014 Variant 1",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/willow1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-willow1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-willow2",
+            "name": "Willow \u2014 Variant 2",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/willow2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-willow2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-forest-willow3",
+            "name": "Willow \u2014 Variant 3",
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
+            "imagePath": "assets/forest/willow3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-forest-willow3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-ruins-blue-gray-ruins1",
+            "name": "Blue-Gray Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/blue-gray-ruins1.png",
+            "direction": "Down",
+            "color": "blue-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.5,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-blue-gray-ruins2",
+            "name": "Blue-Gray Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/blue-gray-ruins2.png",
+            "direction": "Down",
+            "color": "blue-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 2.5,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-blue-gray-ruins3",
+            "name": "Blue-Gray Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/blue-gray-ruins3.png",
+            "direction": "Down",
+            "color": "blue-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-blue-gray-ruins4",
+            "name": "Blue-Gray Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/blue-gray-ruins4.png",
+            "direction": "Down",
+            "color": "blue-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-blue-gray-ruins5",
+            "name": "Blue-Gray Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/blue-gray-ruins5.png",
+            "direction": "Down",
+            "color": "blue-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-ruins-brown-gray-ruins1",
+            "name": "Brown-Gray Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-gray-ruins1.png",
+            "direction": "Down",
+            "color": "brown-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.5,
+            "defaultHeightInTiles": 3.5,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-gray-ruins2",
+            "name": "Brown-Gray Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-gray-ruins2.png",
+            "direction": "Down",
+            "color": "brown-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 2.5,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-gray-ruins3",
+            "name": "Brown-Gray Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-gray-ruins3.png",
+            "direction": "Down",
+            "color": "brown-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-gray-ruins4",
+            "name": "Brown-Gray Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-gray-ruins4.png",
+            "direction": "Down",
+            "color": "brown-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-gray-ruins5",
+            "name": "Brown-Gray Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-gray-ruins5.png",
+            "direction": "Down",
+            "color": "brown-gray",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-ruins-brown-ruins1",
+            "name": "Brown Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-ruins1.png",
+            "direction": "Down",
+            "color": "brown",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.5,
+            "defaultHeightInTiles": 3.5,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-ruins2",
+            "name": "Brown Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-ruins2.png",
+            "direction": "Down",
+            "color": "brown",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 2.5,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-ruins3",
+            "name": "Brown Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-ruins3.png",
+            "direction": "Down",
+            "color": "brown",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-ruins4",
+            "name": "Brown Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-ruins4.png",
+            "direction": "Down",
+            "color": "brown",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-brown-ruins5",
+            "name": "Brown Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/brown-ruins5.png",
+            "direction": "Down",
+            "color": "brown",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-ruins-sand-ruins1",
+            "name": "Sand Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/sand-ruins1.png",
+            "direction": "Down",
+            "color": "sand",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.0,
+            "defaultHeightInTiles": 3.0,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-sand-ruins2",
+            "name": "Sand Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/sand-ruins2.png",
+            "direction": "Down",
+            "color": "sand",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-sand-ruins3",
+            "name": "Sand Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/sand-ruins3.png",
+            "direction": "Down",
+            "color": "sand",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-sand-ruins4",
+            "name": "Sand Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/sand-ruins4.png",
+            "direction": "Down",
+            "color": "sand",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-sand-ruins5",
+            "name": "Sand Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/sand-ruins5.png",
+            "direction": "Down",
+            "color": "sand",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-ruins-snow-ruins1",
+            "name": "Snow Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/snow-ruins1.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.5,
+            "defaultHeightInTiles": 3.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-snow-ruins2",
+            "name": "Snow Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/snow-ruins2.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 2.5,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-snow-ruins3",
+            "name": "Snow Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/snow-ruins3.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-snow-ruins4",
+            "name": "Snow Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/snow-ruins4.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-snow-ruins5",
+            "name": "Snow Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/snow-ruins5.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-ruins-water-ruins1",
+            "name": "Water Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/water-ruins1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 3.0,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-water-ruins2",
+            "name": "Water Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/water-ruins2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-water-ruins3",
+            "name": "Water Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/water-ruins3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-water-ruins4",
+            "name": "Water Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/water-ruins4.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-water-ruins5",
+            "name": "Water Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/water-ruins5.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-ruins-white-ruins1",
+            "name": "White Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/white-ruins1.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.0,
+            "defaultHeightInTiles": 3.0,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-white-ruins2",
+            "name": "White Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/white-ruins2.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-white-ruins3",
+            "name": "White Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/white-ruins3.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-white-ruins4",
+            "name": "White Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/white-ruins4.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-white-ruins5",
+            "name": "White Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/white-ruins5.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-ruins-yellow-ruins1",
+            "name": "Yellow Ruins \u2014 Variant 1",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/yellow-ruins1.png",
+            "direction": "Down",
+            "color": "yellow",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.5,
+            "defaultHeightInTiles": 3.5,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-yellow-ruins2",
+            "name": "Yellow Ruins \u2014 Variant 2",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/yellow-ruins2.png",
+            "direction": "Down",
+            "color": "yellow",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.5,
+            "defaultHeightInTiles": 2.5,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-yellow-ruins3",
+            "name": "Yellow Ruins \u2014 Variant 3",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/yellow-ruins3.png",
+            "direction": "Down",
+            "color": "yellow",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-yellow-ruins4",
+            "name": "Yellow Ruins \u2014 Variant 4",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/yellow-ruins4.png",
+            "direction": "Down",
+            "color": "yellow",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-ruins-yellow-ruins5",
+            "name": "Yellow Ruins \u2014 Variant 5",
+            "tags": ["craftpix", "ruins", "structure", "outdoor"],
+            "imagePath": "assets/ruins/yellow-ruins5.png",
+            "direction": "Down",
+            "color": "yellow",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-bushes-autumn-bush1",
+            "name": "Autumn Bush \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/autumn-bush1.png",
+            "direction": "Down",
+            "color": "autumn",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-autumn-bush1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-autumn-bush2",
+            "name": "Autumn Bush \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/autumn-bush2.png",
+            "direction": "Down",
+            "color": "autumn",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-autumn-bush2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-autumn-bush3",
+            "name": "Autumn Bush \u2014 Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/autumn-bush3.png",
+            "direction": "Down",
+            "color": "autumn",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-autumn-bush3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-broken-tree1",
+            "name": "Broken Tree \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "tree"],
+            "imagePath": "assets/bushes/broken-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-bushes-broken-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-broken-tree2",
+            "name": "Broken Tree \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "tree"],
+            "imagePath": "assets/bushes/broken-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-bushes-broken-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-burned-tree1",
+            "name": "Burned Tree \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "tree"],
+            "imagePath": "assets/bushes/burned-tree1.png",
+            "direction": "Down",
+            "color": "charcoal",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-bushes-burned-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-burned-tree2",
+            "name": "Burned Tree \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "tree"],
+            "imagePath": "assets/bushes/burned-tree2.png",
+            "direction": "Down",
+            "color": "charcoal",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-bushes-burned-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-blue-flowers1",
+            "name": "Bush Blue Flowers \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-blue-flowers1.png",
+            "direction": "Down",
+            "color": "blue",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-blue-flowers1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-blue-flowers2",
+            "name": "Bush Blue Flowers \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-blue-flowers2.png",
+            "direction": "Down",
+            "color": "blue",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-blue-flowers2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-blue-flowers3",
+            "name": "Bush Blue Flowers \u2014 Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-blue-flowers3.png",
+            "direction": "Down",
+            "color": "blue",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-blue-flowers3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-orange-flowers1",
+            "name": "Bush Orange Flowers \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-orange-flowers1.png",
+            "direction": "Down",
+            "color": "orange",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-orange-flowers1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-orange-flowers2",
+            "name": "Bush Orange Flowers \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-orange-flowers2.png",
+            "direction": "Down",
+            "color": "orange",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-orange-flowers2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-orange-flowers3",
+            "name": "Bush Orange Flowers \u2014 Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-orange-flowers3.png",
+            "direction": "Down",
+            "color": "orange",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-orange-flowers3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-pink-flowers1",
+            "name": "Bush Pink Flowers \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-pink-flowers1.png",
+            "direction": "Down",
+            "color": "pink",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-pink-flowers1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-pink-flowers2",
+            "name": "Bush Pink Flowers \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-pink-flowers2.png",
+            "direction": "Down",
+            "color": "pink",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-pink-flowers2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-pink-flowers3",
+            "name": "Bush Pink Flowers \u2014 Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-pink-flowers3.png",
+            "direction": "Down",
+            "color": "pink",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-pink-flowers3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-red-flowers1",
+            "name": "Bush Red Flowers \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-red-flowers1.png",
+            "direction": "Down",
+            "color": "red",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-red-flowers1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-red-flowers2",
+            "name": "Bush Red Flowers \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-red-flowers2.png",
+            "direction": "Down",
+            "color": "red",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-red-flowers2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-red-flowers3",
+            "name": "Bush Red Flowers \u2014 Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-red-flowers3.png",
+            "direction": "Down",
+            "color": "red",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-red-flowers3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-simple1-1",
+            "name": "Bush Simple \u2014 Style 1, Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-simple1-1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-simple1-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-simple1-2",
+            "name": "Bush Simple \u2014 Style 1, Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-simple1-2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-simple1-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-simple1-3",
+            "name": "Bush Simple \u2014 Style 1, Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-simple1-3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-simple1-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-simple2-1",
+            "name": "Bush Simple \u2014 Style 2, Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-simple2-1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-simple2-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-simple2-2",
+            "name": "Bush Simple \u2014 Style 2, Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-simple2-2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-simple2-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-bush-simple2-3",
+            "name": "Bush Simple \u2014 Style 2, Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/bush-simple2-3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-bush-simple2-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-cactus1-1",
+            "name": "Cactus \u2014 Style 1, Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/cactus1-1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-cactus1-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-cactus1-2",
+            "name": "Cactus \u2014 Style 1, Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/cactus1-2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-cactus1-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-cactus1-3",
+            "name": "Cactus \u2014 Style 1, Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/cactus1-3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-cactus1-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-cactus2-1",
+            "name": "Cactus \u2014 Style 2, Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/cactus2-1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-cactus2-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-cactus2-2",
+            "name": "Cactus \u2014 Style 2, Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/cactus2-2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-cactus2-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-cactus2-3",
+            "name": "Cactus \u2014 Style 2, Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/cactus2-3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-cactus2-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-fern1-1",
+            "name": "Fern \u2014 Style 1, Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "grass"],
+            "imagePath": "assets/bushes/fern1-1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-bushes-fern1-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-fern1-2",
+            "name": "Fern \u2014 Style 1, Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "grass"],
+            "imagePath": "assets/bushes/fern1-2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-bushes-fern1-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-fern1-3",
+            "name": "Fern \u2014 Style 1, Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "grass"],
+            "imagePath": "assets/bushes/fern1-3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-bushes-fern1-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-fern2-1",
+            "name": "Fern \u2014 Style 2, Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "grass"],
+            "imagePath": "assets/bushes/fern2-1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-bushes-fern2-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-fern2-2",
+            "name": "Fern \u2014 Style 2, Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "grass"],
+            "imagePath": "assets/bushes/fern2-2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-bushes-fern2-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-fern2-3",
+            "name": "Fern \u2014 Style 2, Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "grass"],
+            "imagePath": "assets/bushes/fern2-3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-bushes-fern2-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-snow-bush1",
+            "name": "Snow Bush \u2014 Variant 1",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/snow-bush1.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-snow-bush1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-snow-bush2",
+            "name": "Snow Bush \u2014 Variant 2",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/snow-bush2.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-snow-bush2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-bushes-snow-bush3",
+            "name": "Snow Bush \u2014 Variant 3",
+            "tags": ["craftpix", "bushes", "vegetation", "bush"],
+            "imagePath": "assets/bushes/snow-bush3.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-bushes-snow-bush3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-autumn-tree1",
+            "name": "Autumn Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/autumn-tree1.png",
+            "direction": "Down",
+            "color": "autumn",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-autumn-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-autumn-tree2",
+            "name": "Autumn Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/autumn-tree2.png",
+            "direction": "Down",
+            "color": "autumn",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-autumn-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-autumn-tree3",
+            "name": "Autumn Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/autumn-tree3.png",
+            "direction": "Down",
+            "color": "autumn",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-autumn-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-broken-tree1",
+            "name": "Broken Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/broken-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-broken-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-broken-tree2",
+            "name": "Broken Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/broken-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-broken-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-broken-tree3",
+            "name": "Broken Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/broken-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-broken-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-broken-tree4",
+            "name": "Broken Tree \u2014 Variant 4",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/broken-tree4.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-broken-tree4",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-broken-tree5",
+            "name": "Broken Tree \u2014 Variant 5",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/broken-tree5.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-broken-tree5",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-broken-tree6",
+            "name": "Broken Tree \u2014 Variant 6",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/broken-tree6.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-broken-tree6",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-broken-tree7",
+            "name": "Broken Tree \u2014 Variant 7",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/broken-tree7.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-broken-tree7",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-burned-tree1",
+            "name": "Burned Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/burned-tree1.png",
+            "direction": "Down",
+            "color": "charcoal",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-burned-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-burned-tree2",
+            "name": "Burned Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/burned-tree2.png",
+            "direction": "Down",
+            "color": "charcoal",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-burned-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-burned-tree3",
+            "name": "Burned Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/burned-tree3.png",
+            "direction": "Down",
+            "color": "charcoal",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-burned-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-christmas-tree1",
+            "name": "Christmas Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/christmas-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-christmas-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-christmas-tree2",
+            "name": "Christmas Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/christmas-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-christmas-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-christmas-tree3",
+            "name": "Christmas Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/christmas-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-christmas-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-flower-tree1",
+            "name": "Flower Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/flower-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-flower-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-flower-tree2",
+            "name": "Flower Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/flower-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-flower-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-flower-tree3",
+            "name": "Flower Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/flower-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-flower-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-fruit-tree1",
+            "name": "Fruit Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/fruit-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-fruit-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-fruit-tree2",
+            "name": "Fruit Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/fruit-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-fruit-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-fruit-tree3",
+            "name": "Fruit Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/fruit-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-fruit-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-moss-tree1",
+            "name": "Moss Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/moss-tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-moss-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-moss-tree2",
+            "name": "Moss Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/moss-tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-moss-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-moss-tree3",
+            "name": "Moss Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/moss-tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-moss-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-palm-tree1-1",
+            "name": "Palm Tree \u2014 Style 1, Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/palm-tree1-1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-palm-tree1-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-palm-tree1-2",
+            "name": "Palm Tree \u2014 Style 1, Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/palm-tree1-2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-palm-tree1-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-palm-tree1-3",
+            "name": "Palm Tree \u2014 Style 1, Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/palm-tree1-3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-palm-tree1-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-palm-tree2-1",
+            "name": "Palm Tree \u2014 Style 2, Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/palm-tree2-1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-palm-tree2-1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-palm-tree2-2",
+            "name": "Palm Tree \u2014 Style 2, Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/palm-tree2-2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-palm-tree2-2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-palm-tree2-3",
+            "name": "Palm Tree \u2014 Style 2, Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/palm-tree2-3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-palm-tree2-3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-snow-christmass-tree1",
+            "name": "Snow Christmas Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/snow-christmass-tree1.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-snow-christmass-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-snow-christmass-tree2",
+            "name": "Snow Christmas Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/snow-christmass-tree2.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-snow-christmass-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-snow-christmass-tree3",
+            "name": "Snow Christmas Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/snow-christmass-tree3.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0,
+            "defaultHeightInTiles": 1.0,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-snow-christmass-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-snow-tree1",
+            "name": "Snow Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/snow-tree1.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-snow-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-snow-tree2",
+            "name": "Snow Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/snow-tree2.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-snow-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-snow-tree3",
+            "name": "Snow Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/snow-tree3.png",
+            "direction": "Down",
+            "color": "white",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-snow-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-tree1",
+            "name": "Green Tree \u2014 Variant 1",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/tree1.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 4.0,
+            "defaultHeightInTiles": 4.0,
+            "collisionGrid": [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 1, 0]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-tree1",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-tree2",
+            "name": "Tree \u2014 Variant 2",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/tree2.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-tree2",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-trees-tree3",
+            "name": "Tree \u2014 Variant 3",
+            "tags": ["craftpix", "trees", "vegetation", "tree"],
+            "imagePath": "assets/trees/tree3.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 2.0,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-trees-tree3",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-01",
+            "name": "Farm Plant \u2014 Variant 01",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-01.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4062,
+            "defaultHeightInTiles": 1.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-01",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-02",
+            "name": "Farm Plant \u2014 Variant 02",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-02.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4062,
+            "defaultHeightInTiles": 1.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-02",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-03",
+            "name": "Farm Plant \u2014 Variant 03",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-03.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 1.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-03",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-04",
+            "name": "Farm Plant \u2014 Variant 04",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-04.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 1.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-04",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-05",
+            "name": "Farm Plant \u2014 Variant 05",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-05.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.625,
+            "defaultHeightInTiles": 4.0625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-05",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-06",
+            "name": "Farm Plant \u2014 Variant 06",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-06.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.625,
+            "defaultHeightInTiles": 4.0625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-06",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-07",
+            "name": "Farm Plant \u2014 Variant 07",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-07.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.1875,
+            "defaultHeightInTiles": 1.5938,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-07",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-08",
+            "name": "Farm Plant \u2014 Variant 08",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-08.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.8438,
+            "defaultHeightInTiles": 1.125,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-08",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-09",
+            "name": "Farm Plant \u2014 Variant 09",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-09.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5312,
+            "defaultHeightInTiles": 0.625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-09",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-10",
+            "name": "Farm Plant \u2014 Variant 10",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-10.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4062,
+            "defaultHeightInTiles": 1.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-10",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-11",
+            "name": "Farm Plant \u2014 Variant 11",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-11.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4062,
+            "defaultHeightInTiles": 1.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-11",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-12",
+            "name": "Farm Plant \u2014 Variant 12",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-12.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7188,
+            "defaultHeightInTiles": 2.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-12",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-13",
+            "name": "Farm Plant \u2014 Variant 13",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-13.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6875,
+            "defaultHeightInTiles": 2.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-13",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-14",
+            "name": "Farm Plant \u2014 Variant 14",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-14.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0938,
+            "defaultHeightInTiles": 1.4688,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-14",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-15",
+            "name": "Farm Plant \u2014 Variant 15",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-15.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.6562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-15",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-16",
+            "name": "Farm Plant \u2014 Variant 16",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-16.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7188,
+            "defaultHeightInTiles": 1.0312,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-16",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-17",
+            "name": "Farm Plant \u2014 Variant 17",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-17.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.375,
+            "defaultHeightInTiles": 0.4375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-17",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-18",
+            "name": "Farm Plant \u2014 Variant 18",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-18.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4375,
+            "defaultHeightInTiles": 0.625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-18",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-19",
+            "name": "Farm Plant \u2014 Variant 19",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-19.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6875,
+            "defaultHeightInTiles": 0.5312,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-19",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-20",
+            "name": "Farm Plant \u2014 Variant 20",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-20.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6875,
+            "defaultHeightInTiles": 0.5312,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-20",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-21",
+            "name": "Farm Plant \u2014 Variant 21",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-21.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.4375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-21",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-22",
+            "name": "Farm Plant \u2014 Variant 22",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-22.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4062,
+            "defaultHeightInTiles": 0.3125,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-22",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-23",
+            "name": "Farm Plant \u2014 Variant 23",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-23.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.8438,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-23",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-24",
+            "name": "Farm Plant \u2014 Variant 24",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-24.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.8438,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-24",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-25",
+            "name": "Farm Plant \u2014 Variant 25",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-25.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.1875,
+            "defaultHeightInTiles": 1.375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-25",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-26",
+            "name": "Farm Plant \u2014 Variant 26",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-26.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.8438,
+            "defaultHeightInTiles": 1.0625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-26",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-27",
+            "name": "Farm Plant \u2014 Variant 27",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-27.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7812,
+            "defaultHeightInTiles": 1.0625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-27",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-28",
+            "name": "Farm Plant \u2014 Variant 28",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-28.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.875,
+            "defaultHeightInTiles": 1.0,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-28",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-29",
+            "name": "Farm Plant \u2014 Variant 29",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-29.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.625,
+            "defaultHeightInTiles": 0.8125,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-29",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-30",
+            "name": "Farm Plant \u2014 Variant 30",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-30.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4375,
+            "defaultHeightInTiles": 0.6875,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-30",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-31",
+            "name": "Farm Plant \u2014 Variant 31",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-31.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4062,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-31",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-32",
+            "name": "Farm Plant \u2014 Variant 32",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-32.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-32",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-33",
+            "name": "Farm Plant \u2014 Variant 33",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-33.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-33",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-34",
+            "name": "Farm Plant \u2014 Variant 34",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-34.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4688,
+            "defaultHeightInTiles": 0.375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-34",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-35",
+            "name": "Farm Plant \u2014 Variant 35",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-35.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5625,
+            "defaultHeightInTiles": 2.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-35",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-36",
+            "name": "Farm Plant \u2014 Variant 36",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-36.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5625,
+            "defaultHeightInTiles": 2.1562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-36",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-37",
+            "name": "Farm Plant \u2014 Variant 37",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-37.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.2812,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-37",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-38",
+            "name": "Farm Plant \u2014 Variant 38",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-38.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.9688,
+            "defaultHeightInTiles": 1.5312,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-38",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-39",
+            "name": "Farm Plant \u2014 Variant 39",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-39.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.9375,
+            "defaultHeightInTiles": 0.9062,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-39",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-40",
+            "name": "Farm Plant \u2014 Variant 40",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-40.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7188,
+            "defaultHeightInTiles": 0.625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-40",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-41",
+            "name": "Farm Plant \u2014 Variant 41",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-41.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5312,
+            "defaultHeightInTiles": 0.3438,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-41",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-42",
+            "name": "Farm Plant \u2014 Variant 42",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-42.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.9062,
+            "defaultHeightInTiles": 0.9375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-42",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-43",
+            "name": "Farm Plant \u2014 Variant 43",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-43.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-43",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-44",
+            "name": "Farm Plant \u2014 Variant 44",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-44.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.9062,
+            "defaultHeightInTiles": 0.8438,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-44",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-45",
+            "name": "Farm Plant \u2014 Variant 45",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-45.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6875,
+            "defaultHeightInTiles": 0.6562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-45",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-46",
+            "name": "Farm Plant \u2014 Variant 46",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-46.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4062,
+            "defaultHeightInTiles": 0.3438,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-46",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-47",
+            "name": "Farm Plant \u2014 Variant 47",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-47.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.6562,
+            "defaultHeightInTiles": 2.1875,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-47",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-48",
+            "name": "Farm Plant \u2014 Variant 48",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-48.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.6562,
+            "defaultHeightInTiles": 2.1875,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-48",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-49",
+            "name": "Farm Plant \u2014 Variant 49",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-49.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.0312,
+            "defaultHeightInTiles": 1.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-49",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-50",
+            "name": "Farm Plant \u2014 Variant 50",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-50.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.0,
+            "defaultHeightInTiles": 1.6875,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-50",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-51",
+            "name": "Farm Plant \u2014 Variant 51",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-51.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.9062,
+            "defaultHeightInTiles": 1.0312,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-51",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-52",
+            "name": "Farm Plant \u2014 Variant 52",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-52.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6875,
+            "defaultHeightInTiles": 0.5312,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-52",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-53",
+            "name": "Farm Plant \u2014 Variant 53",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-53.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.4062,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-53",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-54",
+            "name": "Farm Plant \u2014 Variant 54",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-54.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4688,
+            "defaultHeightInTiles": 0.6562,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-54",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-55",
+            "name": "Farm Plant \u2014 Variant 55",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-55.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4375,
+            "defaultHeightInTiles": 0.5625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-55",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-56",
+            "name": "Farm Plant \u2014 Variant 56",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-56.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.4375,
+            "defaultHeightInTiles": 0.8125,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-56",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-57",
+            "name": "Farm Plant \u2014 Variant 57",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-57.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.3125,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-57",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-58",
+            "name": "Farm Plant \u2014 Variant 58",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-58.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.25,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-58",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-59",
+            "name": "Farm Plant \u2014 Variant 59",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-59.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.375,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-59",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-60",
+            "name": "Farm Plant \u2014 Variant 60",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-60.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.4062,
+            "defaultHeightInTiles": 0.5,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-60",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-61",
+            "name": "Farm Plant \u2014 Variant 61",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-61.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.3438,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-61",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-62",
+            "name": "Farm Plant \u2014 Variant 62",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-62.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.2812,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-62",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-63",
+            "name": "Farm Plant \u2014 Variant 63",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-63.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.2188,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-63",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-64",
+            "name": "Farm Plant \u2014 Variant 64",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-64.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7812,
+            "defaultHeightInTiles": 1.0625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-64",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-65",
+            "name": "Farm Plant \u2014 Variant 65",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-65.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6562,
+            "defaultHeightInTiles": 0.625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-65",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-66",
+            "name": "Farm Plant \u2014 Variant 66",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-66.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.375,
+            "defaultHeightInTiles": 0.5625,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-66",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-67",
+            "name": "Farm Plant \u2014 Variant 67",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-67.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.4375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-67",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-68",
+            "name": "Farm Plant \u2014 Variant 68",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-68.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.3438,
+            "defaultHeightInTiles": 0.4375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-68",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-69",
+            "name": "Farm Plant \u2014 Variant 69",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-69.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.4375,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-69",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-70",
+            "name": "Farm Plant \u2014 Variant 70",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-70.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1875,
+            "defaultHeightInTiles": 0.2812,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-70",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-71",
+            "name": "Farm Plant \u2014 Variant 71",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-71.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.1875,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-71",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-72",
+            "name": "Farm Plant \u2014 Variant 72",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-72.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.1875,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-72",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-plants-farm-plant-73",
+            "name": "Farm Plant \u2014 Variant 73",
+            "tags": ["craftpix", "farm plants", "vegetation", "grass"],
+            "imagePath": "assets/farm-plants/farm-plant-73.png",
+            "direction": "Down",
+            "color": "green",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.1875,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-farm-plants-farm-plant-73",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-01",
+            "name": "Farm Supply \u2014 Variant 01",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-01.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7812,
+            "defaultHeightInTiles": 1.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-02",
+            "name": "Farm Supply \u2014 Variant 02",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-02.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.8125,
+            "defaultHeightInTiles": 1.0938
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-03",
+            "name": "Farm Supply \u2014 Variant 03",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-03.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7812,
+            "defaultHeightInTiles": 1.0625
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-04",
+            "name": "Farm Supply \u2014 Variant 04",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-04.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6875,
+            "defaultHeightInTiles": 1.0
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-05",
+            "name": "Farm Supply \u2014 Variant 05",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-05.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6875,
+            "defaultHeightInTiles": 0.9375
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-06",
+            "name": "Farm Supply \u2014 Variant 06",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-06.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.7188,
+            "defaultHeightInTiles": 0.9062
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-07",
+            "name": "Farm Supply \u2014 Variant 07",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-07.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.8438
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-08",
+            "name": "Farm Supply \u2014 Variant 08",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-08.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.8438
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-09",
+            "name": "Farm Supply \u2014 Variant 09",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-09.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.8125
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-10",
+            "name": "Farm Supply \u2014 Variant 10",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-10.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.8438
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-11",
+            "name": "Farm Supply \u2014 Variant 11",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-11.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.625,
+            "defaultHeightInTiles": 0.8125
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-12",
+            "name": "Farm Supply \u2014 Variant 12",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-12.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.8125
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-13",
+            "name": "Farm Supply \u2014 Variant 13",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-13.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5938,
+            "defaultHeightInTiles": 0.8125
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-14",
+            "name": "Farm Supply \u2014 Variant 14",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-14.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.6875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-15",
+            "name": "Farm Supply \u2014 Variant 15",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-15.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.6875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-16",
+            "name": "Farm Supply \u2014 Variant 16",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-16.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.6875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-17",
+            "name": "Farm Supply \u2014 Variant 17",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-17.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.6875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-18",
+            "name": "Farm Supply \u2014 Variant 18",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-18.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.6875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-19",
+            "name": "Farm Supply \u2014 Variant 19",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-19.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3.375,
+            "defaultHeightInTiles": 2.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-20",
+            "name": "Farm Supply \u2014 Variant 20",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-20.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.4688,
+            "defaultHeightInTiles": 1.1875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-21",
+            "name": "Farm Supply \u2014 Variant 21",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-21.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.9688,
+            "defaultHeightInTiles": 0.5312
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-22",
+            "name": "Farm Supply \u2014 Variant 22",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-22.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.6562
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-23",
+            "name": "Farm Supply \u2014 Variant 23",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-23.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-24",
+            "name": "Farm Supply \u2014 Variant 24",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-24.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1875,
+            "defaultHeightInTiles": 0.1875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-25",
+            "name": "Farm Supply \u2014 Variant 25",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-25.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1562,
+            "defaultHeightInTiles": 0.1562
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-26",
+            "name": "Farm Supply \u2014 Variant 26",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-26.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.2812
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-27",
+            "name": "Farm Supply \u2014 Variant 27",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-27.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.2812
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-28",
+            "name": "Farm Supply \u2014 Variant 28",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-28.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-29",
+            "name": "Farm Supply \u2014 Variant 29",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-29.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-30",
+            "name": "Farm Supply \u2014 Variant 30",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-30.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-31",
+            "name": "Farm Supply \u2014 Variant 31",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-31.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-32",
+            "name": "Farm Supply \u2014 Variant 32",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-32.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.875,
+            "defaultHeightInTiles": 0.7812
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-33",
+            "name": "Farm Supply \u2014 Variant 33",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-33.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.625,
+            "defaultHeightInTiles": 0.5312
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-34",
+            "name": "Farm Supply \u2014 Variant 34",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-34.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.4688
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-35",
+            "name": "Farm Supply \u2014 Variant 35",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-35.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.4688,
+            "defaultHeightInTiles": 0.9688
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-36",
+            "name": "Farm Supply \u2014 Variant 36",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-36.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.8438,
+            "defaultHeightInTiles": 0.9062
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-37",
+            "name": "Farm Supply \u2014 Variant 37",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-37.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.3438
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-38",
+            "name": "Farm Supply \u2014 Variant 38",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-38.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.3438
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-39",
+            "name": "Farm Supply \u2014 Variant 39",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-39.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3125,
+            "defaultHeightInTiles": 0.3125
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-40",
+            "name": "Farm Supply \u2014 Variant 40",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-40.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.2812
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-41",
+            "name": "Farm Supply \u2014 Variant 41",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-41.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.375,
+            "defaultHeightInTiles": 0.3438
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-42",
+            "name": "Farm Supply \u2014 Variant 42",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-42.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.2812
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-43",
+            "name": "Farm Supply \u2014 Variant 43",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-43.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-44",
+            "name": "Farm Supply \u2014 Variant 44",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-44.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1875,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-45",
+            "name": "Farm Supply \u2014 Variant 45",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-45.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-46",
+            "name": "Farm Supply \u2014 Variant 46",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-46.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.2812
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-47",
+            "name": "Farm Supply \u2014 Variant 47",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-47.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1875,
+            "defaultHeightInTiles": 0.1875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-48",
+            "name": "Farm Supply \u2014 Variant 48",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-48.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-49",
+            "name": "Farm Supply \u2014 Variant 49",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-49.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-50",
+            "name": "Farm Supply \u2014 Variant 50",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-50.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1562,
+            "defaultHeightInTiles": 0.1562
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-51",
+            "name": "Farm Supply \u2014 Variant 51",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-51.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.9062,
+            "defaultHeightInTiles": 0.4062
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-52",
+            "name": "Farm Supply \u2014 Variant 52",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-52.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.4062
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-53",
+            "name": "Farm Supply \u2014 Variant 53",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-53.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.4062
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-54",
+            "name": "Farm Supply \u2014 Variant 54",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-54.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.375,
+            "defaultHeightInTiles": 0.3125
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-55",
+            "name": "Farm Supply \u2014 Variant 55",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-55.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.3438
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-56",
+            "name": "Farm Supply \u2014 Variant 56",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-56.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.2812
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-57",
+            "name": "Farm Supply \u2014 Variant 57",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-57.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-58",
+            "name": "Farm Supply \u2014 Variant 58",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-58.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-59",
+            "name": "Farm Supply \u2014 Variant 59",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-59.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2812,
+            "defaultHeightInTiles": 0.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-60",
+            "name": "Farm Supply \u2014 Variant 60",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-60.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-61",
+            "name": "Farm Supply \u2014 Variant 61",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-61.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.2188,
+            "defaultHeightInTiles": 0.1875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-62",
+            "name": "Farm Supply \u2014 Variant 62",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-62.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.25,
+            "defaultHeightInTiles": 0.25
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-63",
+            "name": "Farm Supply \u2014 Variant 63",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-63.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.3438,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-64",
+            "name": "Farm Supply \u2014 Variant 64",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-64.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1875,
+            "defaultHeightInTiles": 0.2188
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-65",
+            "name": "Farm Supply \u2014 Variant 65",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-65.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1875,
+            "defaultHeightInTiles": 0.1875
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-66",
+            "name": "Farm Supply \u2014 Variant 66",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-66.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.1562,
+            "defaultHeightInTiles": 0.1562
+        },
+        {
+            "id": "craftpix-farm-supplies-farm-supply-67",
+            "name": "Farm Supply \u2014 Variant 67",
+            "tags": ["craftpix", "farm supplies"],
+            "imagePath": "assets/farm-supplies/farm-supply-67.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.125,
+            "defaultHeightInTiles": 0.125
+        }
+    ]
+}
