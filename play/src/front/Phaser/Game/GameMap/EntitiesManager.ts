@@ -147,7 +147,7 @@ export class EntitiesManager extends EventEmitter {
                     entity.setVisible(true);
                     TexturesHelper.playEntityAnimation(entity, prefab);
                     entity.applyStoredDimensions();
-                    entity.setDepth(entity.y + entity.displayHeight + (entity.getPrefab().depthOffset ?? 0));
+                    entity.updateRenderDepth();
                     this.refreshEntityCollisionBodies(entity);
                 }
             })
@@ -375,10 +375,9 @@ export class EntitiesManager extends EventEmitter {
                 this.isEntityEditorToolActive() &&
                 get(mapEditorEntityModeStore) === "EDIT"
             ) {
-                const depthOffset = entity.getPrefab().depthOffset ?? 0;
                 entity.x = dragX;
                 entity.y = dragY;
-                entity.setDepth(entity.y + entity.displayHeight + depthOffset);
+                entity.updateRenderDepth();
 
                 this.changeEntityTint(entity);
             }

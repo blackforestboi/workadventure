@@ -51,6 +51,7 @@ import { hasPointerDragged } from "../PanGesture";
 import { shouldPlaceEntity } from "../../../../Utils/EntityPrefabSize";
 import { getEntityCollisionRectangles, getScaledCollisionGridFrame } from "../Entities/EntityCollisionGrid";
 import { applyWallTextureToPreview } from "../Entities/WallTextureProjector";
+import { getEntityRenderDepth } from "../Entities/EntityRenderDepth";
 import { EntityRelatedEditorTool } from "./EntityRelatedEditorTool";
 
 import Key = Phaser.Input.Keyboard.Key;
@@ -703,9 +704,11 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         this.entityPrefabPreview.setPosition(previewPosition.x, previewPosition.y);
 
         this.entityPrefabPreview.setDepth(
-            this.entityPrefabPreview.y +
-                this.entityPrefabPreview.displayHeight * 0.5 +
-                (this.entityPrefab.depthOffset ?? 0),
+            getEntityRenderDepth(
+                this.entityPrefabPreview.getTopLeft().y,
+                this.entityPrefabPreview.displayHeight,
+                this.entityPrefab,
+            ),
         );
     }
 

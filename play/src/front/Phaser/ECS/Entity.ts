@@ -33,6 +33,7 @@ import {
 import { getEntityDisplaySize } from "../../Utils/EntityPrefabSize";
 import { Room } from "../../Connection/Room";
 import ExitPasswordModal from "../../Components/Modal/ExitPasswordModal.svelte";
+import { getEntityRenderDepth } from "../Game/MapEditor/Entities/EntityRenderDepth";
 import { modals } from "@wa-modals";
 
 import Sprite = Phaser.GameObjects.Sprite;
@@ -102,7 +103,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
             })
             .catch((error) => console.error(error));
 
-        this.setDepth(this.y + this.displayHeight + (this.prefab.depthOffset ?? 0));
+        this.updateRenderDepth();
 
         this.outlineColorStoreUnsubscribe = this.outlineColorStore.subscribe(() => {
             this.updateOutline();
@@ -154,7 +155,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
 
         this.setPosition(this.entityData.x, this.entityData.y);
         this.applyStoredDimensions();
-        this.setDepth(this.y + this.displayHeight + (this.prefab.depthOffset ?? 0));
+        this.updateRenderDepth();
         this.oldPosition = this.getPosition();
         const wasActivatable = this.activatable;
         this.activatable = this.hasAnyPropertiesSet();
@@ -190,7 +191,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
         this.elevationOffset = offset;
         const scaleY = Math.abs(this.scaleY);
         this.setDisplayOrigin(0, scaleY === 0 ? 0 : offset / scaleY);
-        this.setDepth(this.y - offset + this.displayHeight + (this.prefab.depthOffset ?? 0));
+        this.updateRenderDepth();
         (this.scene as GameScene).markDirty();
     }
 
@@ -208,7 +209,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
     public previewEditorBounds(bounds: { x: number; y: number; width: number; height: number }): void {
         this.setPosition(bounds.x, bounds.y);
         this.setDisplaySize(bounds.width, bounds.height);
-        this.setDepth(this.y + this.displayHeight + (this.prefab.depthOffset ?? 0));
+        this.updateRenderDepth();
         this.updateDebugActivationZone();
     }
 
@@ -365,7 +366,11 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
             this.updateDebugActivationZone();
         }
 
-        this.setDepth(this.y + this.displayHeight + (this.prefab.depthOffset ?? 0));
+        this.updateRenderDepth();
+    }
+
+    public updateRenderDepth(): void {
+        this.setDepth(getEntityRenderDepth(this.y, this.displayHeight, this.prefab, this.elevationOffset));
     }
 
     public setFollowOutlineColor(color: number): void {

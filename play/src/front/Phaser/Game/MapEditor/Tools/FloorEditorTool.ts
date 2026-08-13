@@ -67,6 +67,7 @@ import type { GameScene } from "../../GameScene";
 import { ModifyTerrainFrontCommand } from "../Commands/Terrain/ModifyTerrainFrontCommand";
 import type { MapEditorModeManager } from "../MapEditorModeManager";
 import { hasPointerDragged } from "../PanGesture";
+import { getEntityRenderDepth } from "../Entities/EntityRenderDepth";
 import { collapseTileRegions, createFloorEdit, type FloorEdit } from "./FloorEditorHistory";
 import {
     collectTerrainGids,
@@ -956,7 +957,7 @@ export class FloorEditorTool extends MapEditorTool {
                     const sprite = this.scene.add.sprite(placement.x, placement.y, prefab.imagePath).setOrigin(0);
                     sprite.setDisplaySize(placement.width, placement.height);
                     sprite.setAlpha(0.7);
-                    sprite.setDepth(placement.y + placement.height + (prefab.depthOffset ?? 0));
+                    sprite.setDepth(getEntityRenderDepth(placement.y, placement.height, prefab));
                     TexturesHelper.playEntityAnimation(sprite, prefab);
                     this.scene.getGameRenderLayers().addWorldObject(sprite);
                     this.vegetationGhosts.push(sprite);
