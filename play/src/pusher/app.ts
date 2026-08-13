@@ -1,4 +1,3 @@
-import fs from "fs";
 import type { Application } from "express";
 import express from "express";
 import cookieParser from "cookie-parser";
@@ -6,6 +5,7 @@ import * as Sentry from "@sentry/node";
 import cors from "cors";
 import uWebsockets from "uWebSockets.js";
 import { adminApi } from "./services/AdminApi";
+import { resolveStaticAssetsPath } from "./services/StaticAssetsPath";
 import { IoSocketController } from "./controllers/IoSocketController";
 import { AuthenticateController } from "./controllers/AuthenticateController";
 import { MapController } from "./controllers/MapController";
@@ -120,16 +120,7 @@ class App {
 
         //this.app.set_error_handler(globalErrorHandler);
 
-        let path: string;
-        if (fs.existsSync("dist/public")) {
-            // In prod mode
-            path = "dist/public";
-        } else if (fs.existsSync("public")) {
-            // In dev mode
-            path = "public";
-        } else {
-            throw new Error("Could not find public folder");
-        }
+        const path = resolveStaticAssetsPath();
 
         // Socket controllers
         new IoSocketController(this.websocketApp);
