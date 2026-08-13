@@ -134,6 +134,7 @@
                     previewOffsetY: customEntity.previewOffsetY,
                     color: customEntity.color,
                     vegetation: customEntity.vegetation,
+                    wall: customEntity.wall,
                 },
             });
         } catch (error) {
@@ -213,6 +214,9 @@
                 (entityPrefabVariant) => entityPrefabVariant.defaultPrefab.type === "Custom",
             ),
         };
+        const wallEntitiesPrefabsVariants = entitiesPrefabsVariants.filter(
+            (entityPrefabVariant) => entityPrefabVariant.defaultPrefab.wall !== undefined,
+        );
         const mostUsedEntitiesPrefabsVariants = getMostUsedEntitiesPrefabsVariants(entitiesPrefabsVariants);
 
         const groupedCategories: { category: CategoryTag; entitiesPrefabsVariants: EntityVariant[] }[] = [];
@@ -228,6 +232,13 @@
             category: { kind: "special", tag: "custom" },
             entitiesPrefabsVariants: customEntitiesPrefabsVariants.Custom,
         });
+
+        if (wallEntitiesPrefabsVariants.length > 0) {
+            groupedCategories.push({
+                category: { kind: "special", tag: "walls" },
+                entitiesPrefabsVariants: wallEntitiesPrefabsVariants,
+            });
+        }
 
         groupedCategories.push(
             ...Object.entries(entitiesPrefabsVariantsGroupedByTag)
@@ -284,6 +295,8 @@
                     return get(LL).mapEditor.entityEditor.specialTags.customLabel();
                 case "most_used":
                     return get(LL).mapEditor.entityEditor.specialTags.mostUsedLabel();
+                case "walls":
+                    return "Walls";
             }
         }
         return category.tag;
@@ -314,6 +327,13 @@
         if (tag.kind === "special" && tag.tag === "most_used") {
             return getMostUsedEntitiesPrefabsVariants(entitiesPrefabsVariants).filter((entityPrefabVariant) =>
                 entityPrefabVariant.defaultPrefab.name.toLowerCase().includes(searchTerm.toLowerCase()),
+            );
+        }
+        if (tag.kind === "special" && tag.tag === "walls") {
+            return entitiesPrefabsVariants.filter(
+                (entityPrefabVariant) =>
+                    entityPrefabVariant.defaultPrefab.wall !== undefined &&
+                    entityPrefabVariant.defaultPrefab.name.toLowerCase().includes(searchTerm.toLowerCase()),
             );
         }
         return entitiesPrefabsVariants.filter(

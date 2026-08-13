@@ -290,6 +290,21 @@ export const CollisionGrid = z.array(z.array(z.number()));
 
 export const VegetationCategory = z.enum(["tree", "bush", "grass", "other"]);
 
+export const WallPlacementOrientation = z.enum(["horizontal", "vertical", "diagonal-up", "diagonal-down"]);
+
+/** Semantic metadata for an image asset that can be painted as a continuous wall. */
+export const WallProfile = z.object({
+    version: z.literal(1),
+    style: z.string().min(1).max(80).optional(),
+    projectionDepthTiles: z.number().finite().min(0.25).max(1).default(0.5),
+});
+
+/** Per-instance rendering direction. Collision remains defined by the prefab. */
+export const WallPlacement = z.object({
+    version: z.literal(1),
+    orientation: WallPlacementOrientation,
+});
+
 /** Optional semantic metadata layered on top of the existing entity prefab contract. */
 export const VegetationProfile = z.object({
     version: z.literal(1),
@@ -355,6 +370,7 @@ export const EntityRawPrefab = z.object({
     previewOffsetX: z.number().int().min(-512).max(512).optional(),
     previewOffsetY: z.number().int().min(-512).max(512).optional(),
     vegetation: VegetationProfile.optional(),
+    wall: WallProfile.optional(),
 });
 
 export const EntityPrefabType = z.union([z.literal("Default"), z.literal("Custom")]);
@@ -501,6 +517,7 @@ export const EntityData = z.object({
     properties: EntityDataProperties.optional(),
     prefab: EntityRawPrefab,
     prefabRef: EntityPrefabRef,
+    wall: WallPlacement.optional(),
 });
 
 export const EntityDimensions = z.object({
@@ -617,6 +634,9 @@ export type EntityPrefabType = z.infer<typeof EntityPrefabType>;
 export type VisualAssetAnimation = z.infer<typeof VisualAssetAnimation>;
 export type VegetationCategory = z.infer<typeof VegetationCategory>;
 export type VegetationProfile = z.infer<typeof VegetationProfile>;
+export type WallPlacementOrientation = z.infer<typeof WallPlacementOrientation>;
+export type WallProfile = z.infer<typeof WallProfile>;
+export type WallPlacement = z.infer<typeof WallPlacement>;
 export type VegetationPresetSpecies = z.infer<typeof VegetationPresetSpecies>;
 export type VegetationPreset = z.infer<typeof VegetationPreset>;
 export type VegetationPresetCollection = z.infer<typeof VegetationPresetCollection>;

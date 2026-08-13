@@ -439,6 +439,7 @@ message CreateEntityMessage {
   optional string name = 7;
   uint32 width = 8;
   uint32 height = 9;
+  optional google.protobuf.Value wall = 10;
 }
 
 message DeleteEntityMessage {
@@ -473,6 +474,7 @@ message UploadEntityMessage {
   optional int32 previewOffsetX = 14;
   optional int32 previewOffsetY = 15;
   optional google.protobuf.Value vegetation = 16;
+  optional google.protobuf.Value wall = 17;
 }
 
 message UploadFileMessage {
@@ -497,6 +499,7 @@ message ModifyCustomEntityMessage {
   optional int32 previewOffsetX = 10;
   optional int32 previewOffsetY = 11;
   optional google.protobuf.Value vegetation = 12;
+  optional google.protobuf.Value wall = 13;
 }
 
 message DeleteCustomEntityMessage {
@@ -512,6 +515,7 @@ message ModifyEntityMessage {
   optional string name = 6;
   uint32 width = 7;
   uint32 height = 8;
+  optional google.protobuf.Value wall = 9;
 }
 
 // Transport envelope for websocket frames sent from front to pusher.

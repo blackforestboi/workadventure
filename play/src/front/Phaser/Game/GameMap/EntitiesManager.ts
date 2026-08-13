@@ -1,6 +1,12 @@
 import * as Phaser from "phaser";
 import type { EntityData, EntityPrefab, WAMEntityData } from "@workadventure/map-editor";
-import { AreaDataProperties, EntityDataProperties, EntityDimensions, EntityPrefabRef } from "@workadventure/map-editor";
+import {
+    AreaDataProperties,
+    EntityDataProperties,
+    EntityDimensions,
+    EntityPrefabRef,
+    WallPlacement,
+} from "@workadventure/map-editor";
 import type { Observable } from "rxjs";
 import { Subject } from "rxjs";
 import type { Unsubscriber } from "svelte/store";
@@ -18,6 +24,7 @@ import {
 } from "../../../Stores/MapEditorStore";
 import { Entity, EntityEvent } from "../../ECS/Entity";
 import { TexturesHelper } from "../../Helpers/TexturesHelper";
+import { applyWallTextureToEntity } from "../MapEditor/Entities/WallTextureProjector";
 import type { GameScene } from "../GameScene";
 import { EditorToolName } from "../MapEditor/MapEditorModeManager";
 import { collisionRectanglesOverlap, type EntityCollisionRectangle } from "../MapEditor/Entities/EntityCollisionGrid";
@@ -38,6 +45,7 @@ export const CopyEntityEventData = z.object({
     prefabRef: EntityPrefabRef,
     properties: EntityDataProperties.optional(),
     entityDimensions: EntityDimensions,
+    wall: WallPlacement.optional(),
 });
 
 export const CopyAreaEventData = z.object({
@@ -135,7 +143,8 @@ export class EntitiesManager extends EventEmitter {
             .then(() => {
                 const entity = this.entities.get(entityId);
                 if (entity) {
-                    entity.setTexture(prefab.imagePath).setVisible(true);
+                    applyWallTextureToEntity(this.scene, entity, prefab, data.wall?.orientation);
+                    entity.setVisible(true);
                     TexturesHelper.playEntityAnimation(entity, prefab);
                     entity.applyStoredDimensions();
                     entity.setDepth(entity.y + entity.displayHeight + (entity.getPrefab().depthOffset ?? 0));
@@ -210,6 +219,7 @@ export class EntitiesManager extends EventEmitter {
                     | "previewOffsetX"
                     | "previewOffsetY"
                     | "vegetation"
+                    | "wall"
                 >
             >,
     ): void {
@@ -483,6 +493,7 @@ export class EntitiesManager extends EventEmitter {
             prefabRef: entity.getEntityData().prefabRef,
             properties: entity.getEntityData().properties,
             entityDimensions: { width: entity.displayWidth, height: entity.displayHeight },
+            wall: entity.getEntityData().wall,
         };
         this.emit(EntitiesManagerEvent.CopyEntity, eventData);
     }

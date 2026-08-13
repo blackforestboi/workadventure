@@ -7,6 +7,8 @@ import {
     EntityRawPrefab,
     VegetationProfile,
     VisualAssetAnimation,
+    WallProfile,
+    createWallFoundationCollisionGrid,
     entityUploadSupportedFormatForMapStorage,
     mapCustomEntityDirectionToDirection,
 } from "@workadventure/map-editor";
@@ -45,7 +47,9 @@ export class CustomEntityCollectionService {
         if (file.byteLength === 0) {
             throw new Error("Cannot upload an empty custom entity image");
         }
-        const entity = this.mapEntityFromUploadEntityMessageToEntityRawPrefab(uploadEntityMessage);
+        const entity = this.withWallCollisionDefault(
+            this.mapEntityFromUploadEntityMessageToEntityRawPrefab(uploadEntityMessage),
+        );
         await this.withEntityCollectionLock(async () => {
             // Keep the binary and its catalog entry ordered against modify/delete/retry
             // operations for this map. A retry upserts the same stable entity ID.
@@ -85,13 +89,14 @@ export class CustomEntityCollectionService {
         }
         const parsedAnimation = VisualAssetAnimation.optional().parse(modifyCustomEntityMessage.animation);
         const parsedVegetation = VegetationProfile.optional().parse(modifyCustomEntityMessage.vegetation);
+        const parsedWall = WallProfile.optional().parse(modifyCustomEntityMessage.wall);
         await this.withEntityCollectionLock(async () => {
             const customEntityCollectionFileContent = await this.readOrCreateEntitiesCollectionFile();
             const customEntityCollection = EntityCollectionRaw.parse(JSON.parse(customEntityCollectionFileContent));
             const indexOfEntityToModify = customEntityCollection.collection.findIndex((entity) => entity.id === id);
             if (indexOfEntityToModify !== -1) {
                 const entityToModify = customEntityCollection.collection[indexOfEntityToModify];
-                customEntityCollection.collection[indexOfEntityToModify] = {
+                customEntityCollection.collection[indexOfEntityToModify] = this.withWallCollisionDefault({
                     ...entityToModify,
                     name,
                     tags,
@@ -104,7 +109,8 @@ export class CustomEntityCollectionService {
                     previewOffsetX: previewOffsetX ?? entityToModify.previewOffsetX,
                     previewOffsetY: previewOffsetY ?? entityToModify.previewOffsetY,
                     vegetation: parsedVegetation ?? entityToModify.vegetation,
-                };
+                    wall: parsedWall ?? entityToModify.wall,
+                });
                 await fileSystem.writeStringAsFile(
                     this.getEntityCollectionFileVirtualPath(),
                     JSON.stringify(customEntityCollection),
@@ -159,6 +165,17 @@ export class CustomEntityCollectionService {
             ...uploadEntityMessage,
             direction: mapCustomEntityDirectionToDirection(uploadEntityMessage.direction),
         });
+    }
+
+    private withWallCollisionDefault(entity: EntityRawPrefab): EntityRawPrefab {
+        if (entity.wall === undefined || entity.collisionGrid !== undefined) return entity;
+        return {
+            ...entity,
+            collisionGrid: createWallFoundationCollisionGrid(
+                entity.defaultSizeInTiles ?? 1,
+                entity.defaultHeightInTiles ?? 1,
+            ),
+        };
     }
 
     private async withEntityCollectionLock(operation: () => Promise<void>): Promise<void> {

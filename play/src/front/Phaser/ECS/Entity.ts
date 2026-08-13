@@ -304,7 +304,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
     private getCollisionGridFrame(): ReturnType<typeof getScaledCollisionGridFrame> {
         const sourceColumns = Math.max(1, ...(this.prefab.collisionGrid?.map((row) => row.length) ?? []));
         const sourceRows = Math.max(1, this.prefab.collisionGrid?.length ?? 0);
-        return getScaledCollisionGridFrame(
+        const frame = getScaledCollisionGridFrame(
             this.prefab.collisionGrid,
             this.width,
             this.height,
@@ -315,6 +315,10 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
             (this.prefab.defaultSizeInTiles ?? sourceColumns) * 32,
             (this.prefab.defaultHeightInTiles ?? sourceRows) * 32,
         );
+        if (this.prefab.wall !== undefined && this.entityData.wall !== undefined) {
+            frame.offset.y = this.displayHeight - frame.height;
+        }
+        return frame;
     }
 
     public updatePrefabMetadata(
@@ -330,6 +334,8 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
                     | "previewPadding"
                     | "previewOffsetX"
                     | "previewOffsetY"
+                    | "vegetation"
+                    | "wall"
                 >
             >,
     ): void {

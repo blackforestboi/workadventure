@@ -1,5 +1,9 @@
 <script lang="ts">
-    import type { EntityPrefab, VegetationCategory } from "@workadventure/map-editor";
+    import {
+        createWallFoundationCollisionGrid,
+        type EntityPrefab,
+        type VegetationCategory,
+    } from "@workadventure/map-editor";
     import { onDestroy } from "svelte";
     import LL from "../../../../../i18n/i18n-svelte";
     import EntityImage from "../EntityItem/EntityImage.svelte";
@@ -56,6 +60,7 @@
         previewOffsetX: initialPreviewOffsetX,
         previewOffsetY: initialPreviewOffsetY,
         vegetation: initialVegetation,
+        wall: initialWall,
     } = $state((() => customEntity)());
     let inputTagOptions: InputTagOption[] | undefined = $state(tags.map((tag) => ({ value: tag, label: tag })));
     let collisionGrid = $state(customEntityCollisionGrid ? customEntityCollisionGrid.map((row) => [...row]) : []);
@@ -81,6 +86,9 @@
     let defaultHeightInTiles = $state(defaultHeightInTilesCustomEntity ?? 1);
     let isVegetation = $state(initialVegetation !== undefined);
     let vegetationCategory = $state<VegetationCategory>(initialVegetation?.category ?? "tree");
+    let isWall = $state(initialWall !== undefined);
+    let wallStyle = $state(initialWall?.style ?? "Wall");
+    let projectionDepthTiles = $state(initialWall?.projectionDepthTiles ?? 0.5);
     let collisionGridWidthIndex = $state(
         Math.max(
             0,
@@ -153,7 +161,26 @@
                       category: vegetationCategory,
                   }
                 : undefined,
+            wall: isWall
+                ? {
+                      version: 1,
+                      style: wallStyle.trim() || undefined,
+                      projectionDepthTiles,
+                  }
+                : undefined,
         };
+    }
+
+    function setWallEnabled(event: Event) {
+        isWall = (event.currentTarget as HTMLInputElement).checked;
+        if (!isWall) return;
+        isVegetation = false;
+        collisionGrid = createWallFoundationCollisionGrid(defaultSizeInTiles, defaultHeightInTiles);
+    }
+
+    function setVegetationEnabled(event: Event) {
+        isVegetation = (event.currentTarget as HTMLInputElement).checked;
+        if (isVegetation) isWall = false;
     }
 
     async function save(): Promise<void> {
@@ -227,13 +254,15 @@
     function updateCollisionGridWidth(event: Event) {
         collisionGridWidthIndex = Number((event.currentTarget as HTMLInputElement).value);
         defaultSizeInTiles = ENTITY_SIZE_TILE_OPTIONS[collisionGridWidthIndex] ?? 1;
-        resizeCollisionGridForFrame();
+        if (isWall) collisionGrid = createWallFoundationCollisionGrid(defaultSizeInTiles, defaultHeightInTiles);
+        else resizeCollisionGridForFrame();
     }
 
     function updateCollisionGridHeight(event: Event) {
         collisionGridHeightIndex = Number((event.currentTarget as HTMLInputElement).value);
         defaultHeightInTiles = ENTITY_SIZE_TILE_OPTIONS[collisionGridHeightIndex] ?? 1;
-        resizeCollisionGridForFrame();
+        if (isWall) collisionGrid = createWallFoundationCollisionGrid(defaultSizeInTiles, defaultHeightInTiles);
+        else resizeCollisionGridForFrame();
     }
 
     function updatePreviewPadding(event: Event) {
@@ -425,7 +454,12 @@
                     </div>
                     <fieldset class="rounded-lg border border-solid border-contrast-300 p-3">
                         <label class="flex cursor-pointer items-center gap-2" for="is-vegetation">
-                            <input id="is-vegetation" type="checkbox" bind:checked={isVegetation} />
+                            <input
+                                id="is-vegetation"
+                                type="checkbox"
+                                checked={isVegetation}
+                                onchange={setVegetationEnabled}
+                            />
                             <span><b>Vegetation asset</b></span>
                         </label>
                         <p class="mb-3 mt-1 text-xs text-gray-300">
@@ -444,6 +478,48 @@
                                 <option value="grass">Grass</option>
                                 <option value="other">Other vegetation</option>
                             </select>
+                        {/if}
+                    </fieldset>
+                    <fieldset class="rounded-lg border border-solid border-contrast-300 p-3">
+                        <label class="flex cursor-pointer items-center gap-2" for="is-wall">
+                            <input id="is-wall" type="checkbox" checked={isWall} onchange={setWallEnabled} />
+                            <span><b>Wall asset</b></span>
+                        </label>
+                        <p class="mb-3 mt-1 text-xs text-gray-300">
+                            Adds this asset to Walls. Drag to paint a continuous wall; hold Shift for a turned,
+                            projected wall.
+                        </p>
+                        {#if isWall}
+                            <div class="flex flex-col gap-3">
+                                <div>
+                                    <label class="mb-2 block text-sm" for="wall-style">Wall style</label>
+                                    <Input
+                                        id="wall-style"
+                                        data-testid="wall-style"
+                                        class="min-w-full rounded-md border border-solid border-contrast-400 bg-contrast px-2 py-2.5 text-[16px] text-white"
+                                        bind:value={wallStyle}
+                                    />
+                                </div>
+                                <div>
+                                    <div class="mb-2 flex items-center justify-between gap-3">
+                                        <label for="wall-projection-depth">Turn depth</label>
+                                        <span class="text-xs opacity-60">{projectionDepthTiles} tile</span>
+                                    </div>
+                                    <input
+                                        id="wall-projection-depth"
+                                        data-testid="wall-projection-depth"
+                                        class="w-full cursor-grab active:cursor-grabbing"
+                                        type="range"
+                                        min="0.25"
+                                        max="1"
+                                        step="0.25"
+                                        bind:value={projectionDepthTiles}
+                                    />
+                                </div>
+                                <p class="m-0 text-xs opacity-60">
+                                    The bottom tile is collision by default. You can customize it in Positioning.
+                                </p>
+                            </div>
                         {/if}
                     </fieldset>
                 </section>

@@ -23,6 +23,7 @@ import {
     vegetationPlacementPlanFromMessage,
     vegetationPresetFromMessage,
     vegetationPresetToMessage,
+    WallPlacement,
 } from "@workadventure/map-editor";
 import type {
     EditMapCommandMessage,
@@ -266,6 +267,7 @@ const mapStorageServer: MapStorageServer = {
                         //       Because of that, we send additional "modifyProperties" flag set properties value as "undefined" so they won't get erased
                         //       by [] value which was supposed to be null.
                         const dataToModify: Partial<WAMEntityData> = structuredClone(message);
+                        dataToModify.wall = WallPlacement.optional().parse(message.wall);
                         if (!message.modifyProperties) {
                             dataToModify.properties = undefined;
                         }
@@ -326,6 +328,7 @@ const mapStorageServer: MapStorageServer = {
                                     height: message.height,
                                     properties: message.properties as EntityDataProperties,
                                     name: message.name,
+                                    wall: WallPlacement.optional().parse(message.wall),
                                 },
                                 commandId,
                             ),

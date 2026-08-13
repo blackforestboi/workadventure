@@ -131,6 +131,7 @@
                     previewOffsetX: customEditedEntity.previewOffsetX,
                     previewOffsetY: customEditedEntity.previewOffsetY,
                     vegetation: customEditedEntity.vegetation,
+                    wall: customEditedEntity.wall,
                     color: "",
                     animation: customEditedEntity.animation,
                 },

@@ -143,6 +143,31 @@ describe("CustomEntityCollectionService", () => {
         expect(persistedCollection.collection[0]?.previewPadding).toBe(-28);
     });
 
+    it("gives wall assets a foundation-only collision grid by default", async () => {
+        const service = new CustomEntityCollectionService("maps.example.test");
+
+        await service.uploadEntity({
+            ...uploadEntityMessage,
+            defaultSizeInTiles: 2,
+            defaultHeightInTiles: 3,
+            wall: { version: 1, style: "Industrial", projectionDepthTiles: 0.5 },
+        });
+
+        const persistedCollection = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as {
+            collection: { wall?: unknown; collisionGrid?: number[][] }[];
+        };
+        expect(persistedCollection.collection[0]?.wall).toEqual({
+            version: 1,
+            style: "Industrial",
+            projectionDepthTiles: 0.5,
+        });
+        expect(persistedCollection.collection[0]?.collisionGrid).toEqual([
+            [0, 0],
+            [0, 0],
+            [1, 1],
+        ]);
+    });
+
     it("keeps a saved asset update available to every map client", async () => {
         const service = new CustomEntityCollectionService("maps.example.test");
         await service.uploadEntity({ ...uploadEntityMessage, defaultSizeInTiles: 1 });

@@ -15,6 +15,7 @@ import {
     UpsertVegetationPresetCommand,
     vegetationPlacementPlanFromMessage,
     vegetationPresetFromMessage,
+    WallPlacement,
     WamFile,
 } from "@workadventure/map-editor";
 import type { EditMapCommandMessage } from "@workadventure/messages";
@@ -139,6 +140,7 @@ export class WamManager {
             case "modifyEntityMessage": {
                 const message = editMapMessage.modifyEntityMessage;
                 const dataToModify: Partial<WAMEntityData> = structuredClone(message);
+                dataToModify.wall = WallPlacement.optional().parse(message.wall);
                 if (!message.modifyProperties) {
                     dataToModify.properties = undefined;
                 }
@@ -173,6 +175,7 @@ export class WamManager {
                         height: message.height,
                         properties: message.properties as EntityDataProperties,
                         name: message.name,
+                        wall: WallPlacement.optional().parse(message.wall),
                     },
                     editMapCommandMessage.id,
                 ).execute();
