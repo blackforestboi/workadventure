@@ -67,7 +67,12 @@ import { ModifyTerrainFrontCommand } from "../Commands/Terrain/ModifyTerrainFron
 import type { MapEditorModeManager } from "../MapEditorModeManager";
 import { hasPointerDragged } from "../PanGesture";
 import { collapseTileRegions, createFloorEdit, type FloorEdit } from "./FloorEditorHistory";
-import { collectTerrainGids, findTopmostErasableLayer, getTerrainTilesetGids } from "./FloorEditorCatalog";
+import {
+    collectTerrainGids,
+    findTopmostErasableLayer,
+    getTerrainTilesetGids,
+    resolveVegetationSelectionLayer,
+} from "./FloorEditorCatalog";
 import { findTilesetForGid, tileLayerCanRenderGid } from "./FloorEditorRendering";
 import { MapEditorTool } from "./MapEditorTool";
 
@@ -213,6 +218,7 @@ export class FloorEditorTool extends MapEditorTool {
             this.vegetationSelectionActive = state.selectionMode === true && state.selectedPreset !== undefined;
             if (!this.vegetationSelectionActive) this.vegetationSelectionStart = undefined;
             this.renderVegetationGhosts(state.preview);
+            this.updateCursor();
         });
         this.setState({ status: "idle", error: undefined });
         this.updateCursor();
@@ -518,7 +524,10 @@ export class FloorEditorTool extends MapEditorTool {
                 .scrollCameraByScreenDelta(pointer.prevPosition.x - pointer.x, pointer.prevPosition.y - pointer.y);
             return;
         }
-        const tile = this.getTileAtPointer(pointer);
+        const tile =
+            this.vegetationSelectionActive || this.vegetationSelectionStart !== undefined
+                ? this.getVegetationTileAtPointer(pointer)
+                : this.getTileAtPointer(pointer);
         if (tile === undefined) {
             if (this.shapeStart === undefined) this.clearHoverPreview();
             return;
@@ -557,6 +566,13 @@ export class FloorEditorTool extends MapEditorTool {
 
     private handlePointerDown(pointer: Phaser.Input.Pointer): void {
         if (!pointer.leftButtonDown()) return;
+        if (this.vegetationSelectionActive) {
+            const tile = this.getVegetationTileAtPointer(pointer);
+            if (tile === undefined) return;
+            this.vegetationSelectionStart = tile;
+            this.showShapeOutline(tile, tile);
+            return;
+        }
         if (this.selectedLayer === "") {
             pointer.motionFactor = 0.35;
             this.panCandidate = true;
@@ -564,11 +580,6 @@ export class FloorEditorTool extends MapEditorTool {
         }
         const tile = this.getTileAtPointer(pointer);
         if (tile === undefined) return;
-        if (this.vegetationSelectionActive) {
-            this.vegetationSelectionStart = tile;
-            this.showShapeOutline(tile, tile);
-            return;
-        }
         if (get(mapEditorFloorStateStore)?.toolMode === "elevation") {
             this.painting = true;
             this.lastPaintedTileKey = undefined;
@@ -611,7 +622,7 @@ export class FloorEditorTool extends MapEditorTool {
     private handlePointerUp(pointer: Phaser.Input.Pointer): void {
         this.stopPanning(pointer);
         if (this.vegetationSelectionStart !== undefined) {
-            const end = this.getTileAtPointer(pointer);
+            const end = this.getVegetationTileAtPointer(pointer);
             if (end !== undefined) this.finishVegetationSelection(end);
             return;
         }
@@ -647,7 +658,22 @@ export class FloorEditorTool extends MapEditorTool {
     }
 
     private updateCursor(): void {
-        this.scene.input.setDefaultCursor(this.selectedLayer === "" ? "auto" : "crosshair");
+        this.scene.input.setDefaultCursor(
+            this.vegetationSelectionActive || this.selectedLayer !== "" ? "crosshair" : "auto",
+        );
+    }
+
+    private getVegetationTileAtPointer(
+        pointer: Phaser.Input.Pointer,
+    ): { layer: string; x: number; y: number } | undefined {
+        if (this.publishedMap === undefined || this.pendingTilesetSelection !== undefined) return undefined;
+        const visibleMap = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
+        const layerName = resolveVegetationSelectionLayer(this.selectedLayer, visibleMap.layers);
+        if (layerName === "") return undefined;
+        const coordinates =
+            this.scene.getElevationRenderer().getTileCoordinatesAtWorldPoint(pointer.worldX, pointer.worldY) ??
+            worldToTileCoordinates(visibleMap, pointer.worldX, pointer.worldY);
+        return { layer: layerName, ...coordinates };
     }
 
     private getTileAtPointer(pointer: Phaser.Input.Pointer): { layer: string; x: number; y: number } | undefined {

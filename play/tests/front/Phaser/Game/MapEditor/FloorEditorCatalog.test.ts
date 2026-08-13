@@ -6,6 +6,7 @@ import {
     collectTerrainGids,
     findTopmostErasableLayer,
     getTerrainTilesetGids,
+    resolveVegetationSelectionLayer,
     resolveBrushLayer,
 } from "../../../../../src/front/Phaser/Game/MapEditor/Tools/FloorEditorCatalog";
 
@@ -49,6 +50,13 @@ describe("terrain editor catalog", () => {
         expect(resolveBrushLayer("", ["collisions", "floor", "walls"])).toBe("floor");
         expect(resolveBrushLayer("walls", ["collisions", "floor", "walls"])).toBe("walls");
         expect(resolveBrushLayer("", [])).toBe("");
+    });
+
+    it("lets vegetation rectangle selection target a surface without an active paint brush", () => {
+        const layers = [tileLayer("collisions", [99]), tileLayer("floor", [7])];
+
+        expect(resolveVegetationSelectionLayer("", layers)).toBe("floor");
+        expect(resolveVegetationSelectionLayer("walls", layers)).toBe("floor");
     });
 
     it("targets the topmost visible non-system tile when erasing stacked layers", () => {

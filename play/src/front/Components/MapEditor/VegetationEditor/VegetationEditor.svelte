@@ -4,8 +4,10 @@
         type EntityPrefab,
         type VegetationCategory,
         type VegetationPreset,
+        type VegetationRectangle,
     } from "@workadventure/map-editor";
     import { gameManager } from "../../../Phaser/Game/GameManager";
+    import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import { mapEditorEntityModeStore, mapEditorSelectedEntityPrefabStore } from "../../../Stores/MapEditorStore";
     import { mapEditorVegetationStore, clearVegetationPreview } from "../../../Stores/MapEditorVegetationStore";
     import { createStarterVegetationPreset, vegetationPrefabs } from "../../../Services/BuiltInVegetationCatalog";
@@ -20,10 +22,6 @@
     let minimumSpacing = $state(1.5);
     let presetName = $state("My vegetation mix");
     let currentPreset = $state<VegetationPreset>();
-    let areaX = $state(0);
-    let areaY = $state(0);
-    let areaWidth = $state(10);
-    let areaHeight = $state(10);
     let seed = $state(crypto.randomUUID());
 
     const manager = gameManager.getCurrentGameScene().getEntitiesCollectionsManager();
@@ -40,6 +38,7 @@
     );
 
     function place(prefab: EntityPrefab) {
+        gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(EditorToolName.EntityEditor);
         mapEditorSelectedEntityPrefabStore.set($state.snapshot(prefab));
         mapEditorEntityModeStore.set("ADD");
         mapEditorVegetationStore.set({ status: "placing" });
@@ -78,16 +77,21 @@
         await scene.getMapEditorModeManager().executeCommand(command);
         // eslint-disable-next-line require-atomic-updates
         currentPreset = command.preset;
-        mapEditorVegetationStore.set({ status: "selecting", selectedPreset: $state.snapshot(command.preset) });
+        scene.getMapEditorModeManager().equipTool(EditorToolName.FloorEditor);
+        mapEditorVegetationStore.set({
+            status: "selecting",
+            selectedPreset: $state.snapshot(command.preset),
+            selectionMode: true,
+        });
     }
 
-    function previewArea() {
+    function previewArea(rectangle: VegetationRectangle) {
         if (currentPreset === undefined) return;
         try {
             const preview = planVegetation({
                 preset: $state.snapshot(currentPreset),
                 seed,
-                rectangle: { x: areaX, y: areaY, width: areaWidth, height: areaHeight },
+                rectangle,
                 species: selectedSpecies.map((prefab) => ({
                     prefabRef: { collectionName: prefab.collectionName, id: prefab.id },
                     footprintWidth: Math.max(1, Math.ceil(prefab.defaultSizeInTiles ?? 1)),
@@ -105,18 +109,11 @@
         }
     }
 
-    function selectOnMap() {
-        if (currentPreset === undefined) return;
-        mapEditorVegetationStore.set({
-            status: "selecting",
-            selectedPreset: $state.snapshot(currentPreset),
-            selectionMode: true,
-        });
-    }
-
     function resample() {
+        const rectangle = $mapEditorVegetationStore.preview?.rectangle;
+        if (rectangle === undefined) return;
         seed = crypto.randomUUID();
-        previewArea();
+        previewArea(rectangle);
     }
 
     async function confirmPreview() {
@@ -175,56 +172,6 @@
             onclick={() => useStarter("grassland")}>Grassland</button
         >
     </div>
-    <div class="flex gap-2">
-        <input
-            class="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/35 px-3 py-2 text-sm"
-            type="search"
-            bind:value={search}
-            placeholder="Search vegetation…"
-            aria-label="Search vegetation"
-        />
-        <select
-            class="rounded-lg border border-white/10 bg-black/35 px-2 text-sm"
-            bind:value={category}
-            aria-label="Vegetation category"
-        >
-            <option value="all">All</option><option value="tree">Trees</option><option value="bush">Bushes</option
-            ><option value="grass">Grass</option><option value="other">Other</option>
-        </select>
-    </div>
-    {#if prefabs.length === 0}
-        <p class="rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-white/60">
-            No vegetation yet. Generate or upload an object, mark it as vegetation, then it will appear here.
-        </p>
-    {:else if filtered.length === 0}
-        <p class="text-sm text-white/60">No vegetation matches this search.</p>
-    {:else}
-        <div class="grid max-h-48 grid-cols-3 gap-2 overflow-y-auto">
-            {#each filtered as prefab (prefab.id)}
-                <article class="rounded-lg border border-white/10 bg-black/20 p-2">
-                    <img class="aspect-square w-full object-contain" src={prefab.imagePath} alt={prefab.name} />
-                    <strong class="block truncate text-xs">{prefab.name}</strong>
-                    <div class="mt-2 flex gap-1">
-                        <button
-                            type="button"
-                            class="flex-1 rounded border border-white/15 px-1 py-1 text-[10px] hover:bg-white/10"
-                            onclick={() => place(prefab)}>Place</button
-                        >
-                        <button
-                            type="button"
-                            class="rounded border px-1.5 py-1 text-[10px] {selectedSpecies.some(
-                                ({ id }) => id === prefab.id,
-                            )
-                                ? 'border-secondary bg-secondary/20'
-                                : 'border-white/15'}"
-                            onclick={() => toggleSpecies(prefab)}
-                            aria-pressed={selectedSpecies.some(({ id }) => id === prefab.id)}>Mix</button
-                        >
-                    </div>
-                </article>
-            {/each}
-        </div>
-    {/if}
     <fieldset class="rounded-lg border border-white/10 p-3">
         <legend class="px-1 text-xs font-semibold">Area mix</legend>
         <label class="block text-xs"
@@ -261,61 +208,10 @@
             disabled={selectedSpecies.length === 0}
             onclick={() => savePreset().catch((error) => console.error(error))}>Save mix and select area</button
         >
+        {#if $mapEditorVegetationStore.selectionMode}
+            <p class="mb-0 mt-2 text-xs text-secondary">Drag a rectangle on the map to preview this mix.</p>
+        {/if}
     </fieldset>
-    {#if currentPreset !== undefined}
-        <fieldset class="rounded-lg border border-white/10 p-3">
-            <legend class="px-1 text-xs font-semibold">Area bounds in tiles</legend>
-            <div class="grid grid-cols-4 gap-2">
-                <label class="text-[10px]"
-                    >X<input
-                        class="mt-1 w-full rounded border border-white/10 bg-black/30 p-1.5"
-                        type="number"
-                        bind:value={areaX}
-                    /></label
-                >
-                <label class="text-[10px]"
-                    >Y<input
-                        class="mt-1 w-full rounded border border-white/10 bg-black/30 p-1.5"
-                        type="number"
-                        bind:value={areaY}
-                    /></label
-                >
-                <label class="text-[10px]"
-                    >Width<input
-                        class="mt-1 w-full rounded border border-white/10 bg-black/30 p-1.5"
-                        type="number"
-                        min="1"
-                        max="64"
-                        bind:value={areaWidth}
-                    /></label
-                >
-                <label class="text-[10px]"
-                    >Height<input
-                        class="mt-1 w-full rounded border border-white/10 bg-black/30 p-1.5"
-                        type="number"
-                        min="1"
-                        max="64"
-                        bind:value={areaHeight}
-                    /></label
-                >
-            </div>
-            <div class="mt-3 grid grid-cols-2 gap-2">
-                <button
-                    type="button"
-                    class="rounded-lg bg-secondary px-3 py-2 text-sm font-semibold"
-                    onclick={selectOnMap}>Drag on map</button
-                >
-                <button
-                    type="button"
-                    class="rounded-lg border border-secondary/60 px-3 py-2 text-sm font-semibold hover:bg-secondary/15"
-                    onclick={previewArea}>Preview bounds</button
-                >
-            </div>
-            {#if $mapEditorVegetationStore.selectionMode}
-                <p class="mb-0 mt-2 text-xs text-secondary">Drag a rectangle on the map to preview this mix.</p>
-            {/if}
-        </fieldset>
-    {/if}
     {#if $mapEditorVegetationStore.preview}
         <div class="rounded-lg border border-secondary/30 bg-secondary/10 p-3 text-xs" aria-live="polite">
             {$mapEditorVegetationStore.preview.placements.length} placed · {$mapEditorVegetationStore.preview.skipped
@@ -340,4 +236,56 @@
     {#if $mapEditorVegetationStore.error}<p class="m-0 text-sm text-red-300" role="alert">
             {$mapEditorVegetationStore.error}
         </p>{/if}
+    <div class="flex gap-2">
+        <input
+            class="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/35 px-3 py-2 text-sm"
+            type="search"
+            bind:value={search}
+            placeholder="Search vegetation…"
+            aria-label="Search vegetation"
+        />
+        <select
+            class="rounded-lg border border-white/10 bg-black/35 px-2 text-sm"
+            bind:value={category}
+            aria-label="Vegetation category"
+        >
+            <option value="all">All</option><option value="tree">Trees</option><option value="bush">Bushes</option
+            ><option value="grass">Grass</option><option value="other">Other</option>
+        </select>
+    </div>
+    <div class="min-h-0 flex-1 overflow-y-auto" data-testid="vegetation-list">
+        {#if prefabs.length === 0}
+            <p class="rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-white/60">
+                No vegetation yet. Generate or upload an object, mark it as vegetation, then it will appear here.
+            </p>
+        {:else if filtered.length === 0}
+            <p class="text-sm text-white/60">No vegetation matches this search.</p>
+        {:else}
+            <div class="grid grid-cols-3 gap-2 pr-1">
+                {#each filtered as prefab (prefab.id)}
+                    <article class="rounded-lg border border-white/10 bg-black/20 p-2">
+                        <img class="aspect-square w-full object-contain" src={prefab.imagePath} alt={prefab.name} />
+                        <strong class="block truncate text-xs">{prefab.name}</strong>
+                        <div class="mt-2 flex gap-1">
+                            <button
+                                type="button"
+                                class="flex-1 rounded border border-white/15 px-1 py-1 text-[10px] hover:bg-white/10"
+                                onclick={() => place(prefab)}>Place</button
+                            >
+                            <button
+                                type="button"
+                                class="rounded border px-1.5 py-1 text-[10px] {selectedSpecies.some(
+                                    ({ id }) => id === prefab.id,
+                                )
+                                    ? 'border-secondary bg-secondary/20'
+                                    : 'border-white/15'}"
+                                onclick={() => toggleSpecies(prefab)}
+                                aria-pressed={selectedSpecies.some(({ id }) => id === prefab.id)}>Mix</button
+                            >
+                        </div>
+                    </article>
+                {/each}
+            </div>
+        {/if}
+    </div>
 </section>

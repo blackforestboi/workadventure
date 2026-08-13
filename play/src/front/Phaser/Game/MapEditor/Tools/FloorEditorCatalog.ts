@@ -17,6 +17,13 @@ export function resolveBrushLayer(selectedLayer: string, layers: readonly string
     return selectedLayer === "" ? chooseDefaultPaintLayer(layers) : selectedLayer;
 }
 
+export function resolveVegetationSelectionLayer(selectedLayer: string, layers: readonly ITiledMapLayer[]): string {
+    const tileLayerNames = flattenLayers(layers)
+        .filter((layer) => layer.type === "tilelayer")
+        .map((layer) => layer.name);
+    return chooseDefaultPaintLayer(tileLayerNames) || (tileLayerNames.includes(selectedLayer) ? selectedLayer : "");
+}
+
 export function findTopmostErasableLayer(layers: readonly ITiledMapLayer[], x: number, y: number): string | undefined {
     const flattenedLayers = flattenLayersWithVisibility(layers);
     // Tiled stores render order from back to front, so inspect the visible stack in reverse.
