@@ -18,6 +18,7 @@ import {
     getTileLayerGid,
     getTileLayerWorldOrigin,
     isAvatarSupportingTileLayerName,
+    surfaceOverlayCoverLayerName,
     tileToLayerIndex,
     type TeapotTileRegion,
     worldToTileCoordinates,
@@ -180,6 +181,29 @@ export class GameMapFrontWrapper {
 
     public readonly initializedPromise = new Deferred<void>();
 
+    private getTileLayerRenderBands(): Map<string, MapRenderBand> {
+        let renderBand: MapRenderBand = "background";
+        const layerRenderBands = new Map<string, MapRenderBand>();
+        for (const layer of this.gameMap.flatLayers) {
+            if (layer.type === "tilelayer") {
+                const overlayCoverLayer = surfaceOverlayCoverLayerName(layer.name);
+                const layerRenderBand =
+                    (overlayCoverLayer === undefined ? undefined : layerRenderBands.get(overlayCoverLayer)) ??
+                    renderBand;
+                layerRenderBands.set(layer.name, layerRenderBand);
+            }
+            if (layer.type === "objectgroup" && layer.name === "floorLayer") renderBand = "foreground";
+        }
+        for (const layer of this.gameMap.flatLayers) {
+            if (layer.type !== "tilelayer") continue;
+            const overlayCoverLayer = surfaceOverlayCoverLayerName(layer.name);
+            if (overlayCoverLayer === undefined) continue;
+            const overlayRenderBand = layerRenderBands.get(overlayCoverLayer) ?? layerRenderBands.get(layer.name);
+            if (overlayRenderBand !== undefined) layerRenderBands.set(layer.name, overlayRenderBand);
+        }
+        return layerRenderBands;
+    }
+
     constructor(
         scene: GameScene,
         gameMap: GameMap,
@@ -196,22 +220,33 @@ export class GameMapFrontWrapper {
 
         this.entitiesManager = new EntitiesManager(this.scene, this);
 
-        let renderBand: MapRenderBand = "background";
+        const layerRenderBands = this.getTileLayerRenderBands();
         const localDepth: Record<MapRenderBand, number> = { background: 0, foreground: 0 };
+        const renderedTileLayers = new Map<string, RenderableTilemapLayer>();
         for (const layer of this.gameMap.flatLayers) {
             if (layer.type === "tilelayer") {
+                const layerRenderBand = layerRenderBands.get(layer.name) ?? "background";
                 const phaserLayer = this.createRenderableLayer(layer, terrains);
                 if (phaserLayer) {
                     phaserLayer
                         .setScrollFactor(layer.parallaxx ?? 1, layer.parallaxy ?? 1)
                         .setAlpha(layer.opacity)
                         .setVisible(isCollisionStorageLayer(layer.name) ? false : layer.visible);
-                    this.gameRenderLayers.addMapLayer(phaserLayer, renderBand, localDepth[renderBand]++);
+                    const overlayCoverLayer = surfaceOverlayCoverLayerName(layer.name);
+                    const coverPhaserLayer =
+                        overlayCoverLayer === undefined ? undefined : renderedTileLayers.get(overlayCoverLayer);
+                    if (coverPhaserLayer === undefined) {
+                        this.gameRenderLayers.addMapLayer(phaserLayer, layerRenderBand, localDepth[layerRenderBand]++);
+                    } else {
+                        this.gameRenderLayers.addToSameMapBand(
+                            coverPhaserLayer,
+                            phaserLayer,
+                            coverPhaserLayer.depth + 0.01,
+                        );
+                    }
                     this.phaserLayers.push(phaserLayer);
+                    renderedTileLayers.set(layer.name, phaserLayer);
                 }
-            }
-            if (layer.type === "objectgroup" && layer.name === "floorLayer") {
-                renderBand = "foreground";
             }
         }
 

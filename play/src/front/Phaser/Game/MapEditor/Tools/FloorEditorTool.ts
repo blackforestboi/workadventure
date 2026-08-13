@@ -1,10 +1,10 @@
 import {
     addTeapotEmbeddedTileset,
     applyTeapotTerrainMutation,
+    createElevationSampler,
     createSurfaceOverlayLayer,
     createWaterUnderlayLayer,
     ELEVATION_WORLD_LAYER,
-    getElevationAt,
     getTileLayerGid,
     sculptElevation,
     surfaceOverlayCoverLayerName,
@@ -1157,16 +1157,9 @@ export class FloorEditorTool extends MapEditorTool {
         const { x: left, y: baseTop } = tileToWorldTopLeft(visibleMap, tile.x, tile.y);
         const pathOverlay = getAuthoringPathOverlay(visibleMap, tile.layer);
         const elevationMode = get(mapEditorFloorStateStore)?.toolMode === "elevation";
-        const previewElevation = elevationMode
-            ? Math.max(
-                  0,
-                  Math.min(
-                      getElevationAt(visibleMap, ELEVATION_WORLD_LAYER, tile.x, tile.y) + this.elevationDirection,
-                      20,
-                  ),
-              )
-            : 0;
-        const top = elevationMode ? baseTop - previewElevation * (tileHeight / 2) : baseTop;
+        const elevationOffset = createElevationSampler(visibleMap)(tile.x + 0.5, tile.y + 0.5) * (tileHeight / 2);
+        const previewOffset = elevationMode ? this.elevationDirection * (tileHeight / 2) : 0;
+        const top = baseTop - elevationOffset - previewOffset;
         const hoverDepth = pathOverlay === undefined ? (phaserLayer?.depth ?? 0) + 2 : DEPTH_OVERLAY_INDEX + 2;
         if (pathOverlay === undefined && !elevationMode) {
             const tileTexture = this.getTileTexture(this.selectedGid);
