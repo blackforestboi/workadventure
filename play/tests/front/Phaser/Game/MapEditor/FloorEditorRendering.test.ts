@@ -72,6 +72,16 @@ describe("floor editor rendering", () => {
         expect(gameSceneSource).not.toContain("cleanLoadedTilesetTexture");
     });
 
+    it("stacks built-in non-water surfaces while keeping water on its underlay", () => {
+        expect(floorEditorToolSource).toContain('this.selectedTilesetFirstGid = familyId === "water" ? 0 : firstGid');
+        expect(floorEditorToolSource).toContain(
+            "this.selectedTilesetFirstGid = this.selectedWaterFillGid === undefined ? firstGid : 0",
+        );
+        expect(floorEditorToolSource).not.toContain(
+            "selectedTileset !== undefined && !BUILT_IN_TERRAIN_TILESET.matchesImage(selectedTileset.image)",
+        );
+    });
+
     it("uses an overlay when a GPU layer cannot render the selected tileset", () => {
         expect(tileLayerCanRenderGid({ tileset: stone }, 118)).toBe(false);
         expect(findTilesetForGid([stone, grass], 118)).toBe(grass);
