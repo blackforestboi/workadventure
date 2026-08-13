@@ -80,6 +80,13 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).not.toContain(
             "selectedTileset !== undefined && !BUILT_IN_TERRAIN_TILESET.matchesImage(selectedTileset.image)",
         );
+        expect(floorEditorToolSource).toContain("this.surfaceStrokePlacementId = crypto.randomUUID()");
+        expect(floorEditorToolSource).toContain(
+            "this.selectedTilesetFirstGid,\n            this.surfaceStrokePlacementId",
+        );
+        expect(floorEditorToolSource).not.toContain(
+            "this.selectedTilesetFirstGid,\n            targetLayerName",
+        );
     });
 
     it("uses an overlay when a GPU layer cannot render the selected tileset", () => {

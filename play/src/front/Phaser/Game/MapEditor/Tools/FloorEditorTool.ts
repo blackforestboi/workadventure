@@ -127,6 +127,7 @@ export class FloorEditorTool extends MapEditorTool {
     private selectedGid = 0;
     private selectedTilesetFirstGid = 0;
     private surfaceStrokeLayerName: string | undefined;
+    private surfaceStrokePlacementId: string | undefined;
     private pendingTilesetSelection: PendingTilesetSelection | undefined;
     private selectedAutotile: { familyId: string; tiles: TerrainAutotileTiles } | undefined;
     private selectedAutotileForTileBrush: TerrainAutotileTiles | undefined;
@@ -595,10 +596,11 @@ export class FloorEditorTool extends MapEditorTool {
             return;
         }
         if (this.selectedTilesetFirstGid > 0) {
+            this.surfaceStrokePlacementId = crypto.randomUUID();
             this.surfaceStrokeLayerName = surfaceOverlayLayerName(
                 this.selectedLayer,
                 this.selectedTilesetFirstGid,
-                crypto.randomUUID(),
+                this.surfaceStrokePlacementId,
             );
         }
         const tile = this.getTileAtPointer(pointer);
@@ -652,6 +654,7 @@ export class FloorEditorTool extends MapEditorTool {
         if (this.shapeStart !== undefined && this.shapeEnd !== undefined && this.shapeBrush !== undefined) {
             this.finishShapeDrag();
             this.surfaceStrokeLayerName = undefined;
+            this.surfaceStrokePlacementId = undefined;
             return;
         }
         this.finishPaintStroke();
@@ -908,6 +911,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.shapeEnd = undefined;
         this.shapeBrush = undefined;
         this.surfaceStrokeLayerName = undefined;
+        this.surfaceStrokePlacementId = undefined;
         this.shapeOutline?.clear();
     }
 
@@ -1039,6 +1043,7 @@ export class FloorEditorTool extends MapEditorTool {
             this.commitEdits(this.activeEditGroup);
         this.activeEditGroup = undefined;
         this.surfaceStrokeLayerName = undefined;
+        this.surfaceStrokePlacementId = undefined;
     }
 
     private commitEdits(edits: FloorEdit[]): void {
@@ -1737,9 +1742,18 @@ export class FloorEditorTool extends MapEditorTool {
     }
 
     private getMissingSurfaceOverlayLayer(map: ITiledMap, targetLayerName: string): ITiledMapTileLayer | undefined {
-        if (targetLayerName !== this.getSurfaceOverlayLayerName() || this.getSurfaceOverlayLayer(map) !== undefined)
+        if (
+            targetLayerName !== this.getSurfaceOverlayLayerName() ||
+            this.surfaceStrokePlacementId === undefined ||
+            this.getSurfaceOverlayLayer(map) !== undefined
+        )
             return undefined;
-        const layer = createSurfaceOverlayLayer(map, this.selectedLayer, this.selectedTilesetFirstGid, targetLayerName);
+        const layer = createSurfaceOverlayLayer(
+            map,
+            this.selectedLayer,
+            this.selectedTilesetFirstGid,
+            this.surfaceStrokePlacementId,
+        );
         return layer.type === "tilelayer" ? layer : undefined;
     }
 }
