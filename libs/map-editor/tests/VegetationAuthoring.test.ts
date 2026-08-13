@@ -26,8 +26,22 @@ function input(overrides: Partial<VegetationPlanningInput> = {}): VegetationPlan
             ],
         },
         species: [
-            { prefabRef: treeRef, footprintWidth: 1, footprintHeight: 1, blocking: true },
-            { prefabRef: grassRef, footprintWidth: 1, footprintHeight: 1, blocking: false },
+            {
+                prefabRef: treeRef,
+                footprintWidth: 1,
+                footprintHeight: 1,
+                displayWidthInTiles: 1,
+                displayHeightInTiles: 2,
+                blocking: true,
+            },
+            {
+                prefabRef: grassRef,
+                footprintWidth: 1,
+                footprintHeight: 1,
+                displayWidthInTiles: 1,
+                displayHeightInTiles: 1,
+                blocking: false,
+            },
         ],
         ...overrides,
     };
@@ -47,6 +61,22 @@ describe("vegetation authoring", () => {
         expect(planVegetation(input())).toEqual(planVegetation(input()));
     });
 
+    it("keeps a blocking footprint independent from the rendered tree height", () => {
+        const result = planVegetation(
+            input({
+                rectangle: { x: 2, y: 3, width: 1, height: 1 },
+                preset: {
+                    ...input().preset,
+                    density: 1,
+                    minimumSpacing: 0,
+                    species: [{ prefabRef: treeRef, weight: 1 }],
+                },
+            }),
+        );
+
+        expect(result.placements[0]).toMatchObject({ width: 32, height: 64 });
+    });
+
     it("resolves tile candidates to ordinary world-space entity coordinates", () => {
         const result = planVegetation(
             input({
@@ -57,7 +87,16 @@ describe("vegetation authoring", () => {
                     minimumSpacing: 0,
                     species: [{ prefabRef: grassRef, weight: 1 }],
                 },
-                species: [{ prefabRef: grassRef, footprintWidth: 2, footprintHeight: 1, blocking: false }],
+                species: [
+                    {
+                        prefabRef: grassRef,
+                        footprintWidth: 2,
+                        footprintHeight: 1,
+                        displayWidthInTiles: 2,
+                        displayHeightInTiles: 1,
+                        blocking: false,
+                    },
+                ],
             }),
         );
         expect(result.placements[0]).toMatchObject({ x: 80, y: 128, width: 64, height: 32 });

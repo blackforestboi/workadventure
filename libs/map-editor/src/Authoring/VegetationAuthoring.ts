@@ -96,8 +96,8 @@ export function planVegetation(input: VegetationPlanningInput): VegetationPlacem
                 prefabRef: entry.prefabRef,
                 x: (x + 0.5) * tileWidth,
                 y: (y + 1) * tileHeight,
-                width: species.footprintWidth * tileWidth,
-                height: species.footprintHeight * tileHeight,
+                width: species.displayWidthInTiles * tileWidth,
+                height: species.displayHeightInTiles * tileHeight,
             });
             occupied.push({ x, y });
         }

@@ -350,7 +350,7 @@
         {
             "id": "craftpix-forest-living-gazebo1",
             "name": "Living Gazebo \u2014 Variant 1",
-            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
             "imagePath": "assets/forest/living-gazebo1.png",
             "direction": "Down",
             "color": "natural",
@@ -365,7 +365,7 @@
             ],
             "vegetation": {
                 "version": 1,
-                "category": "other",
+                "category": "tree",
                 "sourceAssetId": "craftpix-forest-living-gazebo1",
                 "providerId": "craftpix"
             }
@@ -373,7 +373,7 @@
         {
             "id": "craftpix-forest-living-gazebo2",
             "name": "Living Gazebo \u2014 Variant 2",
-            "tags": ["craftpix", "forest", "vegetation", "other"],
+            "tags": ["craftpix", "forest", "vegetation", "tree"],
             "imagePath": "assets/forest/living-gazebo2.png",
             "direction": "Down",
             "color": "natural",
@@ -388,7 +388,7 @@
             ],
             "vegetation": {
                 "version": 1,
-                "category": "other",
+                "category": "tree",
                 "sourceAssetId": "craftpix-forest-living-gazebo2",
                 "providerId": "craftpix"
             }

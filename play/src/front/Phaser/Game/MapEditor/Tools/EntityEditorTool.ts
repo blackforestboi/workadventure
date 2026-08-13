@@ -48,6 +48,7 @@ import { EditorToolName } from "../MapEditorModeManager";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { mapEditorActivated } from "../../../../Stores/MenuStore";
 import { hasPointerDragged } from "../PanGesture";
+import { shouldPlaceEntity } from "../../../../Utils/EntityPrefabSize";
 import { getEntityCollisionRectangles, getScaledCollisionGridFrame } from "../Entities/EntityCollisionGrid";
 import { applyWallTextureToPreview } from "../Entities/WallTextureProjector";
 import { EntityRelatedEditorTool } from "./EntityRelatedEditorTool";
@@ -450,7 +451,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
             return;
         }
         if (!this.canEntityBePlaced()) {
-            this.entityPrefabPreview.setTint(0xff0000);
+            this.entityPrefabPreview.setTint(this.entityPrefab.vegetation?.category === "tree" ? 0xffa500 : 0xff0000);
         } else {
             if (this.shiftKey?.isDown) {
                 this.entityPrefabPreview.setTint(0xffa500);
@@ -508,7 +509,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
 
         this.updateEntityPrefabPreviewPosition(pointer);
 
-        if (!this.canEntityBePlaced()) {
+        if (!shouldPlaceEntity(this.canEntityBePlaced(), this.entityPrefab.vegetation?.category)) {
             return;
         }
 

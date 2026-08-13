@@ -445,6 +445,8 @@ export const VegetationPlanningSpecies = z.object({
     prefabRef: EntityPrefabRef,
     footprintWidth: z.number().int().positive(),
     footprintHeight: z.number().int().positive(),
+    displayWidthInTiles: z.number().finite().positive(),
+    displayHeightInTiles: z.number().finite().positive(),
     blocking: z.boolean(),
 });
 

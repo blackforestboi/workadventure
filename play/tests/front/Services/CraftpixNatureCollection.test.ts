@@ -15,6 +15,19 @@ describe("Craftpix Nature collection", () => {
         expect(collection.collection.every(({ id, name }) => id.length > 0 && name.length > 0)).toBe(true);
         expect(collection.collection.filter(({ vegetation }) => vegetation !== undefined).length).toBeGreaterThan(150);
 
+        const trees = collection.collection.filter(({ vegetation }) => vegetation?.category === "tree");
+        expect(trees.length).toBeGreaterThan(60);
+        expect(
+            trees.every(
+                ({ collisionGrid }) =>
+                    collisionGrid !== undefined && collisionGrid.flat().filter((cell) => cell === 1).length === 1,
+            ),
+        ).toBe(true);
+        expect(trees.filter(({ id }) => id.startsWith("craftpix-forest-living-gazebo")).map(({ id }) => id)).toEqual([
+            "craftpix-forest-living-gazebo1",
+            "craftpix-forest-living-gazebo2",
+        ]);
+
         await Promise.all(
             collection.collection.map(async ({ imagePath }) => {
                 expect((await stat(path.join(collectionDirectory, imagePath))).isFile()).toBe(true);

@@ -20,7 +20,7 @@ import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { TexturesHelper } from "../../../Helpers/TexturesHelper";
 import type { Entity } from "../../../ECS/Entity";
 import { EntityResizeHandles } from "../Entities/EntityResizeHandles";
-import { getEntityDisplaySize } from "../../../../Utils/EntityPrefabSize";
+import { getEntityDisplaySize, getVegetationDisplaySize } from "../../../../Utils/EntityPrefabSize";
 import { MapEditorTool } from "./MapEditorTool";
 
 import Sprite = Phaser.GameObjects.Sprite;
@@ -148,12 +148,18 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                                 this.scene.getGameRenderLayers().addWorldObject(this.entityPrefabPreview);
                             }
                             const preview = this.entityPrefabPreview;
-                            const displaySize = getEntityDisplaySize(
-                                preview.width,
-                                preview.height,
-                                entityPrefab.defaultSizeInTiles,
-                                entityPrefab.defaultHeightInTiles,
-                            );
+                            const displaySize =
+                                getVegetationDisplaySize(
+                                    preview.width,
+                                    preview.height,
+                                    entityPrefab.vegetation?.category,
+                                ) ??
+                                getEntityDisplaySize(
+                                    preview.width,
+                                    preview.height,
+                                    entityPrefab.defaultSizeInTiles,
+                                    entityPrefab.defaultHeightInTiles,
+                                );
                             preview.setDisplaySize(displaySize.width, displaySize.height);
                             TexturesHelper.playEntityAnimation(this.entityPrefabPreview, entityPrefab);
                             this.onEntityPrefabPreviewReady(pointer);
