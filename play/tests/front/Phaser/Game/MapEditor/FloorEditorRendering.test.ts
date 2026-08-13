@@ -456,5 +456,8 @@ describe("floor editor rendering", () => {
         expect(elevationRendererSource).toContain(".phaserLayers.filter");
         expect(elevationRendererSource).toContain("capture.draw(compositeSources");
         expect(floorEditorToolSource).toContain("overlay.setData(ELEVATION_COMPOSITE_LAYER_DATA_KEY");
+        expect(floorEditorToolSource).toContain("const surfaceCoverLayer = surfaceOverlayCoverLayerName(layer)");
+        expect(floorEditorToolSource).toContain("const compositeCoverLayer = underlayCoverLayer ?? surfaceCoverLayer");
+        expect(floorEditorToolSource).toContain("compositeCoverLayer ?? layer");
     });
 });

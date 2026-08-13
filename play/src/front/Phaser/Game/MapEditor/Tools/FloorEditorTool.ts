@@ -1508,9 +1508,11 @@ export class FloorEditorTool extends MapEditorTool {
         const gameMapFrontWrapper = this.scene.getGameMapFrontWrapper();
         const phaserLayer = gameMapFrontWrapper.findPhaserLayer(layer);
         const underlayCoverLayer = waterUnderlayCoverLayerName(layer);
+        const surfaceCoverLayer = surfaceOverlayCoverLayerName(layer);
+        const compositeCoverLayer = underlayCoverLayer ?? surfaceCoverLayer;
         const renderReferenceLayer =
             phaserLayer ??
-            (underlayCoverLayer === undefined ? undefined : gameMapFrontWrapper.findPhaserLayer(underlayCoverLayer));
+            (compositeCoverLayer === undefined ? undefined : gameMapFrontWrapper.findPhaserLayer(compositeCoverLayer));
         const pathOverlayKind = getAuthoringPathOverlayKind(layer);
         if (pathOverlayKind !== undefined) {
             // Collision markers must stay non-empty for Arcade Physics; checker overlays own all path visuals.
@@ -1533,7 +1535,7 @@ export class FloorEditorTool extends MapEditorTool {
                     map,
                     renderReferenceLayer,
                     underlayCoverLayer === undefined ? 0.01 : -0.01,
-                    underlayCoverLayer ?? layer,
+                    compositeCoverLayer ?? layer,
                 );
                 return;
             }
