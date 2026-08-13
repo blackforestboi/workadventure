@@ -13,6 +13,7 @@ const MAX_TILESET_JSON_BYTES = 64 * 1024;
 const MAX_LAYER_JSON_BYTES = 64 * 1024;
 
 export const WATER_UNDERLAY_LAYER_PREFIX = "__teapot_water_underlay__";
+export const SURFACE_OVERLAY_LAYER_PREFIX = "__teapot_surface_overlay__";
 
 export interface TeapotTerrainMutation {
     mapId: string;
@@ -143,6 +144,59 @@ export function createWaterUnderlayLayer(map: ITiledMap, coverLayerName: string)
             ? { ...common, data: [], chunks: [] }
             : { ...common, data: Array<number>(cover.width * cover.height).fill(0) },
     );
+}
+
+/** Creates a transparent tile layer that renders a user surface above its existing floor. */
+export function createSurfaceOverlayLayer(
+    map: ITiledMap,
+    coverLayerName: string,
+    tilesetFirstGid: number,
+    placementId: string,
+): TiledMapLayer {
+    const cover = flattenLayers(map.layers).find((layer) => layer.name === coverLayerName);
+    if (cover?.type !== "tilelayer") throw new Error(`Terrain layer ${coverLayerName} does not exist`);
+    const id = Math.max(map.nextlayerid ?? 1, ...flattenLayers(map.layers).map((layer) => (layer.id ?? 0) + 1));
+    const common = {
+        id,
+        name: surfaceOverlayLayerName(coverLayerName, tilesetFirstGid, placementId),
+        type: "tilelayer" as const,
+        opacity: 1,
+        visible: true,
+        width: cover.width,
+        height: cover.height,
+        x: cover.x ?? 0,
+        y: cover.y ?? 0,
+        startx: cover.startx,
+        starty: cover.starty,
+        offsetx: cover.offsetx,
+        offsety: cover.offsety,
+        parallaxx: cover.parallaxx,
+        parallaxy: cover.parallaxy,
+        properties: [
+            { name: "teapot:overlayFor", type: "string" as const, value: coverLayerName },
+            { name: "teapot:tilesetFirstGid", type: "int" as const, value: tilesetFirstGid },
+        ],
+    };
+    return ITiledMapLayer.parse(
+        map.infinite === true || cover.chunks !== undefined
+            ? { ...common, data: [], chunks: [] }
+            : { ...common, data: Array<number>(cover.width * cover.height).fill(0) },
+    );
+}
+
+export function surfaceOverlayLayerName(coverLayerName: string, tilesetFirstGid: number, placementId: string): string {
+    return `${SURFACE_OVERLAY_LAYER_PREFIX}${tilesetFirstGid}__${encodeURIComponent(placementId)}__${encodeURIComponent(coverLayerName)}`;
+}
+
+export function surfaceOverlayCoverLayerName(layerName: string): string | undefined {
+    if (!layerName.startsWith(SURFACE_OVERLAY_LAYER_PREFIX)) return undefined;
+    const separator = layerName.lastIndexOf("__");
+    if (separator === -1) return undefined;
+    try {
+        return decodeURIComponent(layerName.slice(separator + 2));
+    } catch {
+        return undefined;
+    }
 }
 
 export function waterUnderlayLayerName(coverLayerName: string): string {

@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import gameSceneSource from "../../../src/front/Phaser/Game/GameScene.ts?raw";
 import floorEditorToolSource from "../../../src/front/Phaser/Game/MapEditor/Tools/FloorEditorTool.ts?raw";
 import rasterNormalizerSource from "../../../src/front/Services/AssetGeneration/TilesetRasterNormalizer.ts?raw";
-import {
-    isMapOwnedTilesetImage,
-    terrainTileCrop,
-} from "../../../src/front/Services/AssetGeneration/TilesetRasterNormalizer";
+import { terrainTileCrop } from "../../../src/front/Services/AssetGeneration/TilesetRasterNormalizer";
 import { removeEdgeConnectedBackground } from "../../../src/front/Services/AssetGeneration/EdgeConnectedBackground";
 
 describe("terrainTileCrop", () => {
@@ -19,15 +15,6 @@ describe("terrainTileCrop", () => {
     it("rejects invalid or excessive raster dimensions", () => {
         expect(() => terrainTileCrop(0, 32)).toThrow("invalid dimensions");
         expect(() => terrainTileCrop(2049, 32)).toThrow("cannot exceed");
-    });
-});
-
-describe("isMapOwnedTilesetImage", () => {
-    it("includes world-uploaded assets without touching built-in tilesets", () => {
-        expect(isMapOwnedTilesetImage("dirt.png")).toBe(false);
-        expect(isMapOwnedTilesetImage("assets/dirt.png")).toBe(true);
-        expect(isMapOwnedTilesetImage("/worlds/example/assets/dirt.png")).toBe(true);
-        expect(isMapOwnedTilesetImage("/resources/tilesets/lpc-outdoor-terrain.png")).toBe(false);
     });
 });
 
@@ -47,10 +34,8 @@ describe("generated terrain tile transparency", () => {
         expect(cleaned[(16 * width + 16) * 4 + 3]).toBe(255);
     });
 
-    it("cleans new uploads and historic textures in both runtime loading paths", () => {
+    it("cleans new uploads without mutating loaded game textures", () => {
         expect(rasterNormalizerSource).toContain("cleanTilesetCanvas(context, TILE_SIZE, TILE_SIZE)");
-        expect(gameSceneSource).toContain("cleanLoadedTilesetTexture(");
-        expect(gameSceneSource).toContain("isMapOwnedTilesetImage(tileset.image)");
-        expect(floorEditorToolSource).toContain("cleanLoadedTilesetSpriteSheet(this.scene.textures, textureKey)");
+        expect(floorEditorToolSource).not.toContain("cleanLoadedTilesetSpriteSheet");
     });
 });

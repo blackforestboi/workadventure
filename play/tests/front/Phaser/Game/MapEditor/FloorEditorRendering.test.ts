@@ -62,6 +62,16 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).toContain("underlayCoverLayer === undefined ? 0.01 : -0.01");
     });
 
+    it("stacks custom surfaces above the existing floor instead of replacing it", () => {
+        expect(floorEditorToolSource).toContain("createSurfaceOverlayLayer");
+        expect(floorEditorToolSource).toContain("surfaceOverlayLayerName");
+        expect(floorEditorToolSource).toContain("getSurfaceOverlayLayerName");
+        expect(floorEditorToolSource).toContain("layerJson: JSON.stringify(addedLayer)");
+        expect(floorEditorToolSource).toContain("surfaceOverlayCoverLayerName(layer.name) === undefined");
+        expect(floorEditorToolSource).not.toContain("cleanLoadedTilesetSpriteSheet");
+        expect(gameSceneSource).not.toContain("cleanLoadedTilesetTexture");
+    });
+
     it("uses an overlay when a GPU layer cannot render the selected tileset", () => {
         expect(tileLayerCanRenderGid({ tileset: stone }, 118)).toBe(false);
         expect(findTilesetForGid([stone, grass], 118)).toBe(grass);

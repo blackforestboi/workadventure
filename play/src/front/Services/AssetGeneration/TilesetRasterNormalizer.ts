@@ -6,11 +6,6 @@ import { cleanTilesetCanvas } from "./EdgeConnectedBackground";
 const TILE_SIZE = 32;
 const MAX_DIMENSION = 2048;
 
-/** World-uploaded tilesets are copied under the map's assets directory. */
-export function isMapOwnedTilesetImage(imageUrl: string): boolean {
-    return /(?:^|\/)assets\//.test(imageUrl);
-}
-
 export interface TerrainTileCrop {
     sourceX: number;
     sourceY: number;

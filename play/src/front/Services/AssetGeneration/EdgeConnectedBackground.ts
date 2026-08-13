@@ -1,5 +1,3 @@
-import type * as Phaser from "phaser";
-
 const BACKGROUND_COLOR_TOLERANCE = 12;
 const TILE_SIZE = 32;
 
@@ -99,58 +97,4 @@ export function cleanTilesetCanvas(context: CanvasRenderingContext2D, width: num
         }
     }
     return changed;
-}
-
-/** Replaces an already-loaded custom tileset texture so historic opaque assets render transparently. */
-export function cleanLoadedTilesetTexture(textures: Phaser.Textures.TextureManager, textureKey: string): boolean {
-    if (!textures.exists(textureKey)) return false;
-    const source = textures.get(textureKey).getSourceImage() as CanvasImageSource & {
-        width?: number;
-        height?: number;
-        naturalWidth?: number;
-        naturalHeight?: number;
-    };
-    const width = source.naturalWidth ?? source.width ?? 0;
-    const height = source.naturalHeight ?? source.height ?? 0;
-    if (width <= 0 || height <= 0) return false;
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    if (context === null) return false;
-    context.imageSmoothingEnabled = false;
-    context.drawImage(source, 0, 0, width, height);
-    if (!cleanTilesetCanvas(context, width, height)) return false;
-    textures.remove(textureKey);
-    textures.addCanvas(textureKey, canvas);
-    return true;
-}
-
-export function cleanLoadedTilesetSpriteSheet(
-    textures: Phaser.Textures.TextureManager,
-    textureKey: string,
-    frameWidth = TILE_SIZE,
-    frameHeight = TILE_SIZE,
-): boolean {
-    if (!textures.exists(textureKey)) return false;
-    const source = textures.get(textureKey).getSourceImage() as CanvasImageSource & {
-        width?: number;
-        height?: number;
-        naturalWidth?: number;
-        naturalHeight?: number;
-    };
-    const width = source.naturalWidth ?? source.width ?? 0;
-    const height = source.naturalHeight ?? source.height ?? 0;
-    if (width <= 0 || height <= 0) return false;
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    if (context === null) return false;
-    context.imageSmoothingEnabled = false;
-    context.drawImage(source, 0, 0, width, height);
-    if (!cleanTilesetCanvas(context, width, height)) return false;
-    textures.remove(textureKey);
-    textures.addSpriteSheet(textureKey, canvas, { frameWidth, frameHeight });
-    return true;
 }

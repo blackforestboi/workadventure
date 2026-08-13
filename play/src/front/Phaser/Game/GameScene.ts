@@ -203,8 +203,6 @@ import { areaPropertyVariablesManagerStore } from "../../Stores/AreaPropertyVari
 import { ApplicationManager } from "../../Chat/Applications/ApplicationManager";
 import { audioPlaybackStore } from "../../Stores/AudioPlaybackStore";
 import { requestedScreenSharingState } from "../../Stores/ScreenSharingStore";
-import { cleanLoadedTilesetTexture } from "../../Services/AssetGeneration/EdgeConnectedBackground";
-import { isMapOwnedTilesetImage } from "../../Services/AssetGeneration/TilesetRasterNormalizer";
 import { EnterLeaveScriptingService } from "../Helpers/EnterLeaveScriptingService";
 import { GameMapFrontWrapper } from "./GameMap/GameMapFrontWrapper";
 import { ElevationRenderer } from "./GameMap/ElevationRenderer";
@@ -1903,21 +1901,6 @@ export class GameScene extends DirtyScene {
                 });
             } else {
                 this.load.image(tilesetImageUrl, tilesetImageUrl);
-            }
-        });
-
-        this.load.once(Phaser.Loader.Events.COMPLETE, () => {
-            for (const tileset of this.mapFile.tilesets) {
-                if (
-                    "image" in tileset &&
-                    typeof tileset.image === "string" &&
-                    isMapOwnedTilesetImage(tileset.image)
-                ) {
-                    cleanLoadedTilesetTexture(
-                        this.textures,
-                        resolveTilesetImageUrl(tileset.image, this.mapUrlFile, window.location.origin),
-                    );
-                }
             }
         });
 

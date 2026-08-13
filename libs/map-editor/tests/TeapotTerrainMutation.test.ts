@@ -4,8 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
     applyTeapotTerrainMutation,
     containsOccupiedVisualTileDeletion,
+    createSurfaceOverlayLayer,
     createWaterUnderlayLayer,
     isAvatarSupportingTileLayerName,
+    surfaceOverlayCoverLayerName,
+    surfaceOverlayLayerName,
     waterUnderlayLayerName,
 } from "../src/Authoring/TeapotTerrainMutation";
 import { createCenteredMap, getTileLayerGid } from "../src/GameMap/CenteredMapCoordinates";
@@ -112,6 +115,23 @@ describe("applyTeapotTerrainMutation", () => {
         expect(updated.layers[1]?.name).toBe("floor");
         expect(underlay?.type === "tilelayer" ? getTileLayerGid(underlay, -1, -1) : 0).toBe(8);
         expect(source.layers).toHaveLength(1);
+    });
+
+    it("adds a transparent surface overlay above the existing floor", () => {
+        const source = createSourceMap();
+        const layer = createSurfaceOverlayLayer(source, "floor", 11, "placement-1");
+        const updated = applyTeapotTerrainMutation(source, {
+            mapId: "https://example.com/map.tmj",
+            regions: [{ layer: layer.name, x: -1, y: -1, width: 1, height: 1, gids: [11] }],
+            layerJson: JSON.stringify(layer),
+        });
+        const overlay = updated.layers[1];
+
+        expect(updated.layers[0]?.name).toBe("floor");
+        expect(overlay?.name).toBe(surfaceOverlayLayerName("floor", 11, "placement-1"));
+        expect(surfaceOverlayCoverLayerName(overlay?.name ?? "")).toBe("floor");
+        expect(overlay?.type === "tilelayer" ? getTileLayerGid(overlay, -1, -1) : 0).toBe(11);
+        expect(getTileLayerGid(floorLayer(updated), -1, -1)).toBe(1);
     });
 
     it("applies inverse surface writes before removing a water underlay", () => {
