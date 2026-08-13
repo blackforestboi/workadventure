@@ -204,6 +204,7 @@ import { ApplicationManager } from "../../Chat/Applications/ApplicationManager";
 import { audioPlaybackStore } from "../../Stores/AudioPlaybackStore";
 import { requestedScreenSharingState } from "../../Stores/ScreenSharingStore";
 import { cleanLoadedTilesetTexture } from "../../Services/AssetGeneration/EdgeConnectedBackground";
+import { isMapOwnedTilesetImage } from "../../Services/AssetGeneration/TilesetRasterNormalizer";
 import { EnterLeaveScriptingService } from "../Helpers/EnterLeaveScriptingService";
 import { GameMapFrontWrapper } from "./GameMap/GameMapFrontWrapper";
 import { ElevationRenderer } from "./GameMap/ElevationRenderer";
@@ -1910,7 +1911,7 @@ export class GameScene extends DirtyScene {
                 if (
                     "image" in tileset &&
                     typeof tileset.image === "string" &&
-                    tileset.image.includes("/teapot/tileset-assets/")
+                    isMapOwnedTilesetImage(tileset.image)
                 ) {
                     cleanLoadedTilesetTexture(
                         this.textures,
