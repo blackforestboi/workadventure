@@ -87,6 +87,7 @@ export class ExplorerTool implements MapEditorTool {
     private pointerDownHandler = (pointer: Pointer) => {
         this.explorationPanCandidate = pointer.leftButtonDown();
         if (!this.explorationPanCandidate) return;
+        this.scene.getCameraManager().stopSpeed();
         // The motion factor is used to smooth out the velocity of the camera.
         // By default, the 0.2 value is too low and if we release the pointer when the mouse is not moving but has
         // moved 0.1 second before, the camera will continue to move.
@@ -99,7 +100,6 @@ export class ExplorerTool implements MapEditorTool {
             if (!hasPointerDragged(pointer)) return;
             this.explorationMouseIsActive = true;
             this.scene.input.setDefaultCursor("grabbing");
-            this.scene.getCameraManager().stopSpeed();
         }
 
         this.scene

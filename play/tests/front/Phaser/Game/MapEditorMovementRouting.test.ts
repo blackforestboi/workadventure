@@ -73,6 +73,12 @@ describe("map editor movement routing", () => {
         );
     });
 
+    it("stops explore inertia when a new primary-button pan candidate begins", () => {
+        expect(explorerToolSource).toMatch(
+            /private pointerDownHandler = \(pointer: Pointer\) => \{\s*this\.explorationPanCandidate = pointer\.leftButtonDown\(\);\s*if \(!this\.explorationPanCandidate\) return;\s*this\.scene\.getCameraManager\(\)\.stopSpeed\(\);\s*(?:\/\/[^\n]*\n\s*)*pointer\.motionFactor = 0\.35;\s*\};/,
+        );
+    });
+
     it("does not advertise or activate panning until the pointer is actually dragged", () => {
         expect(mapEditorModeManagerSource).toMatch(/this\.scene\.input\.setDefaultCursor\("auto"\);/);
         expect(explorerToolSource).toMatch(
