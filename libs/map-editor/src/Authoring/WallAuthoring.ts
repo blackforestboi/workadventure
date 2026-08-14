@@ -2,8 +2,34 @@ import type { WallPlacementOrientation } from "../types";
 
 export const WALL_TILE_SIZE = 32;
 export const WALL_MAX_DRAG_TILES = 256;
+export const WALL_DEFAULT_WIDTH_TILES = 2;
+export const WALL_DEFAULT_HEIGHT_TILES = 2;
+export const WALL_DIAGONAL_WIDTH_TILES = 1;
+export const WALL_VERTICAL_WIDTH_TILES = 0;
+export const WALL_EDGE_RENDER_WIDTH = 1;
 
 export type WallTile = { x: number; y: number };
+
+export function isDiagonalWallOrientation(orientation: WallPlacementOrientation): boolean {
+    return orientation === "diagonal-up" || orientation === "diagonal-down";
+}
+
+export function getWallPlacementSize(
+    orientation: WallPlacementOrientation,
+    standardWidthInTiles = WALL_DEFAULT_WIDTH_TILES,
+    heightInTiles = WALL_DEFAULT_HEIGHT_TILES,
+): { widthInTiles: number; heightInTiles: number } {
+    const widthInTiles =
+        orientation === "vertical"
+            ? WALL_VERTICAL_WIDTH_TILES
+            : isDiagonalWallOrientation(orientation)
+              ? WALL_DIAGONAL_WIDTH_TILES
+              : Math.max(1, standardWidthInTiles);
+    return {
+        widthInTiles,
+        heightInTiles: Math.max(1, heightInTiles),
+    };
+}
 
 export function createWallFoundationCollisionGrid(widthInTiles: number, heightInTiles: number): number[][] {
     const width = Math.max(1, Math.ceil(widthInTiles));

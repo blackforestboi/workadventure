@@ -99,7 +99,53 @@ describe("vegetation authoring", () => {
                 ],
             }),
         );
-        expect(result.placements[0]).toMatchObject({ x: 80, y: 128, width: 64, height: 32 });
+        expect(result.placements[0]).toMatchObject({ width: 64, height: 32 });
+        expect(result.placements[0].x).toBeGreaterThan(2 * 32);
+        expect(result.placements[0].x).toBeLessThan(3 * 32);
+        expect(result.placements[0].y).toBeGreaterThan(3 * 32);
+        expect(result.placements[0].y).toBeLessThan(4.5 * 32);
+    });
+
+    it("creates a denser organic distribution instead of exposing the tile raster", () => {
+        const result = planVegetation(
+            input({
+                rectangle: { x: 0, y: 0, width: 4, height: 4 },
+                preset: {
+                    ...input().preset,
+                    density: 1,
+                    minimumSpacing: 0,
+                    species: [{ prefabRef: treeRef, weight: 1 }],
+                },
+            }),
+        );
+
+        expect(result.placements.length).toBeGreaterThan(16);
+        expect(result.placements.some(({ x }) => x % 32 !== 16)).toBe(true);
+        expect(result.placements.some(({ y }) => y % 32 !== 0)).toBe(true);
+    });
+
+    it("keeps randomized placements at least the requested distance apart", () => {
+        const minimumSpacing = 1.5;
+        const result = planVegetation(
+            input({
+                rectangle: { x: 0, y: 0, width: 8, height: 8 },
+                preset: {
+                    ...input().preset,
+                    density: 1,
+                    minimumSpacing,
+                    species: [{ prefabRef: treeRef, weight: 1 }],
+                },
+            }),
+        );
+
+        expect(result.placements.length).toBeGreaterThan(16);
+        for (const [index, placement] of result.placements.entries()) {
+            for (const other of result.placements.slice(index + 1)) {
+                expect(Math.hypot((placement.x - other.x) / 32, (placement.y - other.y) / 32)).toBeGreaterThanOrEqual(
+                    minimumSpacing,
+                );
+            }
+        }
     });
 
     it("changes the resolved plan when the seed changes", () => {

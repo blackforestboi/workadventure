@@ -1,14 +1,9 @@
 import { AvailabilityStatus } from "@workadventure/messages";
 
-export const LOCAL_CAMERA_SMALL_SCREEN_WIDTH = 768;
-
 export type LocalCameraPeerDisplayOptions = {
     hasCameraDevice: boolean;
     isCameraEnergySaving: boolean;
     isSilent: boolean;
-    requestedCameraState: boolean;
-    windowWidth: number;
-    isMobile: boolean;
     isInActiveConversation: boolean;
     isListener: boolean;
     listenerSharingCamera: boolean;
@@ -19,9 +14,6 @@ export function shouldDisplayLocalCameraPeer({
     hasCameraDevice,
     isCameraEnergySaving,
     isSilent,
-    requestedCameraState,
-    windowWidth,
-    isMobile,
     isInActiveConversation,
     isListener,
     listenerSharingCamera,
@@ -47,11 +39,7 @@ export function shouldDisplayLocalCameraPeer({
         return false;
     }
 
-    if ((isMobile || windowWidth < LOCAL_CAMERA_SMALL_SCREEN_WIDTH) && !isInActiveConversation) {
-        return false;
-    }
-
-    if (!requestedCameraState && !isInActiveConversation) {
+    if (!isInActiveConversation) {
         return false;
     }
 

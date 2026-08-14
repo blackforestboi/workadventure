@@ -21,6 +21,7 @@ import {
     normalizeVegetationRectangle,
     planVegetation,
     type VegetationPlacementPlan,
+    type VegetationPreset,
 } from "@workadventure/map-editor";
 import type { EditMapCommandMessage } from "@workadventure/messages";
 import type { ITiledMap, ITiledMapLayer, ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
@@ -68,9 +69,11 @@ import { isElevatableTerrainGid } from "../../GameMap/ElevationEligibility";
 import { ELEVATION_COMPOSITE_LAYER_DATA_KEY } from "../../GameMap/ElevationRenderer";
 import type { GameScene } from "../../GameScene";
 import { ModifyTerrainFrontCommand } from "../Commands/Terrain/ModifyTerrainFrontCommand";
+import { CreateVegetationBatchFrontCommand } from "../Commands/Entity/CreateVegetationBatchFrontCommand";
 import type { MapEditorModeManager } from "../MapEditorModeManager";
 import { hasPointerDragged } from "../PanGesture";
 import { getEntityRenderDepth } from "../Entities/EntityRenderDepth";
+import { getEntityDisplaySize, getVegetationDisplaySize } from "../../../../Utils/EntityPrefabSize";
 import { collapseTileRegions, createFloorEdit, type FloorEdit } from "./FloorEditorHistory";
 import {
     collectTerrainGids,
@@ -184,7 +187,7 @@ export class FloorEditorTool extends MapEditorTool {
         this.nextElevationSculptAt = time + ELEVATION_REPEAT_INTERVAL_MS;
     }
 
-    public clear(): void {
+    public clear(preserveInterfaceState = false): void {
         this.clearHoverPreview();
         this.clearPathOverlay();
         this.unbindPointerEvents();
@@ -197,7 +200,9 @@ export class FloorEditorTool extends MapEditorTool {
         this.vegetationSelectionStart = undefined;
         this.vegetationStateUnsubscriber?.();
         this.vegetationStateUnsubscriber = undefined;
-        mapEditorFloorStateStore.set(undefined);
+        if (!preserveInterfaceState) {
+            mapEditorFloorStateStore.set(undefined);
+        }
     }
 
     public activate(): void {
@@ -922,45 +927,85 @@ export class FloorEditorTool extends MapEditorTool {
         if (start === undefined) return;
         const state = get(mapEditorVegetationStore);
         if (state.selectedPreset === undefined) return;
+        this.placeVegetationSelection(start, end, state.selectedPreset).catch((error) => {
+            mapEditorVegetationStore.set({
+                status: "selecting",
+                selectedPreset: state.selectedPreset,
+                selectionMode: true,
+                error: error instanceof Error ? error.message : "The vegetation area could not be placed.",
+            });
+        });
+    }
+
+    private async placeVegetationSelection(
+        start: { x: number; y: number },
+        end: { x: number; y: number },
+        selectedPreset: VegetationPreset,
+    ): Promise<void> {
+        mapEditorVegetationStore.set({ status: "planning", selectedPreset, selectionMode: false });
+        const tileWidth = this.publishedMap?.tilewidth ?? 32;
+        const tileHeight = this.publishedMap?.tileheight ?? 32;
         const prefabs = get(this.scene.getEntitiesCollectionsManager().getEntitiesPrefabsStore());
         const byReference = new Map(prefabs.map((prefab) => [`${prefab.collectionName}\0${prefab.id}`, prefab]));
-        const selectedSpecies = state.selectedPreset.species.map(({ prefabRef }) => {
-            const prefab = byReference.get(`${prefabRef.collectionName}\0${prefabRef.id}`);
-            if (prefab === undefined) throw new Error(`Vegetation prefab ${prefabRef.id} is unavailable`);
-            return {
-                prefabRef,
-                footprintWidth: Math.max(1, Math.ceil(prefab.defaultSizeInTiles ?? 1)),
-                footprintHeight: Math.max(1, Math.ceil(prefab.defaultHeightInTiles ?? 1)),
-                blocking: prefab.collisionGrid?.some((row) => row.some((cell) => cell !== 0)) ?? false,
-            };
+        const selectedSpecies = await Promise.all(
+            selectedPreset.species.map(async ({ prefabRef }) => {
+                const prefab = byReference.get(`${prefabRef.collectionName}\0${prefabRef.id}`);
+                if (prefab === undefined) throw new Error(`Vegetation prefab ${prefabRef.id} is unavailable`);
+                await TexturesHelper.loadEntityTexture(this.scene, prefab, prefab.imagePath);
+                const frame = this.scene.textures.getFrame(prefab.imagePath);
+                const visibleBounds =
+                    prefab.vegetation?.category === "tree" ? TexturesHelper.getVisibleBounds(frame) : undefined;
+                const displaySize =
+                    getVegetationDisplaySize(
+                        frame.width,
+                        frame.height,
+                        prefab.vegetation?.category,
+                        visibleBounds?.width,
+                        visibleBounds?.height,
+                    ) ??
+                    getEntityDisplaySize(
+                        frame.width,
+                        frame.height,
+                        prefab.defaultSizeInTiles,
+                        prefab.defaultHeightInTiles,
+                    );
+                return {
+                    prefabRef,
+                    footprintWidth: Math.max(1, ...(prefab.collisionGrid?.map((row) => row.length) ?? [])),
+                    footprintHeight: Math.max(1, prefab.collisionGrid?.length ?? 0),
+                    displayWidthInTiles: displaySize.width / tileWidth,
+                    displayHeightInTiles: displaySize.height / tileHeight,
+                    blocking: prefab.collisionGrid?.some((row) => row.some((cell) => cell !== 0)) ?? false,
+                };
+            }),
+        );
+        const plan = planVegetation({
+            preset: selectedPreset,
+            seed: crypto.randomUUID(),
+            rectangle: normalizeVegetationRectangle({
+                startX: start.x,
+                startY: start.y,
+                endX: end.x,
+                endY: end.y,
+            }),
+            species: selectedSpecies,
+            tileWidth,
+            tileHeight,
         });
-        try {
-            const preview = planVegetation({
-                preset: state.selectedPreset,
-                seed: crypto.randomUUID(),
-                rectangle: normalizeVegetationRectangle({
-                    startX: start.x,
-                    startY: start.y,
-                    endX: end.x,
-                    endY: end.y,
-                }),
-                species: selectedSpecies,
-                tileWidth: this.publishedMap?.tilewidth ?? 32,
-                tileHeight: this.publishedMap?.tileheight ?? 32,
-            });
-            mapEditorVegetationStore.set({
-                status: "preview",
-                selectedPreset: state.selectedPreset,
-                preview,
-                selectionMode: false,
-            });
-        } catch (error) {
-            mapEditorVegetationStore.set({
-                ...state,
-                status: "selecting",
-                error: error instanceof Error ? error.message : "The vegetation preview could not be created.",
-            });
-        }
+        if (plan.placements.length === 0) throw new Error("No vegetation fits inside the selected area.");
+        const wamFile = this.scene.getGameMap().getWamFile();
+        if (wamFile === undefined) throw new Error("The current map is not ready for vegetation placement.");
+        mapEditorVegetationStore.set({ status: "saving", selectedPreset, selectionMode: false });
+        await this.mapEditorModeManager.executeCommand(
+            new CreateVegetationBatchFrontCommand(
+                wamFile,
+                plan,
+                undefined,
+                this.scene.getGameMapFrontWrapper().getEntitiesManager(),
+                wamFile.getLastCommandId(),
+            ),
+        );
+        mapEditorVegetationStore.set({ status: "selecting", selectedPreset, selectionMode: true });
     }
 
     private renderVegetationGhosts(preview: VegetationPlacementPlan | undefined): void {

@@ -3,6 +3,9 @@
     import type { VisualAssetAnimation } from "@workadventure/map-editor";
     import type { MapEditorFloorTileset } from "../../../Stores/MapEditorFloorStore";
     import { mapEditorFloorStateStore, dispatchMapEditorFloorAction } from "../../../Stores/MapEditorFloorStore";
+    import { selectCategoryStore } from "../../../Stores/MapEditorStore";
+    import { gameManager } from "../../../Phaser/Game/GameManager";
+    import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import {
         BUILT_IN_TERRAIN_ASSETS,
         BUILT_IN_TERRAIN_TILESET,
@@ -76,6 +79,11 @@
 
     function selectElevation(layer: string) {
         dispatchMapEditorFloorAction({ type: "select-elevation", layer });
+    }
+
+    function openWallAssetBrowser() {
+        selectCategoryStore.set({ kind: "special", tag: "walls" });
+        gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(EditorToolName.EntityEditor);
     }
 
     function selectPaletteBrush(layer: string, gid: number, layers: readonly { name: string }[]) {
@@ -343,6 +351,10 @@
                                 ? 'border-secondary bg-secondary/15 text-white ring-1 ring-secondary'
                                 : 'border-white/10 bg-black/20 text-white/65 hover:border-white/30 hover:bg-white/10 hover:text-white'} disabled:cursor-not-allowed disabled:opacity-35"
                             onclick={() => {
+                                if (mode.id === "walls") {
+                                    openWallAssetBrowser();
+                                    return;
+                                }
                                 if (!isTerrainAssetBrowserMode(mode.id)) {
                                     searchTerm = "";
                                     assetPanelOpen = false;
@@ -364,14 +376,18 @@
                                 if (isAuthoringPathMode(mode.id)) selectBrush(mode.layer, 1);
                                 else selectLayer(mode.layer, state, state.layers);
                             }}
-                            disabled={mode.layer === undefined}
+                            disabled={mode.id !== "walls" && mode.layer === undefined}
                             aria-pressed={activeTerrainModeId === mode.id}
-                            aria-label={mode.layer === undefined
-                                ? `${mode.label} layer unavailable`
-                                : `Use ${mode.label} mode`}
-                            title={mode.layer === undefined
-                                ? `${mode.label} layer is not available on this map`
-                                : mode.label}
+                            aria-label={mode.id === "walls"
+                                ? "Open wall assets"
+                                : mode.layer === undefined
+                                  ? `${mode.label} layer unavailable`
+                                  : `Use ${mode.label} mode`}
+                            title={mode.id === "walls"
+                                ? "Open wall assets"
+                                : mode.layer === undefined
+                                  ? `${mode.label} layer is not available on this map`
+                                  : mode.label}
                         >
                             <span
                                 class="grid h-10 w-10 place-items-center rounded-md border border-white/10 bg-black/25 text-xl group-hover:border-white/20"

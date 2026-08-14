@@ -16,6 +16,46 @@ export type EntityCollisionRectangle = {
     height: number;
 };
 
+export function getWallCollisionGridFrame(
+    sourceGrid: number[][] | undefined,
+    displayHeight: number,
+    widthInTiles: number,
+    heightInTiles: number,
+): EntityCollisionFrame {
+    if (!sourceGrid?.length || !sourceGrid[0]?.length) {
+        return { collisionGrid: sourceGrid, offset: { x: 0, y: 0 }, width: 0, height: 0 };
+    }
+    const columns = Math.max(1, Math.ceil(widthInTiles));
+    const rows = Math.max(1, Math.ceil(heightInTiles));
+    const sourceRows = sourceGrid.length;
+    const sourceColumns = Math.max(...sourceGrid.map((row) => row.length));
+    const collisionGrid = Array.from({ length: rows }, (_, row) =>
+        Array.from({ length: columns }, (_, column) => {
+            const sourceRowStart = Math.floor((row * sourceRows) / rows);
+            const sourceRowEnd = Math.max(sourceRowStart + 1, Math.ceil(((row + 1) * sourceRows) / rows));
+            const sourceColumnStart = Math.floor((column * sourceColumns) / columns);
+            const sourceColumnEnd = Math.max(
+                sourceColumnStart + 1,
+                Math.ceil(((column + 1) * sourceColumns) / columns),
+            );
+            for (let sourceRow = sourceRowStart; sourceRow < sourceRowEnd; sourceRow += 1) {
+                for (let sourceColumn = sourceColumnStart; sourceColumn < sourceColumnEnd; sourceColumn += 1) {
+                    if (sourceGrid[sourceRow]?.[sourceColumn] === 1) return 1;
+                }
+            }
+            return 0;
+        }),
+    );
+    const width = widthInTiles === 0 ? 1 : columns * ASSET_AUTHORING_TILE_SIZE;
+    const height = rows * ASSET_AUTHORING_TILE_SIZE;
+    return {
+        collisionGrid,
+        offset: { x: 0, y: displayHeight - height },
+        width,
+        height,
+    };
+}
+
 export function getScaledCollisionGridFrame(
     sourceGrid: number[][] | undefined,
     sourceAssetWidth: number,

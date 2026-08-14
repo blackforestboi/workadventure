@@ -8,6 +8,8 @@ import {
     VegetationProfile,
     VisualAssetAnimation,
     WallProfile,
+    WALL_DEFAULT_HEIGHT_TILES,
+    WALL_DEFAULT_WIDTH_TILES,
     createWallFoundationCollisionGrid,
     entityUploadSupportedFormatForMapStorage,
     mapCustomEntityDirectionToDirection,
@@ -168,13 +170,15 @@ export class CustomEntityCollectionService {
     }
 
     private withWallCollisionDefault(entity: EntityRawPrefab): EntityRawPrefab {
-        if (entity.wall === undefined || entity.collisionGrid !== undefined) return entity;
+        if (entity.wall === undefined) return entity;
+        const defaultSizeInTiles = entity.defaultSizeInTiles ?? WALL_DEFAULT_WIDTH_TILES;
+        const defaultHeightInTiles = entity.defaultHeightInTiles ?? WALL_DEFAULT_HEIGHT_TILES;
         return {
             ...entity,
-            collisionGrid: createWallFoundationCollisionGrid(
-                entity.defaultSizeInTiles ?? 1,
-                entity.defaultHeightInTiles ?? 1,
-            ),
+            defaultSizeInTiles,
+            defaultHeightInTiles,
+            collisionGrid:
+                entity.collisionGrid ?? createWallFoundationCollisionGrid(defaultSizeInTiles, defaultHeightInTiles),
         };
     }
 

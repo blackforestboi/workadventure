@@ -535,17 +535,18 @@ export class MapEditorModeManager {
         return this.isReverting;
     }
 
-    public equipTool(tool?: EditorToolName): void {
+    public equipTool(tool?: EditorToolName, visibleTool: EditorToolName | undefined = tool): void {
         if (this.activeTool === tool) {
+            mapEditorSelectedToolStore.set(visibleTool);
             return;
         }
-        this.clearToNeutralState();
+        this.clearToNeutralState(visibleTool === this.activeTool);
         this.activeTool = tool;
 
         if (tool !== undefined) {
             this.activateTool();
         }
-        mapEditorSelectedToolStore.set(tool);
+        mapEditorSelectedToolStore.set(visibleTool);
     }
 
     public returnToLastMode(): boolean {
@@ -581,8 +582,8 @@ export class MapEditorModeManager {
     /**
      * Hide everything related to tools like Area Previews etc
      */
-    private clearToNeutralState(): void {
-        this.currentlyActiveTool?.clear();
+    private clearToNeutralState(preserveInterfaceState = false): void {
+        this.currentlyActiveTool?.clear(preserveInterfaceState);
     }
 
     /**

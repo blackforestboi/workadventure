@@ -8,7 +8,7 @@ import type {
     EntityPrefab,
     WAMEntityData,
 } from "@workadventure/map-editor";
-import { GameMapProperties } from "@workadventure/map-editor";
+import { GameMapProperties, getWallPlacementSize } from "@workadventure/map-editor";
 import { deepmergeInto } from "deepmerge-ts";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
@@ -28,6 +28,7 @@ import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
 import {
     getEntityCollisionRectangles,
     getScaledCollisionGridFrame,
+    getWallCollisionGridFrame,
     type EntityCollisionRectangle,
 } from "../Game/MapEditor/Entities/EntityCollisionGrid";
 import { getEntityDisplaySize } from "../../Utils/EntityPrefabSize";
@@ -303,6 +304,19 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
     }
 
     private getCollisionGridFrame(): ReturnType<typeof getScaledCollisionGridFrame> {
+        if (this.prefab.wall !== undefined) {
+            const placementSize = getWallPlacementSize(
+                this.entityData.wall?.orientation ?? "horizontal",
+                this.prefab.defaultSizeInTiles,
+                this.prefab.defaultHeightInTiles,
+            );
+            return getWallCollisionGridFrame(
+                this.prefab.collisionGrid,
+                this.displayHeight,
+                placementSize.widthInTiles,
+                placementSize.heightInTiles,
+            );
+        }
         const sourceColumns = Math.max(1, ...(this.prefab.collisionGrid?.map((row) => row.length) ?? []));
         const sourceRows = Math.max(1, this.prefab.collisionGrid?.length ?? 0);
         const frame = getScaledCollisionGridFrame(
@@ -316,9 +330,6 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
             (this.prefab.defaultSizeInTiles ?? sourceColumns) * 32,
             (this.prefab.defaultHeightInTiles ?? sourceRows) * 32,
         );
-        if (this.prefab.wall !== undefined && this.entityData.wall !== undefined) {
-            frame.offset.y = this.displayHeight - frame.height;
-        }
         return frame;
     }
 

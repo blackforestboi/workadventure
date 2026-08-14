@@ -5,10 +5,57 @@ import {
     toPhaserVisualAssetAnimationFrames,
     type EntityPrefab,
 } from "@workadventure/map-editor";
+import { getOpaqueBoundsFromAlphaBuffer, type VisibleBounds } from "../../Utils/EntityPrefabSize";
 
 import Sprite = Phaser.GameObjects.Sprite;
 
 export class TexturesHelper {
+    private static readonly visibleBoundsByFrame = new WeakMap<Phaser.Textures.Frame, VisibleBounds | null>();
+
+    public static getVisibleBounds(frame: Phaser.Textures.Frame): VisibleBounds | undefined {
+        const cachedBounds = this.visibleBoundsByFrame.get(frame);
+        if (cachedBounds !== undefined) {
+            return cachedBounds ?? undefined;
+        }
+
+        try {
+            const sourceImage = frame.source.image;
+            if (sourceImage === null || frame.cutWidth <= 0 || frame.cutHeight <= 0) {
+                this.visibleBoundsByFrame.set(frame, null);
+                return undefined;
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = frame.cutWidth;
+            canvas.height = frame.cutHeight;
+            const context = canvas.getContext("2d", { willReadFrequently: true });
+            if (context === null) {
+                this.visibleBoundsByFrame.set(frame, null);
+                return undefined;
+            }
+
+            context.drawImage(
+                sourceImage,
+                frame.cutX,
+                frame.cutY,
+                frame.cutWidth,
+                frame.cutHeight,
+                0,
+                0,
+                frame.cutWidth,
+                frame.cutHeight,
+            );
+            const pixels = context.getImageData(0, 0, frame.cutWidth, frame.cutHeight).data;
+            const visibleBounds = getOpaqueBoundsFromAlphaBuffer(pixels, frame.cutWidth, frame.cutHeight);
+            this.visibleBoundsByFrame.set(frame, visibleBounds ?? null);
+            return visibleBounds;
+        } catch {
+            // Reading pixels is best-effort: cross-origin or unavailable sources should not block placement.
+            this.visibleBoundsByFrame.set(frame, null);
+            return undefined;
+        }
+    }
+
     public static async getSnapshot(
         scene: Phaser.Scene,
         ...sprites: { sprite: Sprite; frame?: string | number }[]

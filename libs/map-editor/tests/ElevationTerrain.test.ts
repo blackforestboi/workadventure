@@ -8,6 +8,7 @@ import {
     getElevationCells,
     getElevationCliffEdges,
     getElevationContours,
+    getElevationRenderChunks,
     getElevationSurfaceBounds,
     getElevationSurfaceMesh,
     incrementElevation,
@@ -15,6 +16,7 @@ import {
     MAX_ELEVATION,
     sculptElevation,
     WIDE_ELEVATION_BRUSH_RADIUS,
+    worldToElevatedTileCoordinates,
 } from "../src/Authoring/ElevationTerrain";
 
 function createMap(): ITiledMap {
@@ -79,6 +81,16 @@ describe("elevation terrain", () => {
         });
         const capped = applyElevationUpdates(source, [incrementElevation(source, "floor", 1, 1)!]);
         expect(incrementElevation(capped, "floor", 1, 1)).toBeUndefined();
+    });
+
+    it("maps a pointer on raised terrain back to the visible tile", () => {
+        let raised = createMap();
+        for (let step = 0; step < 4; step += 1) {
+            raised = applyElevationUpdates(raised, sculptElevation(raised, ELEVATION_WORLD_LAYER, 2, 3));
+        }
+
+        expect(worldToElevatedTileCoordinates(raised, 80, 48)).toEqual({ x: 2, y: 3 });
+        expect(worldToElevatedTileCoordinates(createMap(), 80, 48)).toEqual({ x: 2, y: 1 });
     });
 
     it("derives cliff faces only where a cell rises above its neighbor", () => {
@@ -213,6 +225,16 @@ describe("elevation terrain", () => {
             maxY: 9.5,
         });
         expect(getElevationSurfaceBounds(map, "bridge")).toBeUndefined();
+    });
+
+    it("partitions the complete map into contiguous texture- and index-safe render chunks", () => {
+        const map = { ...createMap(), width: 130, height: 70, infinite: false };
+        const chunks = getElevationRenderChunks(map, 4096);
+
+        expect(chunks).toHaveLength(6);
+        expect(chunks[0]).toEqual({ minX: 0, minY: 0, maxX: 63, maxY: 63 });
+        expect(chunks.at(-1)).toEqual({ minX: 126, minY: 63, maxX: 130, maxY: 70 });
+        expect(() => getElevationRenderChunks(map, 0)).toThrow(/texture size/);
     });
 
     it("samples one smooth world surface after collapsing overlapping legacy layers", () => {

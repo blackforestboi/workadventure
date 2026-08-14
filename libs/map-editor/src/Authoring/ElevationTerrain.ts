@@ -1,10 +1,13 @@
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
+import { getMapTileBounds, getTileGridOffset } from "../GameMap/CenteredMapCoordinates";
 
 export const ELEVATION_PROPERTY_NAME = "teapot:elevation/v1";
 /** Canonical transport key for the map-wide height field. The layer field remains for wire compatibility. */
 export const ELEVATION_WORLD_LAYER = "__teapot_world_elevation__";
 export const MAX_ELEVATION = 20;
 export const WIDE_ELEVATION_BRUSH_RADIUS = 2;
+export const ELEVATION_MESH_SUBDIVISIONS = 4;
+const MAXIMUM_MESH_VERTEX_INDEX = 65_535;
 
 export type ElevationSculptDirection = 1 | -1;
 
@@ -117,6 +120,32 @@ export function createElevationSampler(map: ITiledMap, layers?: ReadonlySet<stri
     };
 }
 
+/** Inverts the renderer's vertical height-field warp so pointer input targets the tile visible under it. */
+export function worldToElevatedTileCoordinates(
+    map: ITiledMap,
+    worldX: number,
+    worldY: number,
+    sampleElevation: ElevationSampler = createElevationSampler(map),
+): { x: number; y: number } {
+    const tileWidth = map.tilewidth ?? 32;
+    const tileHeight = map.tileheight ?? 32;
+    const offset = getTileGridOffset(map);
+    const tileX = (worldX - offset.x) / tileWidth;
+    const renderedTileY = (worldY - offset.y) / tileHeight;
+    let lowerTileY = renderedTileY;
+    let upperTileY = renderedTileY + MAX_ELEVATION / 2;
+
+    // Elevation is slope-limited to one step per tile, so the projected Y is monotonic and has one inverse.
+    for (let iteration = 0; iteration < 24; iteration += 1) {
+        const candidateTileY = (lowerTileY + upperTileY) / 2;
+        const projectedTileY = candidateTileY - sampleElevation(tileX, candidateTileY) / 2;
+        if (projectedTileY < renderedTileY) lowerTileY = candidateTileY;
+        else upperTileY = candidateTileY;
+    }
+
+    return { x: Math.floor(tileX), y: Math.floor((lowerTileY + upperTileY) / 2) };
+}
+
 /** Returns the smallest tile-space rectangle that contains the requested logical surface. */
 export function getElevationSurfaceBounds(map: ITiledMap, layer: string): ElevationSurfaceBounds | undefined {
     const cells = getElevationCellsForSurface(map, layer);
@@ -127,6 +156,42 @@ export function getElevationSurfaceBounds(map: ITiledMap, layer: string): Elevat
         maxX: Math.max(...cells.map((cell) => cell.x)) + 1.5,
         maxY: Math.max(...cells.map((cell) => cell.y)) + 1.5,
     };
+}
+
+/** Splits a complete map surface into texture- and WebGL-index-safe elevation meshes. */
+export function getElevationRenderChunks(
+    map: ITiledMap,
+    maximumTextureSize: number,
+    subdivisions = ELEVATION_MESH_SUBDIVISIONS,
+): ElevationSurfaceBounds[] {
+    if (!Number.isFinite(maximumTextureSize) || maximumTextureSize <= 0) {
+        throw new Error("Elevation capture texture size must be positive.");
+    }
+    if (!Number.isInteger(subdivisions) || subdivisions < 1 || subdivisions > 16) {
+        throw new Error("Elevation surface subdivisions must be an integer between 1 and 16.");
+    }
+    const mapBounds = getMapTileBounds(map);
+    const maximumIndexedTiles = Math.floor((Math.sqrt(MAXIMUM_MESH_VERTEX_INDEX) - 1) / subdivisions);
+    const columnsPerChunk = Math.max(
+        1,
+        Math.min(maximumIndexedTiles, Math.floor(maximumTextureSize / (map.tilewidth ?? 32))),
+    );
+    const rowsPerChunk = Math.max(
+        1,
+        Math.min(maximumIndexedTiles, Math.floor(maximumTextureSize / (map.tileheight ?? 32))),
+    );
+    const chunks: ElevationSurfaceBounds[] = [];
+    for (let minY = mapBounds.minY; minY < mapBounds.maxY; minY += rowsPerChunk) {
+        for (let minX = mapBounds.minX; minX < mapBounds.maxX; minX += columnsPerChunk) {
+            chunks.push({
+                minX,
+                minY,
+                maxX: Math.min(mapBounds.maxX, minX + columnsPerChunk),
+                maxY: Math.min(mapBounds.maxY, minY + rowsPerChunk),
+            });
+        }
+    }
+    return chunks;
 }
 
 export function applyElevationUpdates(map: ITiledMap, updates: readonly TeapotElevationUpdate[]): ITiledMap {

@@ -269,6 +269,16 @@ services:
     labels:
       - "traefik.enable=true"
 
+      # The pusher is restarted in-place by `tsx watch`, while Docker keeps
+      # this container registered with Traefik. Retry that short TCP outage so
+      # a browser navigation does not surface a transient 502 Bad Gateway.
+      - "traefik.http.middlewares.play-retry.retry.attempts=40"
+      - "traefik.http.middlewares.play-retry.retry.initialinterval=100ms"
+      # At the exact shutdown edge Traefik can turn an interrupted upstream
+      # connection into a 502 response. Replay only safe navigation requests;
+      # mutating requests must never be duplicated.
+      - "traefik.http.middlewares.play-navigation-retry.buffering.retryexpression=ResponseCode() == 502 && Attempts() < 3"
+
       - "traefik.http.routers.front.rule=Host(`front.workadventure.localhost`)"
       - "traefik.http.routers.front.service=front"
       - "traefik.http.services.front.loadbalancer.server.port=8080"
@@ -279,13 +289,13 @@ services:
       # falls back to the main thread. Priority 2 beats the play catch-all (priority 1); the front
       # router still wins on the front.* host via its longer (higher default priority) Host rule.
       - "traefik.http.routers.play-vite.rule=HostRegexp(`^.+$`) && (PathPrefix(`/src`) || PathPrefix(`/node_modules`) || PathPrefix(`/@fs`) || PathPrefix(`/@vite`) || PathPrefix(`/@id`))"
-      - "traefik.http.routers.play-vite.priority=2"
+      - "traefik.http.routers.play-vite.priority=3"
       - "traefik.http.routers.play-vite.service=front"
 
       # Vite's HMR socket uses its own path so it can share the browser's
       # play.* origin without colliding with the game's /ws/ socket.
-      - "traefik.http.routers.play-vite-hmr.rule=Host(`play.workadventure.localhost`,`tpotworld.localhost`) && Path(`/__vite_hmr`)"
-      - "traefik.http.routers.play-vite-hmr.priority=3"
+      - "traefik.http.routers.play-vite-hmr.rule=(Host(`play.workadventure.localhost`) || Host(`tpotworld.localhost`)) && Path(`/__vite_hmr`)"
+      - "traefik.http.routers.play-vite-hmr.priority=4"
       - "traefik.http.routers.play-vite-hmr.service=front"
 
       - "traefik.http.routers.room-api.rule=Host(`room-api.workadventure.localhost`)"
@@ -296,18 +306,26 @@ services:
       - "traefik.http.routers.play.rule=HostRegexp(`^.+$`)"
       - "traefik.http.routers.play.priority=1"
       - "traefik.http.routers.play.service=play"
+
+      # Browser navigations are safe to replay if the watcher restarts the
+      # pusher between accepting the connection and writing its response.
+      - "traefik.http.routers.play-navigation.rule=HostRegexp(`^.+$`) && (Method(`GET`) || Method(`HEAD`))"
+      - "traefik.http.routers.play-navigation.priority=2"
+      - "traefik.http.routers.play-navigation.service=play"
+      - "traefik.http.routers.play-navigation.middlewares=play-navigation-retry,play-retry"
       # Stable local entry point for the browser. The catch-all remains for
       # custom hosts, while this explicit rule survives proxy reloads.
-      - "traefik.http.routers.play-local.rule=Host(`play.workadventure.localhost`,`tpotworld.localhost`)"
-      # Keep this below the dedicated /ws/ router (priority 2), otherwise
+      - "traefik.http.routers.play-local.rule=Host(`play.workadventure.localhost`) || Host(`tpotworld.localhost`)"
+      # Keep this below the dedicated /ws/ router, otherwise
       # clients remain stuck on the connecting screen.
       - "traefik.http.routers.play-local.priority=1"
       - "traefik.http.routers.play-local.service=play"
       - "traefik.http.services.play.loadbalancer.server.port=3000"
 
       - "traefik.http.routers.play-ws.rule=HostRegexp(`^.+$`) && PathPrefix(`/ws/`)"
-      - "traefik.http.routers.play-ws.priority=2"
+      - "traefik.http.routers.play-ws.priority=3"
       - "traefik.http.routers.play-ws.service=play-ws"
+      - "traefik.http.routers.play-ws.middlewares=play-retry"
       - "traefik.http.services.play-ws.loadbalancer.server.port=3001"
       - "traefik.http.services.play-ws.loadbalancer.sticky.cookie=true"
       - "traefik.http.services.play-ws.loadbalancer.sticky.cookie.name=wa_ws_affinity"

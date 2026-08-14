@@ -1,17 +1,10 @@
 <script lang="ts">
-    import {
-        planVegetation,
-        type EntityPrefab,
-        type VegetationCategory,
-        type VegetationPreset,
-        type VegetationRectangle,
-    } from "@workadventure/map-editor";
+    import type { EntityPrefab, VegetationCategory, VegetationPreset } from "@workadventure/map-editor";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import { mapEditorEntityModeStore, mapEditorSelectedEntityPrefabStore } from "../../../Stores/MapEditorStore";
-    import { mapEditorVegetationStore, clearVegetationPreview } from "../../../Stores/MapEditorVegetationStore";
+    import { mapEditorVegetationStore } from "../../../Stores/MapEditorVegetationStore";
     import { createStarterVegetationPreset, vegetationPrefabs } from "../../../Services/BuiltInVegetationCatalog";
-    import { CreateVegetationBatchFrontCommand } from "../../../Phaser/Game/MapEditor/Commands/Entity/CreateVegetationBatchFrontCommand";
     import { UpsertVegetationPresetFrontCommand } from "../../../Phaser/Game/MapEditor/Commands/Vegetation/VegetationPresetFrontCommand";
 
     let search = $state("");
@@ -22,7 +15,6 @@
     let minimumSpacing = $state(1.5);
     let presetName = $state("My vegetation mix");
     let currentPreset = $state<VegetationPreset>();
-    let seed = $state(crypto.randomUUID());
 
     const manager = gameManager.getCurrentGameScene().getEntitiesCollectionsManager();
     const unsubscribe = manager.getEntitiesPrefabsStore().subscribe((items) => (prefabs = vegetationPrefabs(items)));
@@ -38,7 +30,10 @@
     );
 
     function place(prefab: EntityPrefab) {
-        gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(EditorToolName.EntityEditor);
+        gameManager
+            .getCurrentGameScene()
+            .getMapEditorModeManager()
+            .equipTool(EditorToolName.EntityEditor, EditorToolName.FloorEditor);
         mapEditorSelectedEntityPrefabStore.set($state.snapshot(prefab));
         mapEditorEntityModeStore.set("ADD");
         mapEditorVegetationStore.set({ status: "placing" });
@@ -83,65 +78,6 @@
             selectedPreset: $state.snapshot(command.preset),
             selectionMode: true,
         });
-    }
-
-    function previewArea(rectangle: VegetationRectangle) {
-        if (currentPreset === undefined) return;
-        try {
-            const preview = planVegetation({
-                preset: $state.snapshot(currentPreset),
-                seed,
-                rectangle,
-                species: selectedSpecies.map((prefab) => ({
-                    prefabRef: { collectionName: prefab.collectionName, id: prefab.id },
-                    footprintWidth: Math.max(1, Math.ceil(prefab.defaultSizeInTiles ?? 1)),
-                    footprintHeight: Math.max(1, Math.ceil(prefab.defaultHeightInTiles ?? 1)),
-                    blocking: prefab.collisionGrid?.some((row) => row.some((cell) => cell !== 0)) ?? false,
-                })),
-            });
-            mapEditorVegetationStore.set({ status: "preview", selectedPreset: currentPreset, preview });
-        } catch (error) {
-            mapEditorVegetationStore.set({
-                status: "selecting",
-                selectedPreset: currentPreset,
-                error: error instanceof Error ? error.message : "The vegetation preview could not be created.",
-            });
-        }
-    }
-
-    function resample() {
-        const rectangle = $mapEditorVegetationStore.preview?.rectangle;
-        if (rectangle === undefined) return;
-        seed = crypto.randomUUID();
-        previewArea(rectangle);
-    }
-
-    async function confirmPreview() {
-        const preview = $mapEditorVegetationStore.preview;
-        if (preview === undefined || preview.placements.length === 0) return;
-        const scene = gameManager.getCurrentGameScene();
-        const wamFile = scene.getGameMap().getWamFile();
-        if (wamFile === undefined) return;
-        mapEditorVegetationStore.update((state) => ({ ...state, status: "saving", error: undefined }));
-        try {
-            await scene
-                .getMapEditorModeManager()
-                .executeCommand(
-                    new CreateVegetationBatchFrontCommand(
-                        wamFile,
-                        preview,
-                        undefined,
-                        scene.getGameMapFrontWrapper().getEntitiesManager(),
-                        wamFile.getLastCommandId(),
-                    ),
-                );
-        } catch (error) {
-            mapEditorVegetationStore.update((state) => ({
-                ...state,
-                status: "preview",
-                error: error instanceof Error ? error.message : "The vegetation fill could not be saved.",
-            }));
-        }
     }
 
     function useStarter(id: "forest" | "grassland") {
@@ -206,32 +142,14 @@
             type="button"
             class="mt-3 w-full rounded-lg bg-secondary px-3 py-2 text-sm font-semibold disabled:opacity-40"
             disabled={selectedSpecies.length === 0}
-            onclick={() => savePreset().catch((error) => console.error(error))}>Save mix and select area</button
+            onclick={() => savePreset().catch((error) => console.error(error))}>Save mix and place area</button
         >
         {#if $mapEditorVegetationStore.selectionMode}
-            <p class="mb-0 mt-2 text-xs text-secondary">Drag a rectangle on the map to preview this mix.</p>
+            <p class="mb-0 mt-2 text-xs text-secondary">Drag a rectangle on the map to place this mix.</p>
         {/if}
     </fieldset>
-    {#if $mapEditorVegetationStore.preview}
-        <div class="rounded-lg border border-secondary/30 bg-secondary/10 p-3 text-xs" aria-live="polite">
-            {$mapEditorVegetationStore.preview.placements.length} placed · {$mapEditorVegetationStore.preview.skipped
-                .length} skipped
-            <div class="mt-2 flex gap-2">
-                <button type="button" class="rounded border border-white/15 px-2 py-1" onclick={resample}
-                    >Resample</button
-                >
-                <button
-                    type="button"
-                    class="rounded bg-secondary px-2 py-1 font-semibold disabled:opacity-40"
-                    disabled={$mapEditorVegetationStore.status === "saving" ||
-                        $mapEditorVegetationStore.preview.placements.length === 0}
-                    onclick={confirmPreview}>Confirm</button
-                >
-                <button type="button" class="rounded border border-white/15 px-2 py-1" onclick={clearVegetationPreview}
-                    >Cancel</button
-                >
-            </div>
-        </div>
+    {#if $mapEditorVegetationStore.status === "planning" || $mapEditorVegetationStore.status === "saving"}
+        <p class="m-0 text-xs text-secondary" aria-live="polite">Placing vegetation…</p>
     {/if}
     {#if $mapEditorVegetationStore.error}<p class="m-0 text-sm text-red-300" role="alert">
             {$mapEditorVegetationStore.error}
@@ -264,7 +182,11 @@
             <div class="grid grid-cols-3 gap-2 pr-1">
                 {#each filtered as prefab (prefab.id)}
                     <article class="rounded-lg border border-white/10 bg-black/20 p-2">
-                        <img class="aspect-square w-full object-contain" src={prefab.imagePath} alt={prefab.name} />
+                        <img
+                            class="aspect-square w-full object-contain [image-rendering:pixelated]"
+                            src={prefab.imagePath}
+                            alt={prefab.name}
+                        />
                         <strong class="block truncate text-xs">{prefab.name}</strong>
                         <div class="mt-2 flex gap-1">
                             <button

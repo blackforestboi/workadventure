@@ -3,10 +3,22 @@
     import { onDestroy, onMount } from "svelte";
     import { v4 as uuidv4 } from "uuid";
     import type { EntityPrefab, VisualAssetAnimation } from "@workadventure/map-editor";
-    import { Direction, ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
+    import {
+        createWallFoundationCollisionGrid,
+        Direction,
+        ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT,
+        WALL_DEFAULT_HEIGHT_TILES,
+        WALL_DEFAULT_WIDTH_TILES,
+    } from "@workadventure/map-editor";
     import AssetGenerationPanel from "../../../AssetGeneration/AssetGenerationPanel.svelte";
     import { teapotGeneratedAssetApi } from "../../../../Services/TeapotGeneratedAssetApi";
     import { GeneratedAssetLocalStore } from "../../../../Services/GeneratedAssetLocalStore";
+    import {
+        normalizeWallAssetRaster,
+        WALL_ASSET_HEIGHT,
+        WALL_ASSET_WIDTH,
+        wallAssetFileName,
+    } from "../../../../Services/AssetGeneration/WallAssetNormalizer";
     import {
         GeneratedMapAssetController,
         generatedAssetOwnerScope,
@@ -25,17 +37,24 @@
     interface Props {
         generatedAsset?: Blob | File;
         generatedAssetName?: string;
+        initialWall?: boolean;
         onClose?: () => void;
     }
 
-    let { generatedAsset, generatedAssetName = "generated-entity.png", onClose }: Props = $props();
+    let { generatedAsset, generatedAssetName = "generated-entity.png", initialWall = false, onClose }: Props = $props();
 
     let files: FileList | undefined = $state(undefined);
     let dropZoneRef: HTMLDivElement | undefined = $state();
     let customEntityToUpload: EntityPrefab | undefined = $state(undefined);
     let errorOnFile: string | undefined = $state();
     let selectedAsset:
-        | { source: Blob; name: string; previewUrl: string; animation?: VisualAssetAnimation }
+        | {
+              source: Blob;
+              name: string;
+              previewUrl: string;
+              animation?: VisualAssetAnimation;
+              wallNormalized: boolean;
+          }
         | undefined = $state(undefined);
     let uploadDraft: MapEditorEntityUploadDraft | undefined = $state(undefined);
     let consumedGeneratedAsset: Blob | File | undefined;
@@ -60,14 +79,17 @@
     $effect(() => {
         const file = files?.item(0);
         if (file) {
-            acceptAsset(file, file.name);
+            acceptAsset(file, file.name).catch((error) => setAssetError(error));
         }
     });
 
     $effect(() => {
         if (generatedAsset && generatedAsset !== consumedGeneratedAsset) {
             consumedGeneratedAsset = generatedAsset;
-            acceptAsset(generatedAsset, generatedAsset instanceof File ? generatedAsset.name : generatedAssetName);
+            acceptAsset(
+                generatedAsset,
+                generatedAsset instanceof File ? generatedAsset.name : generatedAssetName,
+            ).catch((error) => setAssetError(error));
         }
     });
 
@@ -82,6 +104,7 @@
             name: draft.sourceName,
             previewUrl: draft.previewUrl,
             animation: draft.uploadEntityMessage.animation,
+            wallNormalized: draft.uploadEntityMessage.wall !== undefined,
         };
         customEntityToUpload ??= mapDraftToEntityPrefab(draft);
 
@@ -105,6 +128,19 @@
 
     async function processFileToUpload(customEditedEntity: EntityPrefab) {
         if (selectedAsset && uploadDraft?.status !== "submitting") {
+            const isWallAsset = customEditedEntity.wall !== undefined;
+            if (isWallAsset && !selectedAsset.wallNormalized) {
+                const normalizedSource = await normalizeWallAssetRaster(selectedAsset.source);
+                URL.revokeObjectURL(selectedAsset.previewUrl);
+                selectedAsset = {
+                    source: normalizedSource,
+                    name: wallAssetFileName(selectedAsset.name),
+                    previewUrl: URL.createObjectURL(normalizedSource),
+                    animation: undefined,
+                    wallNormalized: true,
+                };
+            }
+
             const fileBuffer = await selectedAsset.source.arrayBuffer();
             const fileAsUint8Array = new Uint8Array(fileBuffer);
             const failedDraft = uploadDraft?.status === "failed" ? uploadDraft : undefined;
@@ -133,18 +169,21 @@
                     vegetation: customEditedEntity.vegetation,
                     wall: customEditedEntity.wall,
                     color: "",
-                    animation: customEditedEntity.animation,
+                    animation: isWallAsset ? undefined : customEditedEntity.animation,
                 },
             });
         }
     }
 
-    function acceptAsset(source: Blob, name: string, animation?: VisualAssetAnimation) {
+    async function acceptAsset(source: Blob, name: string, animation?: VisualAssetAnimation) {
         if (!isASupportedFormat(source.type)) {
             console.error("File format not supported");
             errorOnFile = $LL.mapEditor.entityEditor.uploadEntity.errorOnFileFormat();
             return;
         }
+
+        const normalizedSource = initialWall ? await normalizeWallAssetRaster(source) : source;
+        const normalizedName = initialWall ? wallAssetFileName(name) : name;
 
         if (selectedAsset && uploadDraft?.status !== "submitting") {
             URL.revokeObjectURL(selectedAsset.previewUrl);
@@ -152,9 +191,20 @@
         if (uploadDraft && uploadDraft.status !== "submitting") {
             mapEditorEntityUploadDraftStore.clear(uploadDraft.commandId);
         }
-        const previewUrl = URL.createObjectURL(source);
-        selectedAsset = { source, name, previewUrl, animation };
+        const previewUrl = URL.createObjectURL(normalizedSource);
+        selectedAsset = {
+            source: normalizedSource,
+            name: normalizedName,
+            previewUrl,
+            animation: initialWall ? undefined : animation,
+            wallNormalized: initialWall,
+        };
         errorOnFile = undefined;
+    }
+
+    function setAssetError(error: unknown) {
+        console.error("The asset could not be prepared.", error);
+        errorOnFile = error instanceof Error ? error.message : "The asset could not be prepared.";
     }
 
     function startEditingSelectedAsset() {
@@ -169,6 +219,18 @@
             color: "",
             type: BASIC_TYPE,
             animation: selectedAsset.animation,
+            defaultSizeInTiles: initialWall ? WALL_DEFAULT_WIDTH_TILES : undefined,
+            defaultHeightInTiles: initialWall ? WALL_DEFAULT_HEIGHT_TILES : undefined,
+            collisionGrid: initialWall
+                ? createWallFoundationCollisionGrid(WALL_DEFAULT_WIDTH_TILES, WALL_DEFAULT_HEIGHT_TILES)
+                : undefined,
+            wall: initialWall
+                ? {
+                      version: 1,
+                      style: "Wall",
+                      projectionDepthTiles: 0.5,
+                  }
+                : undefined,
         };
     }
 
@@ -180,7 +242,7 @@
 
     async function acceptGeneratedAsset(asset: AcceptedGeneratedMapAsset): Promise<void> {
         if (persistedGeneratedAsset !== asset.blob) await persistGeneratedAsset(asset);
-        acceptAsset(asset.blob, asset.title ?? `generated-${uuidv4()}.png`, asset.animation);
+        await acceptAsset(asset.blob, asset.title ?? `generated-${uuidv4()}.png`, asset.animation);
         startEditingSelectedAsset();
     }
 
@@ -208,7 +270,7 @@
         errorOnFile = undefined;
     }
 
-    function dropHandler(event: DragEvent) {
+    async function dropHandler(event: DragEvent) {
         const { files: filesFromDropEvent } = event.dataTransfer ?? {};
         if (filesFromDropEvent) {
             if (filesFromDropEvent.length > 1) {
@@ -217,9 +279,7 @@
             } else {
                 if (isASupportedFormat(filesFromDropEvent.item(0)?.type ?? "")) {
                     const file = filesFromDropEvent.item(0);
-                    if (file) {
-                        acceptAsset(file, file.name);
-                    }
+                    if (file) await acceptAsset(file, file.name);
                 } else {
                     console.error("File format not supported");
                     errorOnFile = $LL.mapEditor.entityEditor.uploadEntity.errorOnFileFormat();
@@ -260,7 +320,7 @@
             ondrop={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                dropHandler(event);
+                dropHandler(event).catch((error) => setAssetError(error));
             }}
             ondragover={(event) => {
                 event.preventDefault();
@@ -311,9 +371,14 @@
             <AssetGenerationPanel
                 target="environment-object"
                 title={selectedAsset ? "Modify with AI" : "Generate with AI"}
-                promptPlaceholder="A mossy community notice board with small pinned cards, viewed from above…"
+                promptPlaceholder={initialWall
+                    ? "A straight square stone wall segment, two tiles wide and two tiles high…"
+                    : "A mossy community notice board with small pinned cards, viewed from above…"}
                 compact
-                outputSize={{ width: 512, height: 512 }}
+                allowAnimation={!initialWall}
+                outputSize={initialWall
+                    ? { width: WALL_ASSET_WIDTH, height: WALL_ASSET_HEIGHT, pixelated: true }
+                    : { width: 512, height: 512 }}
                 onGenerated={persistGeneratedAsset}
                 onUseImage={selectedAsset ? startEditingSelectedAsset : undefined}
                 onAccept={acceptGeneratedAsset}

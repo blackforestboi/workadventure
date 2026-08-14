@@ -339,7 +339,8 @@ export class AuthenticateController extends BaseHttpController {
             debug(`AuthenticateController => [${req.method}] ${req.originalUrl} — IP: ${req.ip} — Time: ${Date.now()}`);
             const playUri = req.cookies.playUri;
             if (!playUri) {
-                throw new Error("Missing playUri in cookies");
+                res.redirect(FRONT_URL);
+                return;
             }
 
             let userInfo = null;

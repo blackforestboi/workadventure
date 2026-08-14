@@ -39,6 +39,7 @@
 
     let searchTerm = $state("");
     let showUpload = $state(false);
+    let createWallAsset = $state(false);
     let saveAsCustomPending = $state(false);
     let saveAsCustomError = $state<string>();
     let saveAsCustomCommandId: string | undefined;
@@ -89,7 +90,15 @@
     function showCustomAssets() {
         clearEntitySelection();
         showUpload = false;
-        selectCategoryStore.set({ kind: "special", tag: "custom" });
+        const category = createWallAsset ? "walls" : "custom";
+        createWallAsset = false;
+        selectCategoryStore.set({ kind: "special", tag: category });
+    }
+
+    function openEntityUpload(asWall: boolean) {
+        clearEntitySelection();
+        createWallAsset = asWall;
+        showUpload = true;
     }
 
     async function saveEntity(customEntity: EntityPrefab) {
@@ -233,12 +242,10 @@
             entitiesPrefabsVariants: customEntitiesPrefabsVariants.Custom,
         });
 
-        if (wallEntitiesPrefabsVariants.length > 0) {
-            groupedCategories.push({
-                category: { kind: "special", tag: "walls" },
-                entitiesPrefabsVariants: wallEntitiesPrefabsVariants,
-            });
-        }
+        groupedCategories.push({
+            category: { kind: "special", tag: "walls" },
+            entitiesPrefabsVariants: wallEntitiesPrefabsVariants,
+        });
 
         groupedCategories.push(
             ...Object.entries(entitiesPrefabsVariantsGroupedByTag)
@@ -349,6 +356,7 @@
     let filteredEntityPrefabVariants = $derived(
         getEntitiesPrefabsVariantsFilteredByTag($entitiesPrefabsVariants, $selectCategoryStore, searchTerm),
     );
+    let isWallCategory = $derived($selectCategoryStore?.kind === "special" && $selectCategoryStore.tag === "walls");
     let hasColorOptions = $derived.by(() => {
         if (pickedEntityVariant === undefined) return false;
         return pickedEntityVariant.colors.length > 1;
@@ -395,15 +403,7 @@
                 </div>
             {/if}
             {#if !showUpload}
-                <Button
-                    size="sm"
-                    variant="light"
-                    appearance="border"
-                    onclick={() => {
-                        clearEntitySelection();
-                        showUpload = true;
-                    }}
-                >
+                <Button size="sm" variant="light" appearance="border" onclick={() => openEntityUpload(isWallCategory)}>
                     {#snippet icon()}<IconCloudUpload font-size={16} />{/snippet}
                     Create new
                 </Button>
@@ -423,7 +423,7 @@
     <div class="min-h-0 flex-1 overflow-auto">
         {#if showUpload}
             <div class="px-3 pb-3">
-                <EntityUpload onClose={showCustomAssets} />
+                <EntityUpload initialWall={createWallAsset} onClose={showCustomAssets} />
             </div>
         {:else if $selectCategoryStore === undefined && searchTerm === ""}
             <ul class="list-none !p-0 min-w-full">
@@ -440,6 +440,17 @@
             </ul>
         {:else}
             <div class="flex min-h-full flex-col gap-3">
+                {#if isWallCategory && filteredEntityPrefabVariants.length === 0}
+                    <section class="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                        <p class="m-0 font-semibold">No wall assets yet</p>
+                        <p class="mb-3 mt-1 text-sm opacity-65">
+                            Create or upload an image, then drag it across the map to paint a continuous wall.
+                        </p>
+                        <Button size="sm" variant="light" onclick={() => openEntityUpload(true)}>
+                            Create wall asset
+                        </Button>
+                    </section>
+                {/if}
                 <div class="max-h-[220px] overflow-auto">
                     <EntitiesGrid
                         entityPrefabVariants={filteredEntityPrefabVariants}

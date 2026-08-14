@@ -54,14 +54,20 @@ export class CreateVegetationBatchFrontCommand extends CreateVegetationBatchComm
     }
 
     public onAcknowledged(): void {
-        mapEditorVegetationStore.set({ status: "browsing" });
+        mapEditorVegetationStore.update((state) => ({
+            ...state,
+            status: "selecting",
+            preview: undefined,
+            selectionMode: state.selectedPreset !== undefined,
+        }));
     }
 
     public onRejected(reason: string): void {
         mapEditorVegetationStore.update((state) => ({
             ...state,
-            status: "preview",
-            preview: this.plan,
+            status: "selecting",
+            preview: undefined,
+            selectionMode: state.selectedPreset !== undefined,
             error: reason.trim() || "The vegetation fill was rejected.",
         }));
     }

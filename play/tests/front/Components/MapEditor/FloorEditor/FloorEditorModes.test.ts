@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import floorEditorSource from "../../../../../src/front/Components/MapEditor/FloorEditor/FloorEditor.svelte?raw";
+import entityEditorPickerSource from "../../../../../src/front/Components/MapEditor/EntityEditor/EntityEditorPicker.svelte?raw";
+import entityUploadSource from "../../../../../src/front/Components/MapEditor/EntityEditor/EntityUpload/EntityUpload.svelte?raw";
+import customEntityEditionFormSource from "../../../../../src/front/Components/MapEditor/EntityEditor/CustomEntityEditionForm/CustomEntityEditionForm.svelte?raw";
 import {
     getActiveTerrainModeId,
     getActiveAuthoringPathTool,
@@ -90,6 +93,36 @@ describe("getTerrainModeOptions", () => {
         expect(floorEditorSource.match(/isTerrainAssetBrowserMode\(activeTerrainModeId\)/g)).toHaveLength(2);
         expect(floorEditorSource).toContain("if (!isTerrainAssetBrowserMode(mode.id))");
         expect(floorEditorSource).not.toContain('activeTerrainModeId === "floor"');
+    });
+
+    it("opens entity wall assets from the terrain Walls shortcut", () => {
+        expect(floorEditorSource).toContain('if (mode.id === "walls")');
+        expect(floorEditorSource).toContain("openWallAssetBrowser()");
+        expect(floorEditorSource).toContain('tag: "walls"');
+        expect(floorEditorSource).toContain("equipTool(EditorToolName.EntityEditor)");
+    });
+
+    it("keeps an empty Walls category actionable and presets new assets as walls", () => {
+        expect(entityEditorPickerSource).not.toContain("if (wallEntitiesPrefabsVariants.length > 0)");
+        expect(entityEditorPickerSource).toContain("No wall assets yet");
+        expect(entityEditorPickerSource).toContain("Create wall asset");
+        expect(entityEditorPickerSource).toContain("initialWall={createWallAsset}");
+        expect(entityUploadSource).toContain("initialWall = false");
+        expect(entityUploadSource).toContain("normalizeWallAssetRaster(source)");
+        expect(entityUploadSource).toContain("const isWallAsset = customEditedEntity.wall !== undefined");
+        expect(entityUploadSource).toContain("animation: isWallAsset ? undefined : customEditedEntity.animation");
+        expect(entityUploadSource).toContain("defaultSizeInTiles: initialWall ? WALL_DEFAULT_WIDTH_TILES : undefined");
+        expect(entityUploadSource).toContain(
+            "defaultHeightInTiles: initialWall ? WALL_DEFAULT_HEIGHT_TILES : undefined",
+        );
+        expect(entityUploadSource).toContain(
+            "createWallFoundationCollisionGrid(WALL_DEFAULT_WIDTH_TILES, WALL_DEFAULT_HEIGHT_TILES)",
+        );
+        expect(customEntityEditionFormSource).toContain("defaultSizeInTiles = WALL_DEFAULT_WIDTH_TILES");
+        expect(customEntityEditionFormSource).toContain("defaultHeightInTiles = WALL_DEFAULT_HEIGHT_TILES");
+        expect(customEntityEditionFormSource).toContain(
+            "createWallFoundationCollisionGrid(WALL_DEFAULT_WIDTH_TILES, WALL_DEFAULT_HEIGHT_TILES)",
+        );
     });
 
     it("presents water as one borderless underlay instead of shoreline variants", () => {

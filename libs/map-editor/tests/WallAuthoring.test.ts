@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     createWallFoundationCollisionGrid,
+    getWallPlacementSize,
     getWallDragOrientation,
     getWallDragTiles,
     getWallProjectionRise,
@@ -8,6 +9,13 @@ import {
 } from "../src";
 
 describe("wall authoring", () => {
+    it("uses a 2x2 horizontal, 0x2 vertical, and 1x2 diagonal footprint", () => {
+        expect(getWallPlacementSize("horizontal")).toEqual({ widthInTiles: 2, heightInTiles: 2 });
+        expect(getWallPlacementSize("vertical")).toEqual({ widthInTiles: 0, heightInTiles: 2 });
+        expect(getWallPlacementSize("diagonal-up")).toEqual({ widthInTiles: 1, heightInTiles: 2 });
+        expect(getWallPlacementSize("diagonal-down")).toEqual({ widthInTiles: 1, heightInTiles: 2 });
+    });
+
     it("collides only on the foundation row by default", () => {
         expect(createWallFoundationCollisionGrid(2, 3)).toEqual([
             [0, 0],

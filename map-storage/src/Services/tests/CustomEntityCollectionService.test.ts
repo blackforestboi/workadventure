@@ -168,6 +168,23 @@ describe("CustomEntityCollectionService", () => {
         ]);
     });
 
+    it("defaults walls without size metadata to 2x2 with a blocking foundation", async () => {
+        const service = new CustomEntityCollectionService("maps.example.test");
+
+        await service.uploadEntity({
+            ...uploadEntityMessage,
+            wall: { version: 1, style: "Stone", projectionDepthTiles: 0.5 },
+        });
+
+        const persistedCollection = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as {
+            collection: { collisionGrid?: number[][] }[];
+        };
+        expect(persistedCollection.collection[0]?.collisionGrid).toEqual([
+            [0, 0],
+            [1, 1],
+        ]);
+    });
+
     it("keeps a saved asset update available to every map client", async () => {
         const service = new CustomEntityCollectionService("maps.example.test");
         await service.uploadEntity({ ...uploadEntityMessage, defaultSizeInTiles: 1 });

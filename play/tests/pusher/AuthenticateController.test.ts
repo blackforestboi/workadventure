@@ -85,4 +85,26 @@ describe("AuthenticateController", () => {
             ),
         );
     });
+
+    it("restarts login when the OpenID callback has no playUri cookie", async () => {
+        const app = new RouteRecordingApp();
+        const response = new RecordingResponse();
+        new AuthenticateController(app as unknown as Application);
+
+        const handler = app.getRoutes.get("/openid-callback");
+        if (handler === undefined) throw new Error("OpenID callback route was not registered");
+
+        await handler(
+            {
+                cookies: {},
+                ip: "127.0.0.1",
+                method: "GET",
+                originalUrl: "/openid-callback?code=stale-code&state=stale-state",
+            } as unknown as Request,
+            response as unknown as Response,
+            vi.fn(),
+        );
+
+        expect(response.redirect).toHaveBeenCalledWith("http://front.test");
+    });
 });

@@ -73,6 +73,7 @@ const isRecordingConfigured = !!(
     LIVEKIT_RECORDING_S3_SECRET_KEY &&
     LIVEKIT_RECORDING_S3_REGION
 );
+const generatedWorldRootPathPattern = /^\/~\/worlds\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i;
 
 /**
  * A local class mocking a real admin if no admin is configured.
@@ -265,6 +266,13 @@ class LocalAdmin implements AdminInterface {
 
         if (roomUrl.pathname === "/") {
             roomUrl.pathname = START_ROOM_URL;
+            return Promise.resolve({
+                redirectUrl: roomUrl.toString(),
+            });
+        }
+
+        if (generatedWorldRootPathPattern.test(roomUrl.pathname)) {
+            roomUrl.pathname = path.posix.join(roomUrl.pathname, "maps/world.wam");
             return Promise.resolve({
                 redirectUrl: roomUrl.toString(),
             });

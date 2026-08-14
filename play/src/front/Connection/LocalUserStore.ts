@@ -380,7 +380,11 @@ class LocalUserStore {
     }
 
     getAuthToken(): string | null {
-        return localStorage.getItem(authToken);
+        const value = localStorage.getItem(authToken);
+        if (value !== null && this.jwt === undefined) {
+            this.jwt = JwtAuthToken.parse(LocalUserStore.parseJwt(value));
+        }
+        return value;
     }
 
     isLogged(): boolean {

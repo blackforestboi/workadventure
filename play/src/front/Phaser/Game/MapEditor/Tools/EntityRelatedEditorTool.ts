@@ -148,11 +148,17 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                                 this.scene.getGameRenderLayers().addWorldObject(this.entityPrefabPreview);
                             }
                             const preview = this.entityPrefabPreview;
+                            const visibleBounds =
+                                entityPrefab.vegetation?.category === "tree"
+                                    ? TexturesHelper.getVisibleBounds(preview.frame)
+                                    : undefined;
                             const displaySize =
                                 getVegetationDisplaySize(
                                     preview.width,
                                     preview.height,
                                     entityPrefab.vegetation?.category,
+                                    visibleBounds?.width,
+                                    visibleBounds?.height,
                                 ) ??
                                 getEntityDisplaySize(
                                     preview.width,

@@ -7,6 +7,11 @@ import type {
     VegetationProfile,
     WallProfile,
 } from "@workadventure/map-editor";
+import {
+    createWallFoundationCollisionGrid,
+    WALL_DEFAULT_HEIGHT_TILES,
+    WALL_DEFAULT_WIDTH_TILES,
+} from "@workadventure/map-editor";
 import type { Readable, Writable } from "svelte/store";
 import { derived, writable } from "svelte/store";
 import { entitiesFileMigration } from "@workadventure/map-editor/src/Migrations/EntitiesFileMigration";
@@ -185,21 +190,22 @@ export class EntitiesCollectionsManager {
         vegetation?: VegetationProfile,
         wall?: WallProfile,
     ): void {
-        const updatePrefab = (entity: EntityPrefab): EntityPrefab => ({
-            ...entity,
-            name,
-            tags,
-            depthOffset,
-            collisionGrid,
-            defaultSizeInTiles: defaultSizeInTiles ?? entity.defaultSizeInTiles,
-            defaultHeightInTiles: defaultHeightInTiles ?? entity.defaultHeightInTiles,
-            animation: animation ?? entity.animation,
-            previewPadding: previewPadding ?? entity.previewPadding,
-            previewOffsetX: previewOffsetX ?? entity.previewOffsetX,
-            previewOffsetY: previewOffsetY ?? entity.previewOffsetY,
-            vegetation: vegetation ?? entity.vegetation,
-            wall: wall ?? entity.wall,
-        });
+        const updatePrefab = (entity: EntityPrefab): EntityPrefab =>
+            this.withWallCollisionDefault({
+                ...entity,
+                name,
+                tags,
+                depthOffset,
+                collisionGrid,
+                defaultSizeInTiles: defaultSizeInTiles ?? entity.defaultSizeInTiles,
+                defaultHeightInTiles: defaultHeightInTiles ?? entity.defaultHeightInTiles,
+                animation: animation ?? entity.animation,
+                previewPadding: previewPadding ?? entity.previewPadding,
+                previewOffsetX: previewOffsetX ?? entity.previewOffsetX,
+                previewOffsetY: previewOffsetY ?? entity.previewOffsetY,
+                vegetation: vegetation ?? entity.vegetation,
+                wall: wall ?? entity.wall,
+            });
         this.currentCollection.collection = this.currentCollection.collection.map((entity) =>
             entity.id === id ? updatePrefab(entity) : entity,
         );
@@ -265,10 +271,23 @@ export class EntitiesCollectionsManager {
         rawPrefab: EntityRawPrefab,
         entityPrefabType: EntityPrefabType,
     ): EntityPrefab {
-        return {
+        return this.withWallCollisionDefault({
             ...rawPrefab,
             collectionName,
             type: entityPrefabType,
+        });
+    }
+
+    private withWallCollisionDefault(entity: EntityPrefab): EntityPrefab {
+        if (entity.wall === undefined) return entity;
+        const defaultSizeInTiles = entity.defaultSizeInTiles ?? WALL_DEFAULT_WIDTH_TILES;
+        const defaultHeightInTiles = entity.defaultHeightInTiles ?? WALL_DEFAULT_HEIGHT_TILES;
+        return {
+            ...entity,
+            defaultSizeInTiles,
+            defaultHeightInTiles,
+            collisionGrid:
+                entity.collisionGrid ?? createWallFoundationCollisionGrid(defaultSizeInTiles, defaultHeightInTiles),
         };
     }
 }

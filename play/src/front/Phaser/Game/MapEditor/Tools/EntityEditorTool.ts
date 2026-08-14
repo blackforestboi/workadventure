@@ -521,6 +521,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         const previewPosition = this.getEntityPrefabPreviewPosition(pointer);
 
         const entityId = uuidv4();
+        const keepPlacementActive = this.entityPrefab.vegetation !== undefined;
 
         const properties = get(mapEditorCopiedEntityDataPropertiesStore);
 
@@ -546,8 +547,11 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                 ),
             )
             .then(() => {
-                const openEntity = this.entitiesManager.getEntities().get(entityId);
                 if (get(mapEditorEntityFileDroppedStore)) mapEditorEntityFileDroppedStore.set(false);
+                if (keepPlacementActive) {
+                    return;
+                }
+                const openEntity = this.entitiesManager.getEntities().get(entityId);
                 mapEditorEntityModeStore.set("EDIT");
                 mapEditorSelectedEntityStore.set(openEntity);
             })

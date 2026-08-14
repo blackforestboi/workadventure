@@ -1,11 +1,13 @@
 import {
     createElevationSampler,
+    ELEVATION_MESH_SUBDIVISIONS,
     ELEVATION_WORLD_LAYER,
-    getElevationSurfaceBounds,
+    getElevationRenderChunks,
     getElevationSurfaceMesh,
     getTileGridOffset,
     tileToWorldTopLeft,
     type ElevationSampler,
+    worldToElevatedTileCoordinates,
 } from "@workadventure/map-editor";
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import * as Phaser from "phaser";
@@ -23,6 +25,7 @@ interface RenderedElevationSurface {
 }
 
 export const ELEVATION_COMPOSITE_LAYER_DATA_KEY = "teapot:elevationCompositeLayer";
+const MAXIMUM_CAPTURE_TEXTURE_SIZE = 2048;
 
 /**
  * Warps the complete visible floor composite through one map-wide height field and applies
@@ -30,63 +33,95 @@ export const ELEVATION_COMPOSITE_LAYER_DATA_KEY = "teapot:elevationCompositeLaye
  */
 export class ElevationRenderer {
     private readonly surfaces: RenderedElevationSurface[] = [];
+    private readonly hiddenSources = new Set<ElevationCompositeSource>();
     private map: ITiledMap | undefined;
     private sampleElevation: ElevationSampler = () => 0;
 
     public constructor(private readonly scene: GameScene) {}
 
+    public getTileCoordinatesAtWorldPoint(worldX: number, worldY: number): { x: number; y: number } | undefined {
+        if (this.map === undefined) return undefined;
+        return worldToElevatedTileCoordinates(this.map, worldX, worldY, this.sampleElevation);
+    }
+
     public render(map: ITiledMap | undefined): void {
         this.clearSurfaces();
         this.map = map;
         this.sampleElevation = map === undefined ? () => 0 : createElevationSampler(map);
-        if (map === undefined || !(this.scene.game.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)) {
+        const renderer = this.scene.game.renderer;
+        if (map === undefined || !(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)) {
             this.updateWorldObjects();
             return;
         }
 
         const tileHeight = map.tileheight ?? 32;
         const stepHeight = tileHeight / 2;
-        const bounds = getElevationSurfaceBounds(map, ELEVATION_WORLD_LAYER);
-        const surface = getElevationSurfaceMesh(map, ELEVATION_WORLD_LAYER, 4);
         const compositeSources = this.getCompositeSources();
-        if (
-            bounds === undefined ||
-            surface.vertices.length === 0 ||
-            surface.indices.length === 0 ||
-            compositeSources.length === 0
-        ) {
+        if (compositeSources.length === 0) {
             this.updateWorldObjects();
             return;
         }
 
-        const topLeft = tileToWorldTopLeft(map, bounds.minX, bounds.minY);
-        const bottomRight = tileToWorldTopLeft(map, bounds.maxX, bounds.maxY);
-        const capture = this.scene.make.renderTexture(
-            {
-                x: 0,
-                y: 0,
-                width: Math.max(1, Math.ceil(bottomRight.x - topLeft.x)),
-                height: Math.max(1, Math.ceil(bottomRight.y - topLeft.y)),
-            },
-            false,
-        );
-        capture.draw(compositeSources, -topLeft.x, -topLeft.y).render();
-
-        const vertices = surface.vertices.flatMap((vertex) => {
-            const world = tileToWorldTopLeft(map, vertex.x, vertex.y);
-            return [world.x, world.y - vertex.elevation * stepHeight, vertex.u, vertex.v];
-        });
-        const indices = surface.indices.flatMap((index, position) => (position % 3 === 2 ? [index, 0] : [index]));
         const referenceSource = compositeSources[compositeSources.length - 1];
-        const mesh = this.scene.add
-            .mesh2d(0, 0, capture.texture, vertices, indices)
-            .setRenderAsTriangles(true)
-            .setScrollFactor(referenceSource.scrollFactorX, referenceSource.scrollFactorY);
-        this.scene.getGameRenderLayers().addToSameMapBand(referenceSource, mesh, referenceSource.depth + 0.5);
-
-        // The original flat stack remains visible outside the sparse height field. Inside it,
-        // this one mesh replaces the complete visible floor composite with its warped version.
-        this.surfaces.push({ mesh, capture });
+        try {
+            for (const bounds of getElevationRenderChunks(
+                map,
+                Math.min(renderer.getMaxTextureSize(), MAXIMUM_CAPTURE_TEXTURE_SIZE),
+            )) {
+                const surface = getElevationSurfaceMesh(
+                    map,
+                    ELEVATION_WORLD_LAYER,
+                    ELEVATION_MESH_SUBDIVISIONS,
+                    bounds,
+                );
+                if (surface.vertices.length === 0 || surface.indices.length === 0) continue;
+                const topLeft = tileToWorldTopLeft(map, bounds.minX, bounds.minY);
+                const bottomRight = tileToWorldTopLeft(map, bounds.maxX, bounds.maxY);
+                const capture = this.scene.make.renderTexture(
+                    {
+                        x: 0,
+                        y: 0,
+                        width: Math.max(1, Math.ceil(bottomRight.x - topLeft.x)),
+                        height: Math.max(1, Math.ceil(bottomRight.y - topLeft.y)),
+                    },
+                    false,
+                );
+                let mesh: Phaser.GameObjects.Mesh2D | undefined;
+                try {
+                    capture.draw(compositeSources, -topLeft.x, -topLeft.y).render();
+                    const vertices = surface.vertices.flatMap((vertex) => {
+                        const world = tileToWorldTopLeft(map, vertex.x, vertex.y);
+                        return [world.x, world.y - vertex.elevation * stepHeight, vertex.u, vertex.v];
+                    });
+                    const indices = surface.indices.flatMap((index, position) =>
+                        position % 3 === 2 ? [index, 0] : [index],
+                    );
+                    mesh = this.scene.add
+                        .mesh2d(0, 0, capture.texture, vertices, indices, true)
+                        .setRenderAsTriangles(true)
+                        .setScrollFactor(referenceSource.scrollFactorX, referenceSource.scrollFactorY);
+                    this.scene
+                        .getGameRenderLayers()
+                        .addToSameMapBand(referenceSource, mesh, referenceSource.depth + 0.5);
+                    this.surfaces.push({ mesh, capture });
+                } catch (error) {
+                    mesh?.destroy();
+                    capture.destroy();
+                    throw error;
+                }
+            }
+        } catch (error) {
+            this.clearSurfaces();
+            throw error;
+        }
+        if (this.surfaces.length === 0) {
+            this.updateWorldObjects();
+            return;
+        }
+        for (const source of compositeSources) {
+            source.setVisible(false);
+            this.hiddenSources.add(source);
+        }
         this.updateWorldObjects();
         this.scene.markDirty();
     }
@@ -149,5 +184,9 @@ export class ElevationRenderer {
             surface.capture.destroy();
         }
         this.surfaces.length = 0;
+        for (const source of this.hiddenSources) {
+            if (source.active) source.setVisible(true);
+        }
+        this.hiddenSources.clear();
     }
 }

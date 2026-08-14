@@ -1,6 +1,8 @@
 <script lang="ts">
     import {
         createWallFoundationCollisionGrid,
+        WALL_DEFAULT_HEIGHT_TILES,
+        WALL_DEFAULT_WIDTH_TILES,
         type EntityPrefab,
         type VegetationCategory,
     } from "@workadventure/map-editor";
@@ -175,7 +177,11 @@
         isWall = (event.currentTarget as HTMLInputElement).checked;
         if (!isWall) return;
         isVegetation = false;
-        collisionGrid = createWallFoundationCollisionGrid(defaultSizeInTiles, defaultHeightInTiles);
+        defaultSizeInTiles = WALL_DEFAULT_WIDTH_TILES;
+        defaultHeightInTiles = WALL_DEFAULT_HEIGHT_TILES;
+        collisionGridWidthIndex = ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultSizeInTiles);
+        collisionGridHeightIndex = ENTITY_SIZE_TILE_OPTIONS.findIndex((size) => size === defaultHeightInTiles);
+        collisionGrid = createWallFoundationCollisionGrid(WALL_DEFAULT_WIDTH_TILES, WALL_DEFAULT_HEIGHT_TILES);
     }
 
     function setVegetationEnabled(event: Event) {

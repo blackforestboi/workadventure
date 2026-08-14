@@ -4,7 +4,7 @@ import type { MapEditorHistoryAction } from "../MapEditorKeyboardShortcuts";
 
 export abstract class MapEditorTool {
     public abstract update(time: number, dt: number): void;
-    public abstract clear(): void;
+    public abstract clear(preserveInterfaceState?: boolean): void;
     public abstract activate(): void;
     public abstract destroy(): void;
     public abstract subscribeToGameMapFrontWrapperEvents(gameMapFrontWrapper: GameMapFrontWrapper): void;

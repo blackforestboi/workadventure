@@ -282,6 +282,7 @@ describe("floor editor rendering", () => {
         expect(hoverPreviewSource).toContain("if (pathOverlay === undefined)");
         expect(hoverPreviewSource).toContain("AUTHORING_PATH_OVERLAY_COLORS[pathOverlay.kind]");
         expect(hoverPreviewSource).toContain(".fillRect(left + halfWidth, top + halfHeight");
+        expect(hoverPreviewSource).toContain("const top = baseTop - previewElevation * (tileHeight / 2)");
     });
 
     it("clears a hover preview without rewriting the tile underneath it", () => {
@@ -338,21 +339,27 @@ describe("floor editor rendering", () => {
         expect(pointerSource).not.toMatch(/x < 0|y < 0|x >= width|y >= height/);
         expect(pointerSource).toContain("worldToTileCoordinates(visibleMap, pointer.worldX, pointer.worldY)");
         expect(floorEditorToolSource).not.toContain("planTerrainExpansion");
+        expect(pointerSource).toContain("getTileCoordinatesAtWorldPoint(pointer.worldX, pointer.worldY)");
         expect(renderRegionsSource).toContain("wrapper.synchronizeMapGeometryIfNeeded(map)");
+        expect(elevationRendererSource).toContain("worldToElevatedTileCoordinates");
         expect(renderRegionsSource).toContain("deferRefresh: true");
         expect(renderRegionsSource).toContain("wrapper.refreshTileBatch(renderedCells, map)");
         expect(gameMapFrontWrapperSource).toContain("public refreshTileBatch(");
         expect(gameMapFrontWrapperSource).toContain("this.hasVisibleTileSupportAt(source.layers");
     });
 
-    it("renders elevation only over its sparse authored bounds", () => {
+    it("renders elevation across the complete map surface so source pixels are never duplicated", () => {
         const acknowledgeSource = floorEditorToolSource.match(
             /public acknowledgeTerrainMutation\(\)[\s\S]*?\n {4}public rejectTerrainMutation/,
         )?.[0];
 
-        expect(elevationRendererSource).toContain("getElevationSurfaceBounds");
-        expect(elevationRendererSource).not.toContain("getMapTileBounds");
-        expect(elevationRendererSource).toContain("getElevationSurfaceMesh(map, ELEVATION_WORLD_LAYER, 4)");
+        expect(elevationRendererSource).not.toContain("getElevationSurfaceBounds");
+        expect(elevationRendererSource).toContain("getElevationRenderChunks");
+        expect(elevationRendererSource).toContain("getElevationSurfaceMesh(");
+        expect(elevationRendererSource).toContain("ELEVATION_MESH_SUBDIVISIONS");
+        expect(elevationRendererSource).toContain("source.setVisible(false)");
+        expect(elevationRendererSource).toContain("source.setVisible(true)");
+        expect(elevationRendererSource).toContain(".mesh2d(0, 0, capture.texture, vertices, indices, true)");
         expect(elevationRendererSource).toContain("this.map = map");
         expect(acknowledgeSource).toBeDefined();
         expect(acknowledgeSource).not.toContain("getElevationRenderer().render");
@@ -432,10 +439,8 @@ describe("floor editor rendering", () => {
 
     it("warps natural terrain with a persisted textured surface and lifts world assets", () => {
         expect(elevationRendererSource).toContain("ELEVATION_WORLD_LAYER");
-        expect(elevationRendererSource).toContain("getElevationSurfaceMesh(map, ELEVATION_WORLD_LAYER, 4)");
         expect(elevationRendererSource).toContain("const compositeSources = this.getCompositeSources()");
         expect(elevationRendererSource).toContain("capture.draw(compositeSources");
-        expect(elevationRendererSource).toContain(".mesh2d(0, 0, capture.texture, vertices, indices)");
         expect(elevationRendererSource).toContain("addToSameMapBand(referenceSource, mesh");
         expect(elevationRendererSource).not.toContain("fillStyle(0x72d598");
         expect(elevationRendererSource).not.toContain("setAlpha(0.72)");

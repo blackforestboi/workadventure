@@ -53,4 +53,28 @@ describe("EntitiesCollectionsManager", () => {
             previewPadding: -12,
         });
     });
+
+    it("gives every wall entering the client catalog a blocking lower tile", async () => {
+        const manager = new EntitiesCollectionsManager();
+        manager.loadCollections([]);
+        await manager.getEntityPrefab("custom entities", "missing");
+
+        manager.addUploadedEntity(
+            {
+                ...uploadedEntity("Stone wall"),
+                wall: { version: 1, style: "Stone", projectionDepthTiles: 0.5 },
+            },
+            "https://maps.example.test/entities/",
+        );
+
+        const prefab = get(manager.getEntitiesPrefabsVariantStore())[0]?.defaultPrefab;
+        expect(prefab).toMatchObject({
+            defaultSizeInTiles: 2,
+            defaultHeightInTiles: 2,
+            collisionGrid: [
+                [0, 0],
+                [1, 1],
+            ],
+        });
+    });
 });

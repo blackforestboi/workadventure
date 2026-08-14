@@ -5,7 +5,6 @@ import { LayoutMode } from "../WebRtc/LayoutManager";
 import LL from "../../i18n/i18n-svelte";
 import { VideoBox } from "../Space/VideoBox";
 import type { Streamable } from "../Space/Streamable";
-import { touchScreenManager } from "../Touch/TouchScreenManager";
 import { screenSharingLocalVideoBox } from "./ScreenSharingStore";
 
 import { highlightedEmbedScreen } from "./HighlightedEmbedScreenStore";
@@ -23,12 +22,10 @@ import {
     localVoiceIndicatorStore,
     localVolumeStore,
     mediaStreamConstraintsStore,
-    requestedCameraState,
     requestedMicrophoneState,
     silentStore,
 } from "./MediaStore";
 import { screenShareStreamElementsStore, videoStreamElementsStore } from "./PeerStore";
-import { windowSize } from "./CoWebsiteStore";
 import { muteMediaStreamStore } from "./MuteMediaStreamStore";
 import { isLiveStreamingStore } from "./IsStreamingStore";
 import { createDelayedUnsubscribeStore } from "./Utils/createDelayedUnsubscribeStore";
@@ -180,8 +177,6 @@ function createStreamableCollectionStore(): Readable<Map<string, VideoBox>> {
             myCameraPeerStore,
             cameraEnergySavingStore,
             silentStore,
-            requestedCameraState,
-            windowSize,
             isInActiveConversationStore,
             isListenerStore,
             listenerSharingCameraStore,
@@ -197,8 +192,6 @@ function createStreamableCollectionStore(): Readable<Map<string, VideoBox>> {
                 $myCameraPeerStore,
                 $cameraEnergySavingStore,
                 $silentStore,
-                $requestedCameraState,
-                $windowSize,
                 $isInActiveConversationStore,
                 $isListenerStore,
                 $listenerSharingCameraStore,
@@ -221,9 +214,6 @@ function createStreamableCollectionStore(): Readable<Map<string, VideoBox>> {
                     hasCameraDevice: $myCameraStore,
                     isCameraEnergySaving: $cameraEnergySavingStore,
                     isSilent: $silentStore,
-                    requestedCameraState: $requestedCameraState,
-                    windowWidth: $windowSize.width,
-                    isMobile: touchScreenManager.primaryTouchDevice,
                     isInActiveConversation: $isInActiveConversationStore,
                     isListener: $isListenerStore,
                     listenerSharingCamera: $listenerSharingCameraStore,

@@ -64,43 +64,59 @@ export function planVegetation(input: VegetationPlanningInput): VegetationPlacem
     const random = seededRandom(seed);
     const placements: VegetationPlacementPlan["placements"] = [];
     const skipped: VegetationPlacementPlan["skipped"] = [];
+    const skippedKeys = new Set<string>();
     const occupied: Array<{ x: number; y: number }> = [];
+    const recordSkip = (x: number, y: number, reason: VegetationBlockedCellReason | "footprint" | "spacing") => {
+        const key = `${x}:${y}:${reason}`;
+        if (skippedKeys.has(key)) return;
+        skippedKeys.add(key);
+        skipped.push({ x, y, reason });
+    };
 
-    for (let y = rectangle.y; y < rectangle.y + rectangle.height; y += 1) {
-        for (let x = rectangle.x; x < rectangle.x + rectangle.width; x += 1) {
-            if (random() > preset.density) {
-                skipped.push({ x, y, reason: "density" });
-                continue;
-            }
+    const area = rectangle.width * rectangle.height;
+    const densityBoost = 1 + preset.density * 0.35;
+    const targetCount = Math.min(
+        VEGETATION_MAX_PLACEMENTS,
+        Math.max(1, Math.round(area * preset.density * densityBoost)),
+    );
+    const attemptLimit = Math.min(VEGETATION_MAX_PLACEMENTS * 8, Math.max(area * 2, targetCount * 6));
 
-            const entry = weightedChoice(preset, random());
-            const species = speciesByReference.get(referenceKey(entry.prefabRef))!;
-            const footprintReason = findFootprintBlocker(x, y, species, rectangle, blockedCells);
-            if (footprintReason !== undefined && species.blocking) {
-                skipped.push({ x, y, reason: footprintReason });
-                continue;
-            }
-            if (occupied.some((point) => Math.hypot(point.x - x, point.y - y) < preset.minimumSpacing)) {
-                skipped.push({ x, y, reason: "spacing" });
-                continue;
-            }
-            if (placements.length >= VEGETATION_MAX_PLACEMENTS) {
-                throw new Error(`Vegetation fills cannot exceed ${VEGETATION_MAX_PLACEMENTS} instances`);
-            }
-
-            const id = stableHash(
-                `${seed}\0${preset.id}\0${preset.revision}\0${x}\0${y}\0${referenceKey(entry.prefabRef)}`,
-            );
-            placements.push({
-                id: `vegetation-${id}`,
-                prefabRef: entry.prefabRef,
-                x: (x + 0.5) * tileWidth,
-                y: (y + 1) * tileHeight,
-                width: species.displayWidthInTiles * tileWidth,
-                height: species.displayHeightInTiles * tileHeight,
-            });
-            occupied.push({ x, y });
+    for (let attempt = 0; attempt < attemptLimit && placements.length < targetCount; attempt += 1) {
+        const x = rectangle.x + Math.floor(random() * rectangle.width);
+        const y = rectangle.y + Math.floor(random() * rectangle.height);
+        const point = {
+            x: x + 0.5 + (random() - 0.5) * 0.8,
+            y: y + 1 + (random() - 0.5) * 0.8,
+        };
+        const entry = weightedChoice(preset, random());
+        const species = speciesByReference.get(referenceKey(entry.prefabRef))!;
+        const footprintReason = findFootprintBlocker(x, y, species, rectangle, blockedCells);
+        if (footprintReason !== undefined && species.blocking) {
+            recordSkip(x, y, footprintReason);
+            continue;
         }
+        if (
+            occupied.some(
+                (occupiedPoint) =>
+                    Math.hypot(occupiedPoint.x - point.x, occupiedPoint.y - point.y) < preset.minimumSpacing,
+            )
+        ) {
+            recordSkip(x, y, "spacing");
+            continue;
+        }
+
+        const id = stableHash(
+            `${seed}\0${preset.id}\0${preset.revision}\0${attempt}\0${point.x}\0${point.y}\0${referenceKey(entry.prefabRef)}`,
+        );
+        placements.push({
+            id: `vegetation-${id}`,
+            prefabRef: entry.prefabRef,
+            x: point.x * tileWidth,
+            y: point.y * tileHeight,
+            width: species.displayWidthInTiles * tileWidth,
+            height: species.displayHeightInTiles * tileHeight,
+        });
+        occupied.push(point);
     }
 
     const core = {
