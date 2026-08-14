@@ -21,7 +21,7 @@ import type { EntitiesManager } from "../../GameMap/EntitiesManager";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { waScaleManager } from "../../../Services/WaScaleManager";
 import { enableUserInputsStore } from "../../../../Stores/UserInputStore";
-import { hasPointerDragged } from "../PanGesture";
+import { hasPointerDragged, isPrimaryPointerDown } from "../PanGesture";
 import type { MapEditorTool } from "./MapEditorTool";
 
 import Pointer = Phaser.Input.Pointer;
@@ -88,7 +88,7 @@ export class ExplorerTool implements MapEditorTool {
         this.scene.handleMouseWheel(pointer, deltaY);
     };
     private pointerDownHandler = (pointer: Pointer) => {
-        this.explorationPanCandidate = pointer.leftButtonDown();
+        this.explorationPanCandidate = isPrimaryPointerDown(pointer);
         if (!this.explorationPanCandidate) return;
         this.scene.getCameraManager().stopSpeed();
         // The motion factor is used to smooth out the velocity of the camera.

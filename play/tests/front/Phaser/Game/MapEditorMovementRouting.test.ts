@@ -73,9 +73,9 @@ describe("map editor movement routing", () => {
         );
     });
 
-    it("stops explore inertia when a new primary-button pan candidate begins", () => {
+    it("stops explore inertia immediately on a primary pointer press", () => {
         expect(explorerToolSource).toMatch(
-            /private pointerDownHandler = \(pointer: Pointer\) => \{\s*this\.explorationPanCandidate = pointer\.leftButtonDown\(\);\s*if \(!this\.explorationPanCandidate\) return;\s*this\.scene\.getCameraManager\(\)\.stopSpeed\(\);\s*(?:\/\/[^\n]*\n\s*)*pointer\.motionFactor = 0\.35;\s*\};/,
+            /private pointerDownHandler = \(pointer: Pointer\) => \{\s*this\.explorationPanCandidate = isPrimaryPointerDown\(pointer\);\s*if \(!this\.explorationPanCandidate\) return;\s*this\.scene\.getCameraManager\(\)\.stopSpeed\(\);\s*(?:\/\/[^\n]*\n\s*)*pointer\.motionFactor = 0\.35;\s*\};/,
         );
     });
 
@@ -97,7 +97,7 @@ describe("map editor movement routing", () => {
     it("does not advertise or activate panning until the pointer is actually dragged", () => {
         expect(mapEditorModeManagerSource).toMatch(/this\.scene\.input\.setDefaultCursor\("auto"\);/);
         expect(explorerToolSource).toMatch(
-            /this\.explorationPanCandidate = pointer\.leftButtonDown\(\);[\s\S]*if \(!hasPointerDragged\(pointer\)\) return;[\s\S]*this\.explorationMouseIsActive = true;/,
+            /this\.explorationPanCandidate = isPrimaryPointerDown\(pointer\);[\s\S]*if \(!hasPointerDragged\(pointer\)\) return;[\s\S]*this\.explorationMouseIsActive = true;/,
         );
         expect(floorEditorToolSource).toMatch(
             /if \(!hasPointerDragged\(pointer\)\) return;\s*this\.startPanning\(pointer\);/,
