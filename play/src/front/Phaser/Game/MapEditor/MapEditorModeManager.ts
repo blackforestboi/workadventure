@@ -36,7 +36,7 @@ import { CloseTool } from "./Tools/CloseTool";
 import { UpdateAreaFrontCommand } from "./Commands/Area/UpdateAreaFrontCommand";
 import { UploadEntityFrontCommand } from "./Commands/Entity/UploadEntityFrontCommand";
 import { getMapEditorHistoryAction, type MapEditorHistoryAction } from "./MapEditorKeyboardShortcuts";
-import { hasPointerDragged } from "./PanGesture";
+import { hasPointerDragged, isPrimaryPointerDown } from "./PanGesture";
 
 export enum EditorToolName {
     AreaEditor = "AreaEditor",
@@ -91,6 +91,9 @@ export class MapEditorModeManager {
     private normalPanCandidate = false;
     private normalPanActive = false;
     private readonly normalPanPointerDownHandler = (pointer: Input.Pointer, gameObjects: GameObjects.GameObject[]) => {
+        if (isPrimaryPointerDown(pointer)) {
+            this.scene.getCameraManager().stopSpeed();
+        }
         if (this.active || gameObjects.length > 0 || !pointer.leftButtonDown()) return;
         pointer.motionFactor = 0.35;
         this.normalPanCandidate = true;

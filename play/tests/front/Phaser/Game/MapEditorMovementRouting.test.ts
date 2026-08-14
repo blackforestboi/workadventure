@@ -43,6 +43,12 @@ describe("map editor movement routing", () => {
         );
     });
 
+    it("stops inertial panning before routing a primary press to the active editor tool", () => {
+        expect(mapEditorModeManagerSource).toMatch(
+            /private readonly normalPanPointerDownHandler = \(pointer: Input\.Pointer, gameObjects: GameObjects\.GameObject\[\]\) => \{\s*if \(isPrimaryPointerDown\(pointer\)\) \{\s*this\.scene\.getCameraManager\(\)\.stopSpeed\(\);\s*\}\s*if \(this\.active \|\| gameObjects\.length > 0 \|\| !pointer\.leftButtonDown\(\)\) return;/,
+        );
+    });
+
     it("lets normal gameplay center every map edge with half a viewport of surrounding space", () => {
         expect(cameraManagerSource).toContain("originX - halfViewportWidth");
         expect(cameraManagerSource).toContain("originY - halfViewportHeight");
