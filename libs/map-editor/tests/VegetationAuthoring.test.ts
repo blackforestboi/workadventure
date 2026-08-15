@@ -95,10 +95,32 @@ describe("vegetation authoring", () => {
             }),
         );
         expect(result.placements[0]).toMatchObject({ width: 64, height: 32 });
-        expect(result.placements[0].x).toBeGreaterThan(2 * 32);
-        expect(result.placements[0].x).toBeLessThan(3 * 32);
-        expect(result.placements[0].y).toBeGreaterThan(3 * 32);
-        expect(result.placements[0].y).toBeLessThan(4.5 * 32);
+        expect(result.placements[0].x + result.placements[0].width / 2).toBeGreaterThan(2 * 32);
+        expect(result.placements[0].x + result.placements[0].width / 2).toBeLessThan(3 * 32);
+        expect(result.placements[0].y + result.placements[0].height).toBeGreaterThan(3 * 32);
+        expect(result.placements[0].y + result.placements[0].height).toBeLessThan(4.5 * 32);
+    });
+
+    it("keeps the same bottom-center planting point for vegetation with different rendered heights", () => {
+        const planFor = (prefabRef: typeof treeRef | typeof grassRef) =>
+            planVegetation(
+                input({
+                    seed: "shared-planting-point",
+                    rectangle: { x: 2, y: 3, width: 1, height: 1 },
+                    preset: {
+                        ...input().preset,
+                        density: 1,
+                        minimumSpacing: 0,
+                        species: [{ prefabRef, weight: 1 }],
+                    },
+                }),
+            ).placements[0];
+
+        const tree = planFor(treeRef);
+        const grass = planFor(grassRef);
+
+        expect(tree.x + tree.width / 2).toBe(grass.x + grass.width / 2);
+        expect(tree.y + tree.height).toBe(grass.y + grass.height);
     });
 
     it("creates a denser organic distribution instead of exposing the tile raster", () => {

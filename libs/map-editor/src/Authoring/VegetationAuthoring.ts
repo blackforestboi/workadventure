@@ -101,13 +101,15 @@ export function planVegetation(input: VegetationPlanningInput): VegetationPlacem
         const id = stableHash(
             `${seed}\0${preset.id}\0${preset.revision}\0${attempt}\0${point.x}\0${point.y}\0${referenceKey(entry.prefabRef)}`,
         );
+        const width = species.displayWidthInTiles * tileWidth;
+        const height = species.displayHeightInTiles * tileHeight;
         placements.push({
             id: `vegetation-${id}`,
             prefabRef: entry.prefabRef,
-            x: point.x * tileWidth,
-            y: point.y * tileHeight,
-            width: species.displayWidthInTiles * tileWidth,
-            height: species.displayHeightInTiles * tileHeight,
+            x: point.x * tileWidth - width / 2,
+            y: point.y * tileHeight - height,
+            width,
+            height,
         });
         occupied.push(point);
     }
