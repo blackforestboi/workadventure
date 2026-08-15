@@ -1,4 +1,10 @@
-import { applyTeapotTilePatch, createCenteredMap, getTileLayerGid, TeapotTilePatch } from "@workadventure/map-editor";
+import {
+    applyTeapotTilePatch,
+    createCenteredMap,
+    getTileLayerGid,
+    surfaceOverlayLayerName,
+    TeapotTilePatch,
+} from "@workadventure/map-editor";
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
@@ -110,11 +116,21 @@ describe("authoring collision", () => {
                 opacity: 1,
                 visible: true,
             },
+            {
+                id: 8,
+                name: surfaceOverlayLayerName("floor", 102, "placement-1"),
+                type: "tilelayer",
+                width: 2,
+                height: 2,
+                data: [0, 0, 102, 0],
+                opacity: 1,
+                visible: true,
+            },
         );
 
         expect(getTileSupportGrid(map)).toEqual([
             [true, true],
-            [false, false],
+            [true, false],
         ]);
     });
 

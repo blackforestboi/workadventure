@@ -45,6 +45,10 @@ const NON_VISUAL_TERRAIN_LAYER_NAMES = new Set([
 
 /** Returns whether a persisted tile layer can provide visible floor support for an avatar. */
 export function isAvatarSupportingTileLayerName(layerName: string): boolean {
+    const surfaceCoverLayer = surfaceOverlayCoverLayerName(layerName);
+    if (surfaceCoverLayer !== undefined && surfaceCoverLayer !== layerName) {
+        return isAvatarSupportingTileLayerName(surfaceCoverLayer);
+    }
     return !layerName.startsWith("__") && !NON_VISUAL_TERRAIN_LAYER_NAMES.has(normalizeLayerName(layerName));
 }
 

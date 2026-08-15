@@ -60,6 +60,9 @@ function floorLayer(map: ITiledMap) {
 describe("applyTeapotTerrainMutation", () => {
     it("classifies only visual terrain layers as avatar support", () => {
         expect(isAvatarSupportingTileLayerName("floor")).toBe(true);
+        expect(isAvatarSupportingTileLayerName(surfaceOverlayLayerName("floor", 11, "placement-1"))).toBe(true);
+        expect(isAvatarSupportingTileLayerName(surfaceOverlayLayerName("collisions", 11, "placement-1"))).toBe(false);
+        expect(isAvatarSupportingTileLayerName(waterUnderlayLayerName("floor"))).toBe(false);
         expect(isAvatarSupportingTileLayerName("__voidCollisionLayer")).toBe(false);
         expect(isAvatarSupportingTileLayerName("collisions 1")).toBe(false);
         expect(isAvatarSupportingTileLayerName("start 1")).toBe(false);
