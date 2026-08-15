@@ -136,7 +136,7 @@ describe("TeapotAdmissionService", () => {
     it("temporarily lets X-authenticated users enter without invitation checks", async () => {
         const fixture = createFixture();
         const pending = await fixture.services.localIdentity.resolve({ localSubject: "pending" });
-        const gate = new TeapotWorldAdmissionGate(fixture.services);
+        const gate = new TeapotWorldAdmissionGate();
 
         await expect(gate.assertTokenCanEnter({ identifier: pending.id, authProvider: "x" })).resolves.toBeUndefined();
     });

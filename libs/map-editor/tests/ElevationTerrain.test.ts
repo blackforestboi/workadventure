@@ -234,7 +234,7 @@ describe("elevation terrain", () => {
 
         expect(chunks).toHaveLength(6);
         expect(chunks[0]).toEqual({ minX: 0, minY: 0, maxX: 63, maxY: 63 });
-        expect(chunks.at(-1)).toEqual({ minX: 126, minY: 63, maxX: 130, maxY: 70 });
+        expect(chunks[chunks.length - 1]).toEqual({ minX: 126, minY: 63, maxX: 130, maxY: 70 });
         expect(() => getElevationRenderChunks(map, 0)).toThrow(/texture size/);
     });
 
