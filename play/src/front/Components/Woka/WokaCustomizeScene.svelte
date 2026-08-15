@@ -21,6 +21,7 @@
     import { getItemsPerRow } from "./ItemsPerRow";
     import WokaImage from "./WokaImage.svelte";
     import { generatedWokaName, isGeneratedWokaTexture, removeGeneratedWokaAsset } from "./WokaGeneratedAssets";
+    import { isEditableKeyboardTarget } from "./WokaKeyboardNavigation";
 
     interface Props {
         back: () => void;
@@ -290,6 +291,7 @@
 
     // Function to handle keyboard navigation
     function useKeyBoardNavigation(event: KeyboardEvent) {
+        if (isEditableKeyboardTarget(event.target)) return;
         if (!wokaData) return;
         if (
             event.key === "ArrowLeft" ||

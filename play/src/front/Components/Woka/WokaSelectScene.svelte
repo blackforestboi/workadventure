@@ -27,6 +27,7 @@
         isGeneratedWokaTexture,
         removeGeneratedWokaAsset,
     } from "./WokaGeneratedAssets";
+    import { isEditableKeyboardTarget } from "./WokaKeyboardNavigation";
     import { IconShuffle } from "@wa-icons";
 
     /* eslint-disable svelte/require-each-key */
@@ -443,6 +444,7 @@
 
     // Function to validate character textures
     function useKeyBoardNavigation(event: KeyboardEvent) {
+        if (isEditableKeyboardTarget(event.target)) return;
         if (!wokaData || !currentWokaCollection) return;
         if (
             event.key === "ArrowLeft" ||

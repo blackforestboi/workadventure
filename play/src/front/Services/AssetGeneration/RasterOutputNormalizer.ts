@@ -13,6 +13,32 @@ export interface RasterNormalizationOptions {
      * near-uniform color connected to the canvas edge. Interior pixels are kept.
      */
     removeOpaqueEdgeBackground?: boolean;
+    /** Fit the entire source inside the output canvas instead of stretching it to fill. */
+    resizeMode?: "stretch" | "contain";
+}
+
+export interface RasterDrawRect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export function fitRasterWithinBounds(
+    sourceWidth: number,
+    sourceHeight: number,
+    targetWidth: number,
+    targetHeight: number,
+): RasterDrawRect {
+    const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+    const width = sourceWidth * scale;
+    const height = sourceHeight * scale;
+    return {
+        x: (targetWidth - width) / 2,
+        y: (targetHeight - height) / 2,
+        width,
+        height,
+    };
 }
 
 export async function normalizeGeneratedRaster(
@@ -35,7 +61,11 @@ export async function normalizeGeneratedRaster(
             throw new AssetGenerationError("invalid_request", "The generated image cannot be decoded.");
         context.clearRect(0, 0, width, height);
         context.imageSmoothingEnabled = outputSize?.pixelated !== true;
-        context.drawImage(bitmap, 0, 0, width, height);
+        const drawRect =
+            options.resizeMode === "contain"
+                ? fitRasterWithinBounds(bitmap.width, bitmap.height, width, height)
+                : { x: 0, y: 0, width, height };
+        context.drawImage(bitmap, drawRect.x, drawRect.y, drawRect.width, drawRect.height);
         if (options.removeOpaqueEdgeBackground === true) {
             const image = context.getImageData(0, 0, width, height);
             if (removeEdgeConnectedBackground(image)) context.putImageData(image, 0, 0);

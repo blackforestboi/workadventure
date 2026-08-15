@@ -81,7 +81,7 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 {#if $aiGenerationSettingsVisibilityStore}
-    <div class="fixed inset-0 z-[2400] flex items-center justify-center p-3 pointer-events-auto">
+    <div class="fixed inset-0 z-[11000] flex items-center justify-center p-3 pointer-events-auto">
         <button
             type="button"
             class="absolute inset-0 h-full w-full cursor-default bg-black/70 backdrop-blur-sm"

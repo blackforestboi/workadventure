@@ -165,6 +165,27 @@ describe("AssetGenerationSettingsController", () => {
         expect(controller.getReadySelection()).toEqual({ providerId: "openrouter", modelId: "image-quality" });
     });
 
+    it("restores each provider's remembered model after switching away and back", async () => {
+        const storage = new MemoryPreferenceStorage();
+        storage.values.set(
+            "teapot.asset-generation.preferences.v1",
+            JSON.stringify({
+                providerId: "openrouter",
+                modelIds: { openrouter: "image-quality", "codex-cli": "image-fast" },
+            }),
+        );
+        const controller = new AssetGenerationSettingsController({ backend: createBackend(), storage });
+
+        await controller.connectWithApiKey("key");
+        expect(get(controller).modelId).toBe("image-quality");
+
+        controller.setProvider("codex-cli");
+        expect(get(controller).modelId).toBe("image-fast");
+
+        controller.setProvider("openrouter");
+        expect(get(controller).modelId).toBe("image-quality");
+    });
+
     it("clears the ready state when a generation rejects the configured credential", async () => {
         const backend = createBackend();
         const controller = new AssetGenerationSettingsController({ backend });

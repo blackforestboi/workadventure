@@ -21,7 +21,7 @@ const MINIMAL_WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0
 describe("OpenRouterImageProvider", () => {
     afterEach(() => vi.unstubAllGlobals());
 
-    it("offers only Nano Banana 2 after validating the OpenRouter key", async () => {
+    it("offers the configured OpenRouter image models after validating the key", async () => {
         const fetcher = vi.fn<AssetGenerationFetch>(async () => jsonResponse({ data: { label: "test key" } }));
 
         const models = await new OpenRouterImageProvider({ fetcher }).listModels(
@@ -29,13 +29,15 @@ describe("OpenRouterImageProvider", () => {
             new AbortController().signal,
         );
 
-        expect(models).toEqual([
-            expect.objectContaining({
-                id: OPENROUTER_GENERATION_MODEL_ID,
-                name: "Nano Banana 2",
-            }),
+        expect(models.map(({ id, name }) => ({ id, name }))).toEqual([
+            { id: OPENROUTER_GENERATION_MODEL_ID, name: "Grok Imagine Image 2.0" },
+            { id: "google/gemini-3.1-flash-image", name: "Nano Banana 2" },
         ]);
         expect(fetcher.mock.calls[0]?.[0]).toBe("https://openrouter.ai/api/v1/key");
+    });
+
+    it("uses Grok Imagine Image 2.0 as the default image model", () => {
+        expect(OPENROUTER_GENERATION_MODEL_ID).toBe("x-ai/grok-imagine-image-2.0");
     });
 
     it("does not present a rejected key as connected", async () => {
@@ -114,7 +116,7 @@ describe("OpenRouterImageProvider", () => {
         expect(result.usage.actualCost).toEqual({ currency: "USD", amount: 0.04 });
     });
 
-    it("sends supplied reference images to Nano Banana 2", async () => {
+    it("sends supplied reference images to Grok Imagine Image 2.0", async () => {
         const fetcher = vi.fn<AssetGenerationFetch>(async () =>
             jsonResponse({
                 data: [{ b64_json: encodeBase64(MINIMAL_WEBP), media_type: "image/webp" }],
@@ -152,10 +154,30 @@ describe("OpenRouterImageProvider", () => {
             prompt: string;
         };
         expect(fetcher.mock.calls[0]?.[0]).toBe("https://openrouter.ai/api/v1/images");
-        expect(requestBody.resolution).toBe("512");
+        expect(requestBody.resolution).toBe("1K");
         expect(requestBody.aspect_ratio).toBe("1:1");
         expect(requestBody.prompt).toContain("electric magenta #FF00FF");
         expect(requestBody.prompt).toContain("must not appear anywhere on the subject");
+    });
+
+    it("keeps the legacy model's resolution when switching back to it", async () => {
+        const fetcher = vi.fn<AssetGenerationFetch>(async () =>
+            jsonResponse({ data: [{ b64_json: encodeBase64(MINIMAL_WEBP), media_type: "image/webp" }] }),
+        );
+        const provider = new OpenRouterImageProvider({ fetcher });
+
+        await provider.generate(
+            createRequest("google/gemini-3.1-flash-image"),
+            "private-openrouter-key",
+            new AbortController().signal,
+        );
+
+        const serializedRequest = fetcher.mock.calls[0]?.[1]?.body;
+        if (typeof serializedRequest !== "string") throw new Error("Expected a serialized OpenRouter request body");
+        expect(JSON.parse(serializedRequest)).toMatchObject({
+            model: "google/gemini-3.1-flash-image",
+            resolution: "512",
+        });
     });
 
     it("creates a concise title from the original prompt with GPT-5 Nano", async () => {

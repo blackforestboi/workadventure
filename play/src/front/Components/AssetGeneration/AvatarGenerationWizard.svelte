@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
+    import { SvelteMap } from "svelte/reactivity";
     import { assetGenerationSession } from "../../Services/AssetGeneration/AssetGenerationSession";
     import {
         archiveAvatarGenerationDraft,
@@ -45,6 +46,7 @@
     let { onclose, oncomplete, initialAvatar }: Props = $props();
     const characterReferences = new EphemeralReferenceCollection({ maximumCount: 1 });
     const customStyleReferences = new EphemeralReferenceCollection({ maximumCount: 1 });
+    const frameControllers = new SvelteMap<number, AbortController>();
     let step: WizardStep = $state("design");
     let description = $state("");
     let style: AvatarGenerationStyle = $state("cartoon");
@@ -64,12 +66,15 @@
     let checkpointMessage = $state("");
     let controller: AbortController | null = $state(null);
     let checkpointQueue: Promise<void> = Promise.resolve();
-    // Put the front-facing row first so the generated core design is the
-    // first frame people see, followed by back, left, and right movement.
-    const frameDisplayItems = ([1, 0, 2, 10, 9, 11, 4, 3, 5, 7, 6, 8] as const).map((index) => ({
+    // The right-facing output row is derived from Side and is intentionally
+    // hidden so people and the AI only author one canonical side orientation.
+    const frameDisplayItems = ([1, 0, 2, 10, 9, 11, 4, 3, 5] as const).map((index) => ({
         index,
         frame: WOKA_DIRECTIONAL_FRAMES[index],
     }));
+    const completedEditableFrames = $derived(
+        frameDisplayItems.filter(({ index }) => directionFrames[index] !== null).length,
+    );
 
     onMount(() => {
         const initialLoad = initialAvatar ? restoreSavedAvatar(initialAvatar) : restoreDraft();
@@ -85,7 +90,7 @@
     });
 
     onDestroy(() => {
-        controller?.abort();
+        abortAllGenerations();
         characterReferences.dispose();
         customStyleReferences.dispose();
         if (designUrl !== "") URL.revokeObjectURL(designUrl);
@@ -181,17 +186,6 @@
             for (const index of WOKA_NEUTRAL_FRAME_INDEXES) {
                 if (directionFrames[index] !== null) continue;
                 try {
-                    if (index === 7) {
-                        const leftIdle = directionFrames[4];
-                        if (leftIdle === null) throw new Error("The left idle frame is missing.");
-                        // Neutral directions are ordered because the right idle mirrors the completed left idle.
-                        // eslint-disable-next-line no-await-in-loop
-                        setDirectionFrame(7, await mirrorWokaFrameHorizontally(leftIdle));
-                        completedFrames = directionFrames.filter(Boolean).length;
-                        // eslint-disable-next-line no-await-in-loop
-                        await queueCheckpoint();
-                        continue;
-                    }
                     // eslint-disable-next-line no-await-in-loop
                     await generateDirectionalFrame(
                         index,
@@ -271,11 +265,7 @@
                 .flatMap((outcome, position) => (outcome.status === "rejected" ? [stepBIndexes[position] ?? -1] : []))
                 .filter((index) => index >= 0);
             if (failedFrames.length === 0) {
-                const leftStepA = directionFrames[3];
-                const leftStepB = directionFrames[5];
-                if (leftStepA === null || leftStepB === null) throw new Error("The left walking frames are missing.");
-                if (directionFrames[6] === null) setDirectionFrame(6, await mirrorWokaFrameHorizontally(leftStepA));
-                if (directionFrames[8] === null) setDirectionFrame(8, await mirrorWokaFrameHorizontally(leftStepB));
+                await synchronizeMirroredRightFrames();
                 completedFrames = directionFrames.filter(Boolean).length;
                 await queueCheckpoint();
             }
@@ -294,11 +284,17 @@
 
     async function regenerateFrame(index: number): Promise<void> {
         const selection = requireSelection();
-        if (selection === undefined || designBlob === null || WOKA_DIRECTIONAL_FRAMES[index] === undefined) return;
+        if (
+            selection === undefined ||
+            designBlob === null ||
+            WOKA_DIRECTIONAL_FRAMES[index] === undefined ||
+            frameControllers.has(index)
+        )
+            return;
         error = "";
         regeneratingFrameIndexes = [...new Set([...regeneratingFrameIndexes, index])];
         const generationController = new AbortController();
-        controller = generationController;
+        frameControllers.set(index, generationController);
         try {
             const sourceFrameSize = await largestSquareFrameSize([
                 designBlob,
@@ -327,7 +323,7 @@
                 error = errorMessage(reason, "This frame could not be regenerated.");
         } finally {
             regeneratingFrameIndexes = regeneratingFrameIndexes.filter((candidate) => candidate !== index);
-            if (controller === generationController) controller = null;
+            frameControllers.delete(index);
         }
     }
 
@@ -344,9 +340,9 @@
             const normalized = await normalizeGeneratedRaster(
                 file,
                 { ...sourceFrameSize, pixelated: false },
-                { removeOpaqueEdgeBackground: true },
+                { removeOpaqueEdgeBackground: true, resizeMode: "contain" },
             );
-            setDirectionFrame(index, normalized);
+            await setEditableDirectionFrame(index, normalized);
             completedFrames = directionFrames.filter(Boolean).length;
             failedFrames = failedFrames.filter((failedIndex) => failedIndex !== index);
             await refreshFinalAvatar(sourceFrameSize);
@@ -412,9 +408,46 @@
             { ...sourceFrameSize, pixelated: false },
             { removeOpaqueEdgeBackground: true },
         );
-        setDirectionFrame(index, consistent);
+        await setEditableDirectionFrame(index, consistent);
         completedFrames = directionFrames.filter(Boolean).length;
         await queueCheckpoint();
+    }
+
+    async function setEditableDirectionFrame(index: number, blob: Blob): Promise<void> {
+        setDirectionFrame(index, blob);
+        const rightIndex = mirroredRightFrameIndex(index);
+        if (rightIndex !== undefined) {
+            setDirectionFrame(rightIndex, await mirrorWokaFrameHorizontally(blob));
+        }
+    }
+
+    async function synchronizeMirroredRightFrames(): Promise<void> {
+        for (const sideIndex of [3, 4, 5] as const) {
+            const rightIndex = mirroredRightFrameIndex(sideIndex);
+            const sideFrame = directionFrames[sideIndex];
+            if (rightIndex === undefined) continue;
+            if (sideFrame === null) {
+                clearDirectionFrame(rightIndex);
+                continue;
+            }
+            // eslint-disable-next-line no-await-in-loop
+            setDirectionFrame(rightIndex, await mirrorWokaFrameHorizontally(sideFrame));
+        }
+    }
+
+    function mirroredRightFrameIndex(index: number): number | undefined {
+        return index >= 3 && index <= 5 ? index + 3 : undefined;
+    }
+
+    function clearDirectionFrame(index: number): void {
+        const previousUrl = directionFrameUrls[index];
+        if (previousUrl) URL.revokeObjectURL(previousUrl);
+        const updatedFrames = [...directionFrames];
+        updatedFrames[index] = null;
+        directionFrames = updatedFrames;
+        const updatedUrls = [...directionFrameUrls];
+        updatedUrls[index] = "";
+        directionFrameUrls = updatedUrls;
     }
 
     function setDirectionFrame(index: number, blob: Blob): void {
@@ -526,6 +559,7 @@
         directionFrames = consistentFrames;
         revokeDirectionFrameUrls();
         directionFrameUrls = directionFrames.map((frame) => (frame ? URL.createObjectURL(frame) : ""));
+        await synchronizeMirroredRightFrames();
         completedFrames = directionFrames.filter(Boolean).length;
         await queueCheckpoint();
         return sourceFrameSize;
@@ -545,25 +579,24 @@
         directionFrames = draft.directionFrames;
         revokeDirectionFrameUrls();
         directionFrameUrls = directionFrames.map((frame) => (frame ? URL.createObjectURL(frame) : ""));
-        completedFrames = directionFrames.filter(Boolean).length;
-        finalBlob = draft.finalBlob;
         if (directionFrames[1] === null) {
             setDirectionFrame(1, designBlob);
-            completedFrames = directionFrames.filter(Boolean).length;
         }
-        if (draft.finalBlob !== null) {
-            if (completedFrames === WOKA_DIRECTIONAL_FRAMES.length) {
-                const sourceFrameSize = await makeSourceResolutionConsistent();
-                const completed = directionFrames.filter((frame): frame is Blob => frame !== null);
-                finalBlob = await assembleWokaSpriteSheet(completed, sourceFrameSize);
-            }
+        await synchronizeMirroredRightFrames();
+        completedFrames = directionFrames.filter(Boolean).length;
+        if (completedFrames === WOKA_DIRECTIONAL_FRAMES.length) {
+            const sourceFrameSize = await makeSourceResolutionConsistent();
+            const completed = directionFrames.filter((frame): frame is Blob => frame !== null);
+            finalBlob = await assembleWokaSpriteSheet(completed, sourceFrameSize);
             step = "review-final";
         } else {
+            finalBlob = null;
             step = "directions";
         }
+        const restoredEditableFrames = frameDisplayItems.filter(({ index }) => directionFrames[index] !== null).length;
         checkpointMessage =
-            completedFrames > 0
-                ? `Restored your avatar and ${completedFrames} completed finalization step${completedFrames === 1 ? "" : "s"}.`
+            restoredEditableFrames > 0
+                ? `Restored your avatar and ${restoredEditableFrames} completed source frame${restoredEditableFrames === 1 ? "" : "s"}.`
                 : "Restored your previously approved avatar design.";
         await queueCheckpoint();
     }
@@ -578,8 +611,10 @@
         designUrl = URL.createObjectURL(designBlob);
         directionFrames = frames;
         directionFrameUrls = frames.map((frame) => URL.createObjectURL(frame));
-        completedFrames = frames.length;
-        finalBlob = await assembleWokaSpriteSheet(frames, await largestSquareFrameSize(frames));
+        await synchronizeMirroredRightFrames();
+        completedFrames = directionFrames.filter(Boolean).length;
+        const completed = directionFrames.filter((frame): frame is Blob => frame !== null);
+        finalBlob = await assembleWokaSpriteSheet(completed, await largestSquareFrameSize(completed));
         checkpointMessage = "";
         step = "review-final";
     }
@@ -619,13 +654,26 @@
         return `Custom style guide: ${customStyle.trim() || "follow the supplied custom-style reference image"}.`;
     }
 
-    function closeWizard() {
+    function abortAllGenerations(): void {
         controller?.abort();
+        for (const frameController of frameControllers.values()) frameController.abort();
+        frameControllers.clear();
+    }
+
+    function closeWizard() {
+        abortAllGenerations();
         onclose();
     }
 
     function errorMessage(reason: unknown, fallback: string): string {
         return reason instanceof Error ? reason.message : fallback;
+    }
+
+    function displayDirection(direction: (typeof WOKA_DIRECTIONAL_FRAMES)[number]["direction"]): string {
+        if (direction === "down") return "Front";
+        if (direction === "up") return "Back";
+        if (direction === "left") return "Side";
+        return "Right";
     }
 </script>
 
@@ -645,7 +693,11 @@
             </div>
             <div class="flex items-center gap-2">
                 {#if step === "review-final" || step === "saving"}
-                    <Button variant="success" onclick={confirmAvatar} disabled={step === "saving"}>
+                    <Button
+                        variant="success"
+                        onclick={confirmAvatar}
+                        disabled={step === "saving" || regeneratingFrameIndexes.length > 0}
+                    >
                         {step === "saving" ? "Saving…" : "Save avatar"}
                     </Button>
                 {/if}
@@ -818,21 +870,25 @@
                     <div>
                         <h3 class="text-xl font-semibold">Build your movement set</h3>
                         <p class="mt-1 text-sm text-white/60">
-                            {completedFrames} of {WOKA_DIRECTIONAL_FRAMES.length} frames ready. Generate the rest with AI,
-                            or customize any frame yourself.
+                            {completedEditableFrames} of {frameDisplayItems.length} source frames ready. Generate the rest
+                            with AI, or customize any frame yourself.
+                        </p>
+                        <p class="mt-1 text-xs text-white/50">
+                            Side frames always face left. Right-facing output is mirrored automatically from Side.
                         </p>
                     </div>
                     <div class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
                         <Button
                             appearance="border"
-                            disabled={controller !== null || step === "saving"}
+                            disabled={controller !== null || regeneratingFrameIndexes.length > 0 || step === "saving"}
                             onclick={() => (step = "design")}>Edit core design</Button
                         >
                         <Button
                             variant="primary"
                             disabled={controller !== null ||
+                                regeneratingFrameIndexes.length > 0 ||
                                 step === "saving" ||
-                                completedFrames === WOKA_DIRECTIONAL_FRAMES.length}
+                                completedEditableFrames === frameDisplayItems.length}
                             onclick={generateDirections}
                         >
                             {controller !== null ? "Generating…" : "Generate all"}
@@ -849,7 +905,7 @@
                                 {#if directionFrameUrls[item.index]}
                                     <img
                                         src={directionFrameUrls[item.index]}
-                                        alt={`${item.frame.direction} ${item.frame.motion}`}
+                                        alt={`${displayDirection(item.frame.direction)} ${item.frame.motion}`}
                                         class="h-full w-full object-contain"
                                     />
                                 {:else}
@@ -863,7 +919,10 @@
                             </div>
                             <div class="mt-3 flex items-center justify-between gap-3">
                                 <p class="text-sm font-semibold capitalize">
-                                    {item.frame.direction} · {item.frame.motion.replace("walking ", "")}
+                                    {displayDirection(item.frame.direction)} · {item.frame.motion.replace(
+                                        "walking ",
+                                        "",
+                                    )}
                                 </p>
                                 {#if item.index === 1}
                                     <span
@@ -876,7 +935,9 @@
                                 bind:value={frameInstructions[item.index]}
                                 rows="2"
                                 class="mt-3 w-full resize-y rounded-md bg-black/30 p-2 text-xs"
-                                placeholder="Optional changes for this frame…"
+                                placeholder={item.frame.direction === "left"
+                                    ? "Optional changes… Keep this Side view facing left."
+                                    : "Optional changes for this frame…"}
                             ></textarea>
                             <div class="mt-2 grid grid-cols-2 gap-2">
                                 <Button

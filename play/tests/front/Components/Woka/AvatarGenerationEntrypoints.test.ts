@@ -13,4 +13,8 @@ describe("avatar generation entrypoints", () => {
         expect(source).toContain("AvatarGenerationWizard");
         expect(source).not.toContain("AssetGenerationPanel");
     });
+
+    it.each(entrypoints)("keeps native text-field keyboard navigation in %s", (_entrypoint, source) => {
+        expect(source).toContain("if (isEditableKeyboardTarget(event.target)) return;");
+    });
 });

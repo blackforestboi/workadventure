@@ -15,9 +15,14 @@ const OPENROUTER_IMAGE_ENDPOINT = "https://openrouter.ai/api/v1/images";
 const OPENROUTER_CHAT_COMPLETIONS_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_KEY_ENDPOINT = "https://openrouter.ai/api/v1/key";
 const MAX_GENERATED_IMAGE_BYTES = 25 * 1024 * 1024;
-export const OPENROUTER_GENERATION_MODEL_ID = "google/gemini-3.1-flash-image";
-export const OPENROUTER_GENERATION_MODEL_NAME = "Nano Banana 2";
+export const OPENROUTER_GENERATION_MODEL_ID = "x-ai/grok-imagine-image-2.0";
+export const OPENROUTER_GENERATION_MODEL_NAME = "Grok Imagine Image 2.0";
 export const OPENROUTER_TITLE_MODEL_ID = "openai/gpt-5-nano";
+const OPENROUTER_LEGACY_GENERATION_MODEL_ID = "google/gemini-3.1-flash-image";
+const OPENROUTER_GENERATION_MODEL_PROFILES = [
+    { id: OPENROUTER_GENERATION_MODEL_ID, name: OPENROUTER_GENERATION_MODEL_NAME, resolution: "1K" },
+    { id: OPENROUTER_LEGACY_GENERATION_MODEL_ID, name: "Nano Banana 2", resolution: "512" },
+] as const;
 /**
  * Use the established Image API in production. The Chat Completions route is
  * retained as an opt-in experiment for models that expose image reasoning.
@@ -86,17 +91,15 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
             throw this.malformedResponse();
         }
 
-        return [
-            {
-                id: OPENROUTER_GENERATION_MODEL_ID,
-                name: OPENROUTER_GENERATION_MODEL_NAME,
-                description: "Fast OpenRouter image generation.",
-                inputModalities: ["text", "image"],
-                outputModalities: ["image", "text"],
-                supportedParameters: {},
-                supportsStreaming: false,
-            },
-        ];
+        return OPENROUTER_GENERATION_MODEL_PROFILES.map(({ id, name }) => ({
+            id,
+            name,
+            description: "OpenRouter image generation.",
+            inputModalities: ["text", "image"],
+            outputModalities: ["image", "text"],
+            supportedParameters: {},
+            supportsStreaming: false,
+        }));
     }
 
     public async generate(
@@ -133,7 +136,7 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
             assets,
             provenance: {
                 providerId: this.id,
-                modelId: OPENROUTER_GENERATION_MODEL_ID,
+                modelId: request.modelId,
                 providerRequestId: first.providerRequestId,
                 providerCreatedAt: parseProviderCreatedAt(recordValue(first.payload, "created")),
             },
@@ -195,7 +198,7 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
                 method: "POST",
                 headers: this.createHeaders(credential),
                 body: JSON.stringify({
-                    model: OPENROUTER_GENERATION_MODEL_ID,
+                    model: request.modelId,
                     modalities: ["text", "image"],
                     // Keep the reasoning internal: it is useful for applying the
                     // pose contract but is neither persisted nor shown in the UI.
@@ -246,11 +249,11 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
                 method: "POST",
                 headers: this.createHeaders(credential),
                 body: JSON.stringify({
-                    model: OPENROUTER_GENERATION_MODEL_ID,
+                    model: request.modelId,
                     prompt: this.createImagePrompt(request),
-                    resolution: "512",
+                    resolution: resolutionForModel(request.modelId),
                     aspect_ratio: "1:1",
-                    // Nano Banana 2 accepts up to fourteen references. Omit the
+                    // The selected OpenRouter image model accepts up to fourteen references. Omit the
                     // field entirely when none are supplied.
                     ...(inputReferences.length === 0 ? {} : { input_references: inputReferences.slice(0, 14) }),
                     n: 1,
@@ -366,6 +369,10 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
             cause,
         });
     }
+}
+
+function resolutionForModel(modelId: string): string {
+    return OPENROUTER_GENERATION_MODEL_PROFILES.find((profile) => profile.id === modelId)?.resolution ?? "1K";
 }
 
 function openRouterErrorReason(payload: unknown): string | undefined {

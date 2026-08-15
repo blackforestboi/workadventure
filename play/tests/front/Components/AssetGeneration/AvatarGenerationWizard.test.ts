@@ -10,11 +10,14 @@ describe("avatar generation wizard editor", () => {
         expect(wizardSource).not.toContain('step = "review-design"');
     });
 
-    it("presents the front-facing generated frame first in a large three-column grid", () => {
-        expect(wizardSource).toContain("[1, 0, 2, 10, 9, 11, 4, 3, 5, 7, 6, 8]");
+    it("presents only Front, Back, and Side source rows in a large three-column grid", () => {
+        expect(wizardSource).toContain("[1, 0, 2, 10, 9, 11, 4, 3, 5]");
+        expect(wizardSource).not.toContain("[1, 0, 2, 10, 9, 11, 4, 3, 5, 7, 6, 8]");
         expect(wizardSource).toContain("max-w-6xl");
         expect(wizardSource).toContain("lg:grid-cols-3");
         expect(wizardSource).toContain("Core design");
+        expect(wizardSource).toContain('if (direction === "left") return "Side"');
+        expect(wizardSource).toContain("Side frames always face left");
     });
 
     it("offers bulk generation plus AI and upload controls on every frame", () => {
@@ -25,9 +28,28 @@ describe("avatar generation wizard editor", () => {
         expect(wizardSource).toContain('accept="image/png,image/jpeg,image/webp"');
     });
 
-    it("keeps manually supplied right-facing frames when generating the missing set", () => {
-        expect(wizardSource).toContain("if (directionFrames[6] === null)");
-        expect(wizardSource).toContain("if (directionFrames[8] === null)");
-        expect(wizardSource).not.toContain("replaceRightFramesWithMirrors");
+    it("contains uploaded frame assets instead of stretching them", () => {
+        expect(wizardSource).toContain('resizeMode: "contain"');
+    });
+
+    it("keeps other frame actions available while one frame generates", () => {
+        const regenerateFrameSource = wizardSource.slice(
+            wizardSource.indexOf("async function regenerateFrame"),
+            wizardSource.indexOf("async function uploadFrame"),
+        );
+        expect(regenerateFrameSource).not.toContain("controller = generationController");
+        expect(regenerateFrameSource).toContain("frameControllers.set(index, generationController)");
+        expect(regenerateFrameSource).toContain("frameControllers.delete(index)");
+        expect(wizardSource).toContain("for (const frameController of frameControllers.values())");
+    });
+
+    it("always derives the hidden right-facing output from the left-facing Side row", () => {
+        expect(wizardSource).toContain("for (const sideIndex of [3, 4, 5] as const)");
+        expect(wizardSource).toContain("return index >= 3 && index <= 5 ? index + 3 : undefined");
+        expect(wizardSource).toContain("setDirectionFrame(rightIndex, await mirrorWokaFrameHorizontally(blob))");
+        expect(wizardSource).toContain("await setEditableDirectionFrame(index, normalized)");
+        expect(wizardSource).toContain("await setEditableDirectionFrame(index, consistent)");
+        expect(wizardSource).not.toContain("if (directionFrames[6] === null)");
+        expect(wizardSource).not.toContain("if (directionFrames[8] === null)");
     });
 });

@@ -10,7 +10,6 @@ import {
     type HostedAgentProvider,
 } from "../HostedAgentConnectionApi";
 import { assetGenerationSession } from "./AssetGenerationSession";
-import { OPENROUTER_GENERATION_MODEL_ID } from "./OpenRouterImageProvider";
 import type { AssetGenerationModel, AssetGenerationProviderId } from "./AssetGenerationTypes";
 
 const PREFERENCES_KEY = "teapot.asset-generation.preferences.v1";
@@ -459,7 +458,6 @@ export const assetGenerationSettings = new AssetGenerationSettingsController({
     storage: getBrowserPreferenceStorage(),
     // Subscription bridges remain implemented but are intentionally unavailable in the product for now.
     enabledProviders: ["openrouter"],
-    fixedModelIds: { openrouter: OPENROUTER_GENERATION_MODEL_ID },
 });
 
 function readPreferences(

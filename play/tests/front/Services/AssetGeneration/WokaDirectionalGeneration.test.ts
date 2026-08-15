@@ -113,6 +113,8 @@ describe("WokaDirectionalGeneration", () => {
         expect(stepA.prompt).toContain(
             "for SIDE views, follow the direction-specific camera-facing arm and foot instruction",
         );
+        expect(stepA.prompt).toContain("Canonical Side-view rule: generate only a strict LEFT-facing profile");
+        expect(stepA.prompt).toContain("right-facing output is created later by an exact horizontal pixel mirror");
         expect(stepA.prompt).toContain("For FRONT and BACK views, follow the explicit biological LEFT/RIGHT");
     });
 
