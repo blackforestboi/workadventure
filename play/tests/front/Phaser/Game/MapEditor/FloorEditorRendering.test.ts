@@ -84,9 +84,7 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).toContain(
             "this.selectedTilesetFirstGid,\n            this.surfaceStrokePlacementId",
         );
-        expect(floorEditorToolSource).not.toContain(
-            "this.selectedTilesetFirstGid,\n            targetLayerName",
-        );
+        expect(floorEditorToolSource).not.toContain("this.selectedTilesetFirstGid,\n            targetLayerName");
     });
 
     it("uses an overlay when a GPU layer cannot render the selected tileset", () => {
@@ -282,7 +280,7 @@ describe("floor editor rendering", () => {
         expect(hoverPreviewSource).toContain("if (pathOverlay === undefined)");
         expect(hoverPreviewSource).toContain("AUTHORING_PATH_OVERLAY_COLORS[pathOverlay.kind]");
         expect(hoverPreviewSource).toContain(".fillRect(left + halfWidth, top + halfHeight");
-        expect(hoverPreviewSource).toContain("const top = baseTop - previewElevation * (tileHeight / 2)");
+        expect(hoverPreviewSource).toContain("const top = baseTop - elevationOffset - previewOffset");
     });
 
     it("clears a hover preview without rewriting the tile underneath it", () => {
@@ -308,13 +306,13 @@ describe("floor editor rendering", () => {
     });
 
     it("returns to pointer mode when Escape cancels an active floor action", () => {
-        const keyDownSource = floorEditorToolSource.match(
-            /public handleKeyDownEvent\([\s\S]*?\n {4}public async handleIncomingCommandMessage/,
+        const cancelCurrentActionSource = floorEditorToolSource.match(
+            /public cancelCurrentAction\([\s\S]*?\n {4}public async handleIncomingCommandMessage/,
         )?.[0];
 
-        expect(keyDownSource).toBeDefined();
-        expect(keyDownSource).toMatch(
-            /if \(event\.key !== "Escape"\) return;[\s\S]*?this\.cancelShapeDrag\(\);[\s\S]*?this\.finishPaintStroke\(\);[\s\S]*?this\.clearBrush\(\);/,
+        expect(cancelCurrentActionSource).toBeDefined();
+        expect(cancelCurrentActionSource).toMatch(
+            /if \(this\.shapeStart !== undefined\) this\.cancelShapeDrag\(\);[\s\S]*?else this\.finishPaintStroke\(\);[\s\S]*?this\.clearBrush\(\);/,
         );
     });
 

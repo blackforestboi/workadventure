@@ -1,0 +1,1140 @@
+{
+    "version": "1.0.0",
+    "collectionName": "Craftpix Summer RPG",
+    "defaultDimensionsControlDisplay": true,
+    "tags": ["craftpix", "summer", "outdoor", "buildings", "vegetation", "terrain"],
+    "collection": [
+        {
+            "id": "craftpix-summer-building-01",
+            "name": "Chimney Cottage",
+            "tags": ["craftpix", "summer", "outdoor", "building", "chimney", "cottage", "size-building"],
+            "imagePath": "assets/buildings/building_1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.97,
+            "defaultHeightInTiles": 3,
+            "collisionGrid": [
+                [0, 0],
+                [0, 0],
+                [1, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-building-02",
+            "name": "Stone Cottage",
+            "tags": ["craftpix", "summer", "outdoor", "building", "stone", "cottage", "size-building"],
+            "imagePath": "assets/buildings/building_2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.77,
+            "defaultHeightInTiles": 3,
+            "collisionGrid": [
+                [0, 0],
+                [0, 0],
+                [1, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-building-03",
+            "name": "Village Hall",
+            "tags": ["craftpix", "summer", "outdoor", "building", "village", "hall", "size-building"],
+            "imagePath": "assets/buildings/building_3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 2.86,
+            "defaultHeightInTiles": 3,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [1, 1, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-building-04",
+            "name": "Round Watchtower",
+            "tags": ["craftpix", "summer", "outdoor", "building", "round", "watchtower", "size-building"],
+            "imagePath": "assets/buildings/building_4.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.04,
+            "defaultHeightInTiles": 3,
+            "collisionGrid": [[0], [0], [1]]
+        },
+        {
+            "id": "craftpix-summer-building-05",
+            "name": "Log Workshop",
+            "tags": ["craftpix", "summer", "outdoor", "building", "log", "workshop", "size-building"],
+            "imagePath": "assets/buildings/building_5.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 3,
+            "defaultHeightInTiles": 2.88,
+            "collisionGrid": [
+                [0, 0, 0],
+                [0, 0, 0],
+                [1, 1, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-building-06",
+            "name": "Tall Timber House",
+            "tags": ["craftpix", "summer", "outdoor", "building", "tall", "timber", "house", "size-building"],
+            "imagePath": "assets/buildings/building_6.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.44,
+            "defaultHeightInTiles": 3,
+            "collisionGrid": [
+                [0, 0],
+                [0, 0],
+                [1, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-building-07",
+            "name": "Stone Well",
+            "tags": ["craftpix", "summer", "outdoor", "building", "stone", "well", "size-medium"],
+            "imagePath": "assets/buildings/building_7.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.08,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [[0], [1]]
+        },
+        {
+            "id": "craftpix-summer-deco-01",
+            "name": "Scarecrow",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "scarecrow", "size-medium"],
+            "imagePath": "assets/decor/decor_1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.05,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-deco-02",
+            "name": "Village Banner",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "village", "banner", "size-medium"],
+            "imagePath": "assets/decor/decor_2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.85,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [[0], [1]]
+        },
+        {
+            "id": "craftpix-summer-deco-03",
+            "name": "Notice Board",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "notice", "board", "size-medium"],
+            "imagePath": "assets/decor/decor_3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.18,
+            "defaultHeightInTiles": 1.1,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-deco-04",
+            "name": "Street Lantern",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "street", "lantern", "size-medium"],
+            "imagePath": "assets/decor/decor_4.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.41,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [[0], [1]]
+        },
+        {
+            "id": "craftpix-summer-deco-05",
+            "name": "Small Mud Puddle",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "small", "mud", "puddle", "size-ground-detail"],
+            "imagePath": "assets/decor/decor_5.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1,
+            "defaultHeightInTiles": 0.35
+        },
+        {
+            "id": "craftpix-summer-deco-06",
+            "name": "Wide Mud Puddles",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "wide", "mud", "puddles", "size-ground-detail"],
+            "imagePath": "assets/decor/decor_6.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 0.33
+        },
+        {
+            "id": "craftpix-summer-deco-07",
+            "name": "Tiny Mud Puddle",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "tiny", "mud", "puddle", "size-ground-detail"],
+            "imagePath": "assets/decor/decor_7.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.24
+        },
+        {
+            "id": "craftpix-summer-deco-08",
+            "name": "Wooden Footbridge",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "wooden", "footbridge", "size-medium"],
+            "imagePath": "assets/decor/decor_8.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.1,
+            "defaultHeightInTiles": 1.5
+        },
+        {
+            "id": "craftpix-summer-deco-09",
+            "name": "Wooden Signpost",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "wooden", "signpost", "size-medium"],
+            "imagePath": "assets/decor/decor_9.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.98,
+            "defaultHeightInTiles": 1.25,
+            "collisionGrid": [[0], [1]]
+        },
+        {
+            "id": "craftpix-summer-deco-10",
+            "name": "Wooden Barrel",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "wooden", "barrel", "size-compact"],
+            "imagePath": "assets/decor/decor_10.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.89,
+            "defaultHeightInTiles": 1,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-deco-11",
+            "name": "Doghouse",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "doghouse", "size-compact"],
+            "imagePath": "assets/decor/decor_11.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.68,
+            "defaultHeightInTiles": 1,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-deco-12",
+            "name": "Toy Sailboat",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "toy", "sailboat", "size-compact"],
+            "imagePath": "assets/decor/decor_12.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.6,
+            "defaultHeightInTiles": 0.65,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-deco-13",
+            "name": "Wooden Basin",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "wooden", "basin", "size-compact"],
+            "imagePath": "assets/decor/decor_13.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.9,
+            "defaultHeightInTiles": 0.64,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-deco-14",
+            "name": "Hay Bale",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "hay", "bale", "size-medium"],
+            "imagePath": "assets/decor/decor_14.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.04,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-deco-15",
+            "name": "Wooden Fence",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "wooden", "fence", "size-medium"],
+            "imagePath": "assets/decor/decor_15.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 1.5,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-deco-16",
+            "name": "Hanging Lantern",
+            "tags": ["craftpix", "summer", "outdoor", "deco", "hanging", "lantern", "size-compact"],
+            "imagePath": "assets/decor/decor_16.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.87,
+            "defaultHeightInTiles": 1,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-greener-01",
+            "name": "Rounded Shrub",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "rounded",
+                "shrub",
+                "vegetation",
+                "bush",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1,
+            "defaultHeightInTiles": 0.68,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-summer-greener-01",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-02",
+            "name": "Tall Grass Clump",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "tall",
+                "grass",
+                "clump",
+                "vegetation",
+                "grass",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.68,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-summer-greener-02",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-03",
+            "name": "Dense Grass Clump",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "dense",
+                "grass",
+                "clump",
+                "vegetation",
+                "grass",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.57,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-summer-greener-03",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-04",
+            "name": "Small Grass Tuft",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "small",
+                "grass",
+                "tuft",
+                "vegetation",
+                "grass",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_4.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.4,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-summer-greener-04",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-05",
+            "name": "Curved Grass Tuft",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "curved",
+                "grass",
+                "tuft",
+                "vegetation",
+                "grass",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_5.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.4,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-summer-greener-05",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-06",
+            "name": "Broadleaf Plant",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "broadleaf",
+                "plant",
+                "vegetation",
+                "other",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_6.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.62,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-summer-greener-06",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-07",
+            "name": "Tiny Grass Tuft",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "tiny",
+                "grass",
+                "tuft",
+                "vegetation",
+                "grass",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_7.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.41,
+            "vegetation": {
+                "version": 1,
+                "category": "grass",
+                "sourceAssetId": "craftpix-summer-greener-07",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-08",
+            "name": "Dark Ground Plant",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "dark",
+                "ground",
+                "plant",
+                "vegetation",
+                "other",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_8.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.43,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-summer-greener-08",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-09",
+            "name": "Berry Bush",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "berry",
+                "bush",
+                "vegetation",
+                "bush",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_9.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1,
+            "defaultHeightInTiles": 0.69,
+            "vegetation": {
+                "version": 1,
+                "category": "bush",
+                "sourceAssetId": "craftpix-summer-greener-09",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-greener-10",
+            "name": "Forest Mushrooms",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "greener",
+                "forest",
+                "mushrooms",
+                "vegetation",
+                "other",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/greenery/greenery_10.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.45,
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-summer-greener-10",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-stone-01",
+            "name": "Large Boulder",
+            "tags": ["craftpix", "summer", "outdoor", "stone", "large", "boulder", "size-medium"],
+            "imagePath": "assets/stones/stones_1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.62,
+            "defaultHeightInTiles": 1.75,
+            "collisionGrid": [
+                [0, 0],
+                [1, 1]
+            ]
+        },
+        {
+            "id": "craftpix-summer-stone-02",
+            "name": "Stone Pile",
+            "tags": ["craftpix", "summer", "outdoor", "stone", "stone", "pile", "size-medium"],
+            "imagePath": "assets/stones/stones_2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.5,
+            "defaultHeightInTiles": 0.79,
+            "collisionGrid": [[1, 1]]
+        },
+        {
+            "id": "craftpix-summer-stone-03",
+            "name": "Small Rock",
+            "tags": ["craftpix", "summer", "outdoor", "stone", "small", "rock", "size-compact"],
+            "imagePath": "assets/stones/stones_3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.5,
+            "defaultHeightInTiles": 0.34,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-stone-04",
+            "name": "Split Boulder",
+            "tags": ["craftpix", "summer", "outdoor", "stone", "split", "boulder", "size-compact"],
+            "imagePath": "assets/stones/stones_4.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.59,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-stone-05",
+            "name": "Jagged Rock",
+            "tags": ["craftpix", "summer", "outdoor", "stone", "jagged", "rock", "size-compact"],
+            "imagePath": "assets/stones/stones_5.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.49,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-stone-06",
+            "name": "Smooth Rock Cluster",
+            "tags": ["craftpix", "summer", "outdoor", "stone", "smooth", "rock", "cluster", "size-compact"],
+            "imagePath": "assets/stones/stones_6.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1,
+            "defaultHeightInTiles": 0.53,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-stone-07",
+            "name": "Rose Stone Cluster",
+            "tags": ["craftpix", "summer", "outdoor", "stone", "rose", "stone", "cluster", "size-compact"],
+            "imagePath": "assets/stones/stones_7.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.46,
+            "collisionGrid": [[1]]
+        },
+        {
+            "id": "craftpix-summer-tree-01",
+            "name": "Golden Poplar",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "golden",
+                "poplar",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_1.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.23,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-01",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-02",
+            "name": "Amber Poplar",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "amber",
+                "poplar",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_2.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.23,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-02",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-03",
+            "name": "Young Pine",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "young",
+                "pine",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_3.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.15,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-03",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-04",
+            "name": "Broad Oak",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "broad",
+                "oak",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_4.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.37,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-04",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-05",
+            "name": "Dense Summer Tree",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "dense",
+                "summer",
+                "tree",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_5.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.46,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-05",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-06",
+            "name": "Large Oak",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "large",
+                "oak",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_6.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.65,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-06",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-07",
+            "name": "Round Forest Tree",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "round",
+                "forest",
+                "tree",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_7.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.19,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-07",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-08",
+            "name": "Dark Pine",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "dark",
+                "pine",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_8.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.12,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-08",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-09",
+            "name": "Bright Pine",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "bright",
+                "pine",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_9.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.15,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-09",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-10",
+            "name": "Ancient Broad Oak",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "ancient",
+                "broad",
+                "oak",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_10.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.65,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-10",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-11",
+            "name": "Hollow Dead Tree",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "hollow",
+                "dead",
+                "tree",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_11.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.21,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-11",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-12",
+            "name": "Massive Dead Tree",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "massive",
+                "dead",
+                "tree",
+                "vegetation",
+                "forest",
+                "size-canopy-tree"
+            ],
+            "imagePath": "assets/trees/tree_12.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1.32,
+            "defaultHeightInTiles": 2,
+            "collisionGrid": [
+                [0, 0],
+                [0, 1]
+            ],
+            "vegetation": {
+                "version": 1,
+                "category": "tree",
+                "sourceAssetId": "craftpix-summer-tree-12",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-13",
+            "name": "Mossy Tree Stump",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "mossy",
+                "tree",
+                "stump",
+                "vegetation",
+                "forest",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/trees/tree_13.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.9,
+            "defaultHeightInTiles": 0.7,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-summer-tree-13",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-14",
+            "name": "Dark Tree Stump",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "dark",
+                "tree",
+                "stump",
+                "vegetation",
+                "forest",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/trees/tree_14.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 1,
+            "defaultHeightInTiles": 0.67,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-summer-tree-14",
+                "providerId": "craftpix"
+            }
+        },
+        {
+            "id": "craftpix-summer-tree-15",
+            "name": "Fresh-Cut Tree Stump",
+            "tags": [
+                "craftpix",
+                "summer",
+                "outdoor",
+                "tree",
+                "fresh",
+                "cut",
+                "tree",
+                "stump",
+                "vegetation",
+                "forest",
+                "size-low-vegetation"
+            ],
+            "imagePath": "assets/trees/tree_15.png",
+            "direction": "Down",
+            "color": "natural",
+            "depthOffset": 0,
+            "defaultSizeInTiles": 0.75,
+            "defaultHeightInTiles": 0.69,
+            "collisionGrid": [[1]],
+            "vegetation": {
+                "version": 1,
+                "category": "other",
+                "sourceAssetId": "craftpix-summer-tree-15",
+                "providerId": "craftpix"
+            }
+        }
+    ]
+}

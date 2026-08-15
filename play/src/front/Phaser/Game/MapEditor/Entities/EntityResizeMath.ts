@@ -3,6 +3,14 @@ export type EntityResizeCorner = "north-west" | "north-east" | "south-east" | "s
 
 const MINIMUM_SIZE = 16;
 
+export function toRenderedEntityBounds(bounds: EntityBounds, elevationOffset: number): EntityBounds {
+    return { ...bounds, y: bounds.y - elevationOffset };
+}
+
+export function toAuthoredEntityBounds(bounds: EntityBounds, elevationOffset: number): EntityBounds {
+    return { ...bounds, y: bounds.y + elevationOffset };
+}
+
 export function resizeBoundsFromCorner(
     bounds: EntityBounds,
     corner: EntityResizeCorner,

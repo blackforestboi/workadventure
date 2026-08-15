@@ -1,7 +1,10 @@
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
-import { BUILT_IN_TERRAIN_TILESET } from "../../../../../src/front/Services/BuiltInTerrainCatalog";
+import {
+    BUILT_IN_SUMMER_TERRAIN_TILESET,
+    BUILT_IN_TERRAIN_TILESET,
+} from "../../../../../src/front/Services/BuiltInTerrainCatalog";
 import {
     isElevatableTerrainGid,
     layerHasElevatableTerrain,
@@ -56,5 +59,25 @@ describe("elevation eligibility", () => {
         expect(layerHasElevatableTerrain(map, "dirt")).toBe(true);
         expect(layerHasElevatableTerrain(map, "wood")).toBe(false);
         expect(isElevatableTerrainGid(map, 2000)).toBe(false);
+    });
+
+    it("accepts non-water Craftpix Summer terrain", () => {
+        const map = createMap();
+        const firstGid = 3000;
+        const meadowTileId = BUILT_IN_SUMMER_TERRAIN_TILESET.groups.find(({ id }) => id === "summer-meadow-texture")!
+            .tileIds[0];
+        map.tilesets.push({
+            firstgid: firstGid,
+            name: BUILT_IN_SUMMER_TERRAIN_TILESET.name,
+            image: BUILT_IN_SUMMER_TERRAIN_TILESET.image,
+            imagewidth: BUILT_IN_SUMMER_TERRAIN_TILESET.width,
+            imageheight: BUILT_IN_SUMMER_TERRAIN_TILESET.height,
+            tilewidth: 32,
+            tileheight: 32,
+            tilecount: BUILT_IN_SUMMER_TERRAIN_TILESET.tileCount,
+            columns: BUILT_IN_SUMMER_TERRAIN_TILESET.columns,
+        });
+
+        expect(isElevatableTerrainGid(map, firstGid + meadowTileId)).toBe(true);
     });
 });

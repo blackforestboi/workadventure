@@ -1,6 +1,9 @@
 import type { TerrainAutotileTiles } from "./TerrainAutotile";
+import { BUILT_IN_SUMMER_TERRAIN_ASSETS, BUILT_IN_SUMMER_TERRAIN_TILESET } from "./CraftpixSummerTerrainCatalog";
 
-export const BUILT_IN_TERRAIN_CATALOG_VERSION = "2026-08-11.1";
+export { BUILT_IN_SUMMER_TERRAIN_ASSETS, BUILT_IN_SUMMER_TERRAIN_TILESET } from "./CraftpixSummerTerrainCatalog";
+
+export const BUILT_IN_TERRAIN_CATALOG_VERSION = "2026-08-14.1";
 
 export const BUILT_IN_TERRAIN_TYPES = [
     "earth",
@@ -19,7 +22,9 @@ export type BuiltInTerrainType = (typeof BUILT_IN_TERRAIN_TYPES)[number];
 export interface BuiltInTerrainAsset {
     /** Stable identifier for map-generation prompts and API consumers. */
     id: string;
-    /** Zero-based local tile ID in the built-in LPC terrain atlas. */
+    /** Stable identifier of the bundled atlas containing this tile. */
+    tilesetId: string;
+    /** Zero-based local tile ID in the built-in terrain atlas named by tilesetId. */
     tileId: number;
     name: string;
     description: string;
@@ -48,6 +53,19 @@ export interface BuiltInTerrainGroup {
     displayTileIds: readonly number[];
     previewTileId: number;
     autotile?: TerrainAutotileTiles;
+}
+
+export interface BuiltInTerrainTileset {
+    id: string;
+    name: string;
+    image: string;
+    width: number;
+    height: number;
+    columns: number;
+    rows: number;
+    tileCount: number;
+    groups: readonly BuiltInTerrainGroup[];
+    matchesImage(image: string): boolean;
 }
 
 export interface BuiltInTerrainSearch {
@@ -372,6 +390,7 @@ const makeAsset = (family: TerrainFamilyDefinition, tileId: number, variant: num
     ];
     return {
         id: `workadventure-lpc-outdoor-terrain:${tileId}`,
+        tilesetId: "workadventure-lpc-outdoor-terrain",
         tileId,
         name,
         description: `${family.description} Atlas coordinate: row ${row}, column ${column}; local tile ID ${tileId}.`,
@@ -425,20 +444,54 @@ export const BUILT_IN_TERRAIN_TILESET = {
     matchesImage(image: string): boolean {
         return image.split(/[?#]/, 1)[0].endsWith(IMAGE_URL);
     },
-} as const;
+} as const satisfies BuiltInTerrainTileset;
+
+export const BUILT_IN_TERRAIN_TILESETS: readonly BuiltInTerrainTileset[] = [
+    BUILT_IN_TERRAIN_TILESET,
+    BUILT_IN_SUMMER_TERRAIN_TILESET,
+];
+
+export const ALL_BUILT_IN_TERRAIN_ASSETS: readonly BuiltInTerrainAsset[] = [
+    ...BUILT_IN_TERRAIN_ASSETS,
+    ...BUILT_IN_SUMMER_TERRAIN_ASSETS,
+];
+
+const duplicateBuiltInTileIds = ALL_BUILT_IN_TERRAIN_ASSETS.filter(
+    (asset, index, assets) => assets.findIndex((candidate) => candidate.tileId === asset.tileId) !== index,
+);
+if (duplicateBuiltInTileIds.length > 0) {
+    throw new Error(
+        `Built-in terrain atlases must use disjoint local tile IDs: ${duplicateBuiltInTileIds
+            .map((asset) => asset.tileId)
+            .join(", ")}`,
+    );
+}
+
+export function getBuiltInTerrainTileset(image: string): BuiltInTerrainTileset | undefined {
+    return BUILT_IN_TERRAIN_TILESETS.find((tileset) => tileset.matchesImage(image));
+}
+
+export function getBuiltInTerrainAssetsForTileset(tilesetId: string): readonly BuiltInTerrainAsset[] {
+    return ALL_BUILT_IN_TERRAIN_ASSETS.filter((asset) => asset.tilesetId === tilesetId);
+}
+
+export function getBuiltInTerrainTileIdsForTileset(tilesetId: string): readonly number[] {
+    return getBuiltInTerrainAssetsForTileset(tilesetId).map((asset) => asset.tileId);
+}
 
 export function getBuiltInTerrainTileIds(): readonly number[] {
     return BUILT_IN_TERRAIN_ASSETS.map((asset) => asset.tileId);
 }
 
 export function getBuiltInTerrainAsset(tileId: number): BuiltInTerrainAsset | undefined {
-    return BUILT_IN_TERRAIN_ASSETS.find((asset) => asset.tileId === tileId);
+    return ALL_BUILT_IN_TERRAIN_ASSETS.find((asset) => asset.tileId === tileId);
 }
 
 /** Returns contour metadata only for a verified shape-ready terrain family. */
 export function getBuiltInTerrainAutotile(tileId: number): TerrainAutotileTiles | undefined {
-    return TERRAIN_FAMILIES.find((family) => family.autotile !== undefined && family.tileIds.includes(tileId))
-        ?.autotile;
+    return BUILT_IN_TERRAIN_TILESETS.flatMap((tileset) => tileset.groups).find(
+        (family) => family.autotile !== undefined && family.tileIds.includes(tileId),
+    )?.autotile;
 }
 
 /** Water uses its centre sprite as a boundary-free fill beneath the surrounding surface. */
@@ -452,7 +505,7 @@ export function getBuiltInWaterFillTileId(tileId: number): number | undefined {
 
 export function searchBuiltInTerrainAssets(search: BuiltInTerrainSearch = {}): readonly BuiltInTerrainAsset[] {
     const queryTokens = (search.query ?? "").trim().toLowerCase().split(/\s+/).filter(Boolean);
-    return BUILT_IN_TERRAIN_ASSETS.filter(
+    return ALL_BUILT_IN_TERRAIN_ASSETS.filter(
         (asset) =>
             (search.terrainType === undefined || asset.terrainType === search.terrainType) &&
             (search.solid === undefined || asset.solid === search.solid) &&

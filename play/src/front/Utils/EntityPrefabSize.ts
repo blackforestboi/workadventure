@@ -54,22 +54,61 @@ export function getEntityDisplaySize(
     naturalHeight: number,
     defaultSizeInTiles: number | undefined,
     defaultHeightInTiles?: number,
+    defaultDimensionsControlDisplay = false,
 ): { width: number; height: number } {
     if (defaultSizeInTiles === undefined || naturalWidth <= 0 || naturalHeight <= 0) {
         return { width: naturalWidth, height: naturalHeight };
     }
 
-    // A stored height means these values describe the independent collision grid.
-    // Keep the raster at its natural placed size instead of stretching it to that grid.
+    const width = defaultSizeInTiles * MAP_TILE_SIZE;
+    if (defaultDimensionsControlDisplay) {
+        return {
+            width,
+            height:
+                defaultHeightInTiles !== undefined
+                    ? defaultHeightInTiles * MAP_TILE_SIZE
+                    : width * (naturalHeight / naturalWidth),
+        };
+    }
+
+    // For legacy collections, a stored height means these values describe the
+    // independent collision frame rather than the rendered raster.
     if (defaultHeightInTiles !== undefined) {
         return { width: naturalWidth, height: naturalHeight };
     }
 
-    const width = defaultSizeInTiles * MAP_TILE_SIZE;
     return {
         width,
         height: width * (naturalHeight / naturalWidth),
     };
+}
+
+const MAX_UINT32 = 0xffffffff;
+
+/** Entity dimensions are serialized as protobuf uint32 values. */
+export function normalizeEntityDimensions(dimensions: { width: number; height: number }): {
+    width: number;
+    height: number;
+} {
+    const normalize = (value: number): number =>
+        Number.isFinite(value) ? Math.min(MAX_UINT32, Math.max(1, Math.round(value))) : 1;
+
+    return {
+        width: normalize(dimensions.width),
+        height: normalize(dimensions.height),
+    };
+}
+
+export function shouldApplyPrefabDisplayDefaults(
+    storedWidth: number | undefined,
+    storedHeight: number | undefined,
+    naturalWidth: number,
+    naturalHeight: number,
+    defaultDimensionsControlDisplay: boolean | undefined,
+): boolean {
+    if (!defaultDimensionsControlDisplay) return false;
+    if (storedWidth === undefined || storedHeight === undefined) return true;
+    return Math.abs(storedWidth - naturalWidth) < 0.01 && Math.abs(storedHeight - naturalHeight) < 0.01;
 }
 
 export function getVegetationDisplaySize(

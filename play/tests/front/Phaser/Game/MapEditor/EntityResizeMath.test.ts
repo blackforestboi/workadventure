@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resizeBoundsFromCorner } from "../../../../../src/front/Phaser/Game/MapEditor/Entities/EntityResizeMath";
+import {
+    resizeBoundsFromCorner,
+    toAuthoredEntityBounds,
+    toRenderedEntityBounds,
+} from "../../../../../src/front/Phaser/Game/MapEditor/Entities/EntityResizeMath";
 
 describe("resizeBoundsFromCorner", () => {
     const bounds = { x: 100, y: 80, width: 64, height: 48 };
@@ -45,5 +49,13 @@ describe("resizeBoundsFromCorner", () => {
             width: 21,
             height: 16,
         });
+    });
+
+    it("keeps an elevated asset inside its rendered resize frame without changing its authored position", () => {
+        const authoredBounds = { x: 100, y: 80, width: 64, height: 48 };
+        const renderedBounds = toRenderedEntityBounds(authoredBounds, 12);
+
+        expect(renderedBounds).toEqual({ x: 100, y: 68, width: 64, height: 48 });
+        expect(toAuthoredEntityBounds(renderedBounds, 12)).toEqual(authoredBounds);
     });
 });

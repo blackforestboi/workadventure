@@ -248,6 +248,10 @@ export function createBlankInfiniteWorldTemplate(sourceRoomUrl: string | undefin
                 url: new URL("/collections/CraftpixNature/CraftpixNatureCollection.json", playBase).toString(),
                 type: "file",
             },
+            {
+                url: new URL("/collections/CraftpixSummer/CraftpixSummerCollection.json", playBase).toString(),
+                type: "file",
+            },
         ],
         lastCommandId: randomUUID(),
     };

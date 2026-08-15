@@ -1,6 +1,6 @@
 import type { ITiledMap, ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 
-import { BUILT_IN_TERRAIN_TILESET, getBuiltInTerrainAsset } from "../../../Services/BuiltInTerrainCatalog";
+import { getBuiltInTerrainAsset, getBuiltInTerrainTileset } from "../../../Services/BuiltInTerrainCatalog";
 
 const TILED_TILE_FLIP_FLAGS = 0xe0000000;
 
@@ -26,7 +26,7 @@ export function isElevatableTerrainGid(map: ITiledMap, rawGid: number): boolean 
         tileset?.firstgid === undefined ||
         !("image" in tileset) ||
         typeof tileset.image !== "string" ||
-        !BUILT_IN_TERRAIN_TILESET.matchesImage(tileset.image)
+        getBuiltInTerrainTileset(tileset.image) === undefined
     ) {
         return false;
     }

@@ -2,6 +2,7 @@
     import {
         createWallFoundationCollisionGrid,
         WALL_DEFAULT_HEIGHT_TILES,
+        WALL_DEFAULT_PROJECTION_DEPTH_TILES,
         WALL_DEFAULT_WIDTH_TILES,
         type EntityPrefab,
         type VegetationCategory,
@@ -90,7 +91,7 @@
     let vegetationCategory = $state<VegetationCategory>(initialVegetation?.category ?? "tree");
     let isWall = $state(initialWall !== undefined);
     let wallStyle = $state(initialWall?.style ?? "Wall");
-    let projectionDepthTiles = $state(initialWall?.projectionDepthTiles ?? 0.5);
+    let projectionDepthTiles = $state(initialWall?.projectionDepthTiles ?? WALL_DEFAULT_PROJECTION_DEPTH_TILES);
     let collisionGridWidthIndex = $state(
         Math.max(
             0,

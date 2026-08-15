@@ -133,6 +133,7 @@ import {
 import { requestedScreenSharingState } from "../Stores/ScreenSharingStore";
 import { selectCompanionSceneVisibleStore } from "../Stores/SelectCompanionStore";
 import { selectCharacterSceneVisibleStore } from "../Stores/SelectCharacterStore";
+import { normalizeEntityDimensions } from "../Utils/EntityPrefabSize";
 import { adminMessagesService } from "./AdminMessagesService";
 import { connectionManager } from "./ConnectionManager";
 import type {
@@ -1335,6 +1336,7 @@ export class RoomConnection implements RoomConnection {
         config: AtLeast<WAMEntityData, "x" | "y">,
         entityDimensions: EntityDimensions,
     ): void {
+        const normalizedDimensions = normalizeEntityDimensions(entityDimensions);
         this.send({
             message: {
                 $case: "editMapCommandMessage",
@@ -1348,8 +1350,8 @@ export class RoomConnection implements RoomConnection {
                                 id: entityId,
                                 properties: config.properties ?? [],
                                 modifyProperties: config.properties !== undefined,
-                                width: entityDimensions.width,
-                                height: entityDimensions.height,
+                                width: normalizedDimensions.width,
+                                height: normalizedDimensions.height,
                                 wall: config.wall,
                             },
                         },
@@ -1365,6 +1367,7 @@ export class RoomConnection implements RoomConnection {
         config: WAMEntityData,
         entityDimensions: EntityDimensions,
     ): void {
+        const normalizedDimensions = normalizeEntityDimensions(entityDimensions);
         this.send({
             message: {
                 $case: "editMapCommandMessage",
@@ -1381,8 +1384,8 @@ export class RoomConnection implements RoomConnection {
                                 prefabId: config.prefabRef.id,
                                 properties: config.properties ?? [],
                                 name: config.name,
-                                width: entityDimensions.width,
-                                height: entityDimensions.height,
+                                width: normalizedDimensions.width,
+                                height: normalizedDimensions.height,
                                 wall: config.wall,
                             },
                         },

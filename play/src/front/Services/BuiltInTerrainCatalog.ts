@@ -1,14 +1,21 @@
 export {
     BUILT_IN_ATLAS_ASSET_KINDS,
     BUILT_IN_ATLAS_ASSETS,
+    ALL_BUILT_IN_TERRAIN_ASSETS,
+    BUILT_IN_SUMMER_TERRAIN_ASSETS,
+    BUILT_IN_SUMMER_TERRAIN_TILESET,
     BUILT_IN_TERRAIN_ASSETS,
     BUILT_IN_TERRAIN_CATALOG_VERSION,
     BUILT_IN_TERRAIN_TILESET,
+    BUILT_IN_TERRAIN_TILESETS,
     BUILT_IN_TERRAIN_TYPES,
     getBuiltInTerrainAsset,
+    getBuiltInTerrainAssetsForTileset,
     getBuiltInTerrainAutotile,
+    getBuiltInTerrainTileset,
     getBuiltInWaterFillTileId,
     getBuiltInTerrainTileIds,
+    getBuiltInTerrainTileIdsForTileset,
     searchBuiltInAtlasAssets,
     searchBuiltInTerrainAssets,
     type BuiltInAtlasAsset,
@@ -18,6 +25,7 @@ export {
     type BuiltInTerrainAsset,
     type BuiltInTerrainGroup,
     type BuiltInTerrainSearch,
+    type BuiltInTerrainTileset,
     type BuiltInTerrainType,
 } from "../../common/Teapot/BuiltInTerrainCatalog";
 
@@ -53,3 +61,12 @@ export {
     type TerrainWaterKind,
     type TerrainWaterWaveform,
 } from "../../common/Teapot/TerrainSurfaceCatalog";
+
+export {
+    BUILT_IN_LEGACY_MAP_TILESETS,
+    BUILT_IN_MAP_TILESETS,
+    getBuiltInMapTileset,
+    isLegacyWorkAdventureTileset,
+    type BuiltInMapTileset,
+    type LegacyWorkAdventureTileset,
+} from "../../common/Teapot/BuiltInMapTilesetCatalog";

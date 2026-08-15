@@ -1,8 +1,10 @@
 import * as Phaser from "phaser";
 import {
-    getWallDragOrientation,
     getWallDragTiles,
-    snapWorldPointToWallTile,
+    getWallPlacementSize,
+    getWallRenderSize,
+    getWallTopLeftPosition,
+    snapWorldPointToWallPlacement,
     vegetationPlacementPlanFromMessage,
     vegetationPresetFromMessage,
     WallPlacement,
@@ -49,10 +51,26 @@ import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { mapEditorActivated } from "../../../../Stores/MenuStore";
 import { hasPointerDragged } from "../PanGesture";
 import { shouldPlaceEntity } from "../../../../Utils/EntityPrefabSize";
-import { getEntityCollisionRectangles, getScaledCollisionGridFrame } from "../Entities/EntityCollisionGrid";
+import {
+    getEntityCollisionRectangles,
+    getScaledCollisionGridFrame,
+    getWallCollisionGridFrame,
+} from "../Entities/EntityCollisionGrid";
 import { applyWallTextureToPreview } from "../Entities/WallTextureProjector";
 import { getEntityRenderDepth } from "../Entities/EntityRenderDepth";
 import { EntityRelatedEditorTool } from "./EntityRelatedEditorTool";
+
+const WALL_PLACEMENT_ORIENTATION_CYCLE: readonly WallPlacementOrientation[] = [
+    "horizontal",
+    "diagonal-down",
+    "vertical",
+    "diagonal-up",
+];
+
+function getNextWallPlacementOrientation(orientation: WallPlacementOrientation): WallPlacementOrientation {
+    const index = WALL_PLACEMENT_ORIENTATION_CYCLE.indexOf(orientation);
+    return WALL_PLACEMENT_ORIENTATION_CYCLE[(index + 1) % WALL_PLACEMENT_ORIENTATION_CYCLE.length] ?? "horizontal";
+}
 
 import Key = Phaser.Input.Keyboard.Key;
 import Pointer = Phaser.Input.Pointer;
@@ -76,8 +94,8 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     private panCandidate = false;
     private panning = false;
     private wallDragStart: WallTile | undefined;
-    private wallDragStartWorld: { x: number; y: number } | undefined;
     private wallDragOrientation: WallPlacementOrientation | undefined;
+    private wallPlacementOrientation: WallPlacementOrientation = "horizontal";
     private readonly placedWallTiles = new Set<string>();
 
     protected mapEditorEntityUploadStoreUnsubscriber: Unsubscriber | undefined;
@@ -345,6 +363,9 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         this.scene.input.on(Phaser.Input.Events.GAME_OUT, this.pointerUpEventHandler);
 
         this.shiftKey?.on(Phaser.Input.Keyboard.Events.DOWN, () => {
+            if (this.entityPrefab?.wall !== undefined && this.wallDragStart === undefined) {
+                this.wallPlacementOrientation = getNextWallPlacementOrientation(this.wallPlacementOrientation);
+            }
             this.updateWallPreviewForActivePointer();
             this.changePreviewTint();
         });
@@ -670,21 +691,10 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         if (!this.entityPrefabPreview || !this.entityPrefab) {
             return false;
         }
-        const sourceColumns = Math.max(1, ...(this.entityPrefab.collisionGrid?.map((row) => row.length) ?? []));
-        const sourceRows = Math.max(1, this.entityPrefab.collisionGrid?.length ?? 0);
-        const frame = getScaledCollisionGridFrame(
-            this.entityPrefab.collisionGrid,
-            this.entityPrefabPreview.width,
-            this.entityPrefabPreview.height,
-            this.entityPrefabPreview.displayWidth,
-            this.entityPrefabPreview.displayHeight,
-            this.entityPrefab.previewOffsetX,
-            this.entityPrefab.previewOffsetY,
-            (this.entityPrefab.defaultSizeInTiles ?? sourceColumns) * 32,
-            (this.entityPrefab.defaultHeightInTiles ?? sourceRows) * 32,
-        );
-        if (this.entityPrefab.wall !== undefined)
-            frame.offset.y = this.entityPrefabPreview.displayHeight - frame.height;
+        const frame =
+            this.entityPrefab.wall === undefined
+                ? this.getRegularEntityPreviewCollisionFrame()
+                : this.getWallPreviewCollisionFrame();
         const position = this.entityPrefabPreview.getTopLeft();
         return gameMapFrontWrapper.canEntityBePlacedOnMap(
             position,
@@ -693,6 +703,46 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
             getEntityCollisionRectangles(frame, position),
             undefined,
             this.entityPrefab.wall === undefined && this.shiftKey?.isDown,
+        );
+    }
+
+    private getRegularEntityPreviewCollisionFrame(): ReturnType<typeof getScaledCollisionGridFrame> {
+        if (!this.entityPrefabPreview || !this.entityPrefab) {
+            return { collisionGrid: undefined, offset: { x: 0, y: 0 }, width: 0, height: 0 };
+        }
+        const sourceColumns = Math.max(1, ...(this.entityPrefab.collisionGrid?.map((row) => row.length) ?? []));
+        const sourceRows = Math.max(1, this.entityPrefab.collisionGrid?.length ?? 0);
+        return getScaledCollisionGridFrame(
+            this.entityPrefab.collisionGrid,
+            this.entityPrefabPreview.width,
+            this.entityPrefabPreview.height,
+            this.entityPrefabPreview.displayWidth,
+            this.entityPrefabPreview.displayHeight,
+            this.entityPrefab.previewOffsetX,
+            this.entityPrefab.previewOffsetY,
+            this.entityPrefab.defaultDimensionsControlDisplay
+                ? this.entityPrefabPreview.width
+                : (this.entityPrefab.defaultSizeInTiles ?? sourceColumns) * 32,
+            this.entityPrefab.defaultDimensionsControlDisplay
+                ? this.entityPrefabPreview.height
+                : (this.entityPrefab.defaultHeightInTiles ?? sourceRows) * 32,
+        );
+    }
+
+    private getWallPreviewCollisionFrame(): ReturnType<typeof getWallCollisionGridFrame> {
+        if (!this.entityPrefabPreview || !this.entityPrefab) {
+            return { collisionGrid: undefined, offset: { x: 0, y: 0 }, width: 0, height: 0 };
+        }
+        const placementSize = getWallPlacementSize(
+            this.wallDragOrientation ?? this.wallPlacementOrientation,
+            this.entityPrefab.defaultSizeInTiles,
+            this.entityPrefab.defaultHeightInTiles,
+        );
+        return getWallCollisionGridFrame(
+            this.entityPrefab.collisionGrid,
+            this.entityPrefabPreview.displayHeight,
+            placementSize.widthInTiles,
+            placementSize.heightInTiles,
         );
     }
 
@@ -721,32 +771,16 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     }
 
     private startWallDrag(pointer: Pointer): void {
-        this.wallDragStart = snapWorldPointToWallTile(pointer.worldX, pointer.worldY);
-        this.wallDragStartWorld = { x: pointer.worldX, y: pointer.worldY };
-        this.wallDragOrientation = this.shiftKey?.isDown ? "diagonal-down" : undefined;
+        this.wallDragOrientation = this.wallPlacementOrientation;
+        this.wallDragStart = snapWorldPointToWallPlacement(pointer.worldX, pointer.worldY, this.wallDragOrientation);
         this.placedWallTiles.clear();
-        this.updateWallPreviewForTile(this.wallDragStart, this.wallDragOrientation ?? "horizontal");
+        this.updateWallPreviewForTile(this.wallDragStart, this.wallDragOrientation);
     }
 
     private extendWallDrag(pointer: Pointer): void {
         if (this.wallDragStart === undefined || this.entityPrefab?.wall === undefined) return;
-        const current = snapWorldPointToWallTile(pointer.worldX, pointer.worldY);
-        const worldDelta = {
-            x: pointer.worldX - (this.wallDragStartWorld?.x ?? pointer.worldX),
-            y: pointer.worldY - (this.wallDragStartWorld?.y ?? pointer.worldY),
-        };
-        if (this.wallDragOrientation === undefined && Math.hypot(worldDelta.x, worldDelta.y) >= 8) {
-            this.wallDragOrientation = getWallDragOrientation(
-                { x: 0, y: 0 },
-                worldDelta,
-                this.shiftKey?.isDown ?? false,
-            );
-        }
-        if (this.wallDragOrientation === undefined) {
-            this.updateWallPreviewForTile(this.wallDragStart, "horizontal");
-            return;
-        }
-        const orientation = this.wallDragOrientation;
+        const orientation = this.wallDragOrientation ?? this.wallPlacementOrientation;
+        const current = snapWorldPointToWallPlacement(pointer.worldX, pointer.worldY, orientation);
         const tiles = getWallDragTiles(this.wallDragStart, current, orientation);
         for (const tile of tiles) {
             const key = `${tile.x}:${tile.y}`;
@@ -763,7 +797,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
 
     private handlePointerUpEvent(pointer: Pointer): void {
         if (this.wallDragStart !== undefined && this.entityPrefab?.wall !== undefined) {
-            const orientation = this.wallDragOrientation ?? (this.shiftKey?.isDown ? "diagonal-down" : "horizontal");
+            const orientation = this.wallDragOrientation ?? this.wallPlacementOrientation;
             if (this.placedWallTiles.size === 0) {
                 this.updateWallPreviewForTile(this.wallDragStart, orientation);
                 if (this.canEntityBePlaced()) this.placeWallTile(this.wallDragStart, orientation);
@@ -780,11 +814,17 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     private placeWallTile(tile: WallTile, orientation: WallPlacementOrientation): void {
         if (!this.entityPrefabPreview || !this.entityPrefab) return;
         const properties = get(mapEditorCopiedEntityDataPropertiesStore);
+        const topLeft = getWallTopLeftPosition(tile, orientation);
+        const wallSize = getWallRenderSize(
+            orientation,
+            this.entityPrefab.defaultSizeInTiles,
+            this.entityPrefab.defaultHeightInTiles,
+        );
         const entityData: WAMEntityData = {
-            x: tile.x * 32,
-            y: Math.floor((tile.y + 1) * 32 - this.entityPrefabPreview.displayHeight),
-            width: this.entityPrefabPreview.displayWidth,
-            height: this.entityPrefabPreview.displayHeight,
+            x: topLeft.x,
+            y: topLeft.y,
+            width: wallSize.width,
+            height: wallSize.height,
             prefabRef: { collectionName: this.entityPrefab.collectionName, id: this.entityPrefab.id },
             properties: properties ?? [],
             name: properties?.find((property) => property.type === "openFile")?.name ?? undefined,
@@ -812,40 +852,48 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
 
     private updateWallPreview(pointer: Pointer): void {
         if (!this.entityPrefab?.wall || !this.entityPrefabPreview) return;
-        const orientation = this.shiftKey?.isDown ? "diagonal-down" : "horizontal";
-        applyWallTextureToPreview(this.scene, this.entityPrefabPreview, this.entityPrefab, orientation);
-        const tile = snapWorldPointToWallTile(pointer.worldX, pointer.worldY);
-        this.setWallPreviewPosition(tile);
+        applyWallTextureToPreview(
+            this.scene,
+            this.entityPrefabPreview,
+            this.entityPrefab,
+            this.wallPlacementOrientation,
+        );
+        const tile = snapWorldPointToWallPlacement(pointer.worldX, pointer.worldY, this.wallPlacementOrientation);
+        this.setWallPreviewPosition(tile, this.wallPlacementOrientation);
     }
 
     private updateWallPreviewForTile(tile: WallTile, orientation: WallPlacementOrientation): void {
         if (!this.entityPrefab?.wall || !this.entityPrefabPreview) return;
         applyWallTextureToPreview(this.scene, this.entityPrefabPreview, this.entityPrefab, orientation);
-        this.setWallPreviewPosition(tile);
+        this.setWallPreviewPosition(tile, orientation);
     }
 
     private getWallPreviewPosition(pointer: Pointer): { x: number; y: number } {
-        const tile = snapWorldPointToWallTile(pointer.worldX, pointer.worldY);
-        return this.getWallPreviewPositionForTile(tile);
+        const orientation = this.wallDragOrientation ?? this.wallPlacementOrientation;
+        const tile = snapWorldPointToWallPlacement(pointer.worldX, pointer.worldY, orientation);
+        return this.getWallPreviewPositionForTile(tile, orientation);
     }
 
-    private setWallPreviewPosition(tile: WallTile): void {
+    private setWallPreviewPosition(tile: WallTile, orientation: WallPlacementOrientation): void {
         if (!this.entityPrefabPreview) return;
-        const position = this.getWallPreviewPositionForTile(tile);
+        const position = this.getWallPreviewPositionForTile(tile, orientation);
         this.entityPrefabPreview.setPosition(position.x, position.y);
     }
 
-    private getWallPreviewPositionForTile(tile: WallTile): { x: number; y: number } {
-        if (!this.entityPrefabPreview) return { x: tile.x * 32 + 16, y: tile.y * 32 + 16 };
+    private getWallPreviewPositionForTile(
+        tile: WallTile,
+        orientation: WallPlacementOrientation,
+    ): { x: number; y: number } {
+        if (!this.entityPrefabPreview || !this.entityPrefab) return { x: tile.x * 32 + 16, y: tile.y * 32 + 16 };
+        const topLeft = getWallTopLeftPosition(tile, orientation);
         return {
-            x: tile.x * 32 + this.entityPrefabPreview.displayWidth * 0.5,
-            y: (tile.y + 1) * 32 - this.entityPrefabPreview.displayHeight * 0.5,
+            x: topLeft.x + this.entityPrefabPreview.displayWidth * 0.5,
+            y: topLeft.y + this.entityPrefabPreview.displayHeight * 0.5,
         };
     }
 
     private resetWallDrag(): void {
         this.wallDragStart = undefined;
-        this.wallDragStartWorld = undefined;
         this.wallDragOrientation = undefined;
         this.placedWallTiles.clear();
     }

@@ -9,7 +9,7 @@ import {
 } from "@workadventure/map-editor";
 import type { ITiledMap, ITiledMapLayer, ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
 
-import { BUILT_IN_TERRAIN_ASSETS, BUILT_IN_TERRAIN_TILESET } from "../../../Services/BuiltInTerrainCatalog";
+import { getBuiltInTerrainAssetsForTileset, getBuiltInTerrainTileset } from "../../../Services/BuiltInTerrainCatalog";
 import { PathTileType } from "../../../Utils/PathfindingManager";
 
 export type CollisionGridCell = PathTileType.Walkable | PathTileType.Collider | PathTileType.Exit | PathTileType.Start;
@@ -201,12 +201,16 @@ export function tileHasDefaultCollision(map: ITiledMap, gid: number): boolean {
             tileset.firstgid === undefined ||
             !("image" in tileset) ||
             typeof tileset.image !== "string" ||
-            !BUILT_IN_TERRAIN_TILESET.matchesImage(tileset.image)
+            getBuiltInTerrainTileset(tileset.image) === undefined
         ) {
             return false;
         }
+        const builtInTileset = getBuiltInTerrainTileset(tileset.image);
+        if (builtInTileset === undefined) return false;
         const tileId = normalizedGid - tileset.firstgid;
-        return BUILT_IN_TERRAIN_ASSETS.some((asset) => asset.tileId === tileId && asset.solid);
+        return getBuiltInTerrainAssetsForTileset(builtInTileset.id).some(
+            (asset) => asset.tileId === tileId && asset.solid,
+        );
     });
 }
 

@@ -8,7 +8,12 @@ import type {
     EntityPrefab,
     WAMEntityData,
 } from "@workadventure/map-editor";
-import { GameMapProperties, getWallPlacementSize } from "@workadventure/map-editor";
+import {
+    GameMapProperties,
+    getWallPlacementSize,
+    getWallRenderSize,
+    migrateLegacyWallPosition,
+} from "@workadventure/map-editor";
 import { deepmergeInto } from "deepmerge-ts";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
@@ -31,10 +36,15 @@ import {
     getWallCollisionGridFrame,
     type EntityCollisionRectangle,
 } from "../Game/MapEditor/Entities/EntityCollisionGrid";
-import { getEntityDisplaySize } from "../../Utils/EntityPrefabSize";
+import { getEntityDisplaySize, shouldApplyPrefabDisplayDefaults } from "../../Utils/EntityPrefabSize";
 import { Room } from "../../Connection/Room";
 import ExitPasswordModal from "../../Components/Modal/ExitPasswordModal.svelte";
 import { getEntityRenderDepth } from "../Game/MapEditor/Entities/EntityRenderDepth";
+import {
+    toAuthoredEntityBounds,
+    toRenderedEntityBounds,
+    type EntityBounds,
+} from "../Game/MapEditor/Entities/EntityResizeMath";
 import { modals } from "@wa-modals";
 
 import Sprite = Phaser.GameObjects.Sprite;
@@ -190,32 +200,82 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
     public setElevationOffset(offset: number): void {
         if (this.elevationOffset === offset) return;
         this.elevationOffset = offset;
-        const scaleY = Math.abs(this.scaleY);
-        this.setDisplayOrigin(0, scaleY === 0 ? 0 : offset / scaleY);
+        this.refreshElevationDisplayOrigin();
         this.updateRenderDepth();
         (this.scene as GameScene).markDirty();
     }
 
-    public applyStoredDimensions(): void {
-        if (this.entityData.width !== undefined && this.entityData.height !== undefined) {
-            this.setDisplaySize(this.entityData.width, this.entityData.height);
-        }
-        if (this.elevationOffset !== 0) {
-            const offset = this.elevationOffset;
-            this.elevationOffset = 0;
-            this.setElevationOffset(offset);
-        }
+    private refreshElevationDisplayOrigin(): void {
+        const scaleY = Math.abs(this.scaleY);
+        this.setDisplayOrigin(0, scaleY === 0 ? 0 : this.elevationOffset / scaleY);
     }
 
-    public previewEditorBounds(bounds: { x: number; y: number; width: number; height: number }): void {
-        this.setPosition(bounds.x, bounds.y);
+    public applyStoredDimensions(): void {
+        const wallOrientation = this.entityData.wall?.orientation;
+        if (this.prefab.wall !== undefined && wallOrientation !== undefined) {
+            const wallSize = getWallRenderSize(
+                wallOrientation,
+                this.prefab.defaultSizeInTiles,
+                this.prefab.defaultHeightInTiles,
+            );
+            if (this.entityData.height !== undefined) {
+                const migratedPosition = migrateLegacyWallPosition(
+                    this.getPosition(),
+                    this.entityData.height,
+                    wallOrientation,
+                    this.prefab.defaultSizeInTiles,
+                    this.prefab.defaultHeightInTiles,
+                );
+                this.entityData.x = migratedPosition.x;
+                this.entityData.y = migratedPosition.y;
+                this.setPosition(migratedPosition.x, migratedPosition.y);
+            }
+            this.entityData.width = wallSize.width;
+            this.entityData.height = wallSize.height;
+            this.setDisplaySize(wallSize.width, wallSize.height);
+        } else if (
+            shouldApplyPrefabDisplayDefaults(
+                this.entityData.width,
+                this.entityData.height,
+                this.width,
+                this.height,
+                this.prefab.defaultDimensionsControlDisplay,
+            )
+        ) {
+            const displaySize = getEntityDisplaySize(
+                this.width,
+                this.height,
+                this.prefab.defaultSizeInTiles,
+                this.prefab.defaultHeightInTiles,
+                true,
+            );
+            this.entityData.width = displaySize.width;
+            this.entityData.height = displaySize.height;
+            this.setDisplaySize(displaySize.width, displaySize.height);
+        } else if (this.entityData.width !== undefined && this.entityData.height !== undefined) {
+            this.setDisplaySize(this.entityData.width, this.entityData.height);
+        }
+        this.refreshElevationDisplayOrigin();
+    }
+
+    public getEditorBounds(): EntityBounds {
+        return toRenderedEntityBounds(
+            { x: this.x, y: this.y, width: this.displayWidth, height: this.displayHeight },
+            this.elevationOffset,
+        );
+    }
+
+    public previewEditorBounds(bounds: EntityBounds): void {
+        const authoredBounds = toAuthoredEntityBounds(bounds, this.elevationOffset);
+        this.setPosition(authoredBounds.x, authoredBounds.y);
         this.setDisplaySize(bounds.width, bounds.height);
+        this.refreshElevationDisplayOrigin();
         this.updateRenderDepth();
         this.updateDebugActivationZone();
     }
 
-    public beginEditorResize(bounds: { x: number; y: number; width: number; height: number }): void {
-        this.editorBoundsBeforeResize = bounds;
+    public beginEditorResize(bounds: EntityBounds): void {
+        this.editorBoundsBeforeResize = toAuthoredEntityBounds(bounds, this.elevationOffset);
     }
 
     public consumeEditorBoundsBeforeResize(): { x: number; y: number; width: number; height: number } | undefined {
@@ -224,13 +284,14 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
         return bounds;
     }
 
-    public commitEditorBounds(bounds: { x: number; y: number; width: number; height: number }): void {
-        this.entityData.x = bounds.x;
-        this.entityData.y = bounds.y;
-        this.entityData.width = bounds.width;
-        this.entityData.height = bounds.height;
+    public commitEditorBounds(bounds: EntityBounds): void {
+        const authoredBounds = toAuthoredEntityBounds(bounds, this.elevationOffset);
+        this.entityData.x = authoredBounds.x;
+        this.entityData.y = authoredBounds.y;
+        this.entityData.width = authoredBounds.width;
+        this.entityData.height = authoredBounds.height;
         this.previewEditorBounds(bounds);
-        this.emit(EntityEvent.Updated, this.appendId(bounds));
+        this.emit(EntityEvent.Updated, this.appendId(authoredBounds));
     }
 
     /**
@@ -327,8 +388,12 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
             this.displayHeight,
             this.prefab.previewOffsetX,
             this.prefab.previewOffsetY,
-            (this.prefab.defaultSizeInTiles ?? sourceColumns) * 32,
-            (this.prefab.defaultHeightInTiles ?? sourceRows) * 32,
+            this.prefab.defaultDimensionsControlDisplay
+                ? this.width
+                : (this.prefab.defaultSizeInTiles ?? sourceColumns) * 32,
+            this.prefab.defaultDimensionsControlDisplay
+                ? this.height
+                : (this.prefab.defaultHeightInTiles ?? sourceRows) * 32,
         );
         return frame;
     }
@@ -370,6 +435,7 @@ export class Entity extends Sprite implements ActivatableInterface, OutlineableI
                 this.height,
                 metadata.defaultSizeInTiles ?? previousSizeInTiles,
                 metadata.defaultHeightInTiles ?? previousHeightInTiles,
+                this.prefab.defaultDimensionsControlDisplay,
             );
             this.entityData.width = displaySize.width;
             this.entityData.height = displaySize.height;

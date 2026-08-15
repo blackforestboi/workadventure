@@ -3,6 +3,8 @@ import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
 import {
+    BUILT_IN_SUMMER_TERRAIN_ASSETS,
+    BUILT_IN_SUMMER_TERRAIN_TILESET,
     BUILT_IN_TERRAIN_ASSETS,
     BUILT_IN_TERRAIN_TILESET,
 } from "../../../../../src/front/Services/BuiltInTerrainCatalog";
@@ -355,6 +357,26 @@ describe("authoring collision", () => {
             { x: 1, y: 0 },
             { x: 0, y: 1 },
         ]);
+    });
+
+    it("honors solid river defaults from the Craftpix Summer terrain catalog", () => {
+        const riverAsset = BUILT_IN_SUMMER_TERRAIN_ASSETS.find(({ terrainType }) => terrainType === "water");
+        expect(riverAsset).toBeDefined();
+        const firstGid = 3000;
+        const map = collisionMap();
+        map.tilesets.push({
+            firstgid: firstGid,
+            name: BUILT_IN_SUMMER_TERRAIN_TILESET.name,
+            tilewidth: 32,
+            tileheight: 32,
+            tilecount: BUILT_IN_SUMMER_TERRAIN_TILESET.tileCount,
+            columns: BUILT_IN_SUMMER_TERRAIN_TILESET.columns,
+            image: BUILT_IN_SUMMER_TERRAIN_TILESET.image,
+            imagewidth: BUILT_IN_SUMMER_TERRAIN_TILESET.width,
+            imageheight: BUILT_IN_SUMMER_TERRAIN_TILESET.height,
+        });
+
+        expect(tileHasDefaultCollision(map, firstGid + riverAsset!.tileId)).toBe(true);
     });
 
     it("erases only collision data and leaves every visual layer in the stack untouched", () => {

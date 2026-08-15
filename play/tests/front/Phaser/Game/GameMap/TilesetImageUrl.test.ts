@@ -17,6 +17,18 @@ describe("resolveTilesetImageUrl", () => {
                 playOrigin,
             ),
         ).toBe("http://play.workadventure.localhost/resources/tilesets/lpc-outdoor-terrain.png");
+        expect(
+            resolveTilesetImageUrl(
+                "/collections/CraftpixSummer/assets/terrain/craftpix-summer-terrain.png",
+                mapUrl,
+                playOrigin,
+            ),
+        ).toBe(
+            "http://play.workadventure.localhost/collections/CraftpixSummer/assets/terrain/craftpix-summer-terrain.png",
+        );
+        expect(
+            resolveTilesetImageUrl("/collections/WorkAdventureLegacy/assets/Floor0/walls2.png", mapUrl, playOrigin),
+        ).toBe("http://play.workadventure.localhost/collections/WorkAdventureLegacy/assets/Floor0/walls2.png");
     });
 
     it("resolves regular map assets against the map URL", () => {

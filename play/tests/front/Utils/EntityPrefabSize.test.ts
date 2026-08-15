@@ -4,8 +4,12 @@ import {
     getEntityDisplaySize,
     getOpaqueBoundsFromAlphaBuffer,
     getVegetationDisplaySize,
+    normalizeEntityDimensions,
+    shouldApplyPrefabDisplayDefaults,
     shouldPlaceEntity,
 } from "../../../src/front/Utils/EntityPrefabSize";
+import roomConnectionSource from "../../../src/front/Connection/RoomConnection.ts?raw";
+import createEntityFrontCommandSource from "../../../src/front/Phaser/Game/MapEditor/Commands/Entity/CreateEntityFrontCommand.ts?raw";
 import texturesHelperSource from "../../../src/front/Phaser/Helpers/TexturesHelper.ts?raw";
 import entityRelatedEditorToolSource from "../../../src/front/Phaser/Game/MapEditor/Tools/EntityRelatedEditorTool.ts?raw";
 import modifyCustomEntityCommandSource from "../../../src/front/Phaser/Game/MapEditor/Commands/Entity/ModifyCustomEntityFrontCommand.ts?raw";
@@ -14,6 +18,12 @@ import entitySource from "../../../src/front/Phaser/ECS/Entity.ts?raw";
 import entityEditorToolSource from "../../../src/front/Phaser/Game/MapEditor/Tools/EntityEditorTool.ts?raw";
 
 describe("entity prefab default size", () => {
+    it("normalizes fractional display sizes before storing or sending an entity", () => {
+        expect(normalizeEntityDimensions({ width: 32, height: 28.48 })).toEqual({ width: 32, height: 28 });
+        expect(roomConnectionSource.match(/normalizeEntityDimensions\(/g)).toHaveLength(2);
+        expect(createEntityFrontCommandSource).toContain("normalizeEntityDimensions(entityDimensions)");
+    });
+
     it("finds the opaque rectangle in one RGBA buffer", () => {
         const pixels = new Uint8ClampedArray(5 * 4 * 4);
         for (const [x, y, alpha] of [
@@ -49,6 +59,19 @@ describe("entity prefab default size", () => {
 
     it("keeps the raster's natural dimensions when grid width and height are stored", () => {
         expect(getEntityDisplaySize(512, 256, 1, 3)).toEqual({ width: 512, height: 256 });
+    });
+
+    it("renders a display-sized prefab at its authored width and height", () => {
+        expect(getEntityDisplaySize(512, 256, 1.5, 2, true)).toEqual({ width: 48, height: 64 });
+    });
+
+    it("migrates buggy natural-size placements without overwriting a user's resize", () => {
+        expect(shouldApplyPrefabDisplayDefaults(512, 256, 512, 256, true)).toBe(true);
+        expect(shouldApplyPrefabDisplayDefaults(undefined, undefined, 512, 256, true)).toBe(true);
+        expect(shouldApplyPrefabDisplayDefaults(96, 48, 512, 256, true)).toBe(false);
+        expect(shouldApplyPrefabDisplayDefaults(512, 256, 512, 256, false)).toBe(false);
+        expect(entitySource).toContain("shouldApplyPrefabDisplayDefaults(");
+        expect(entitySource).toContain("this.setDisplaySize(displaySize.width, displaySize.height)");
     });
 
     it.each([
@@ -141,7 +164,9 @@ describe("entity prefab default size", () => {
         const genericSizeIndex = entityRelatedEditorToolSource.indexOf("getEntityDisplaySize(");
         expect(visibleBoundsIndex).toBeGreaterThan(-1);
         expect(treeSizeIndex).toBeGreaterThan(visibleBoundsIndex);
-        expect(genericSizeIndex).toBeGreaterThan(treeSizeIndex);
+        expect(genericSizeIndex).toBeGreaterThan(visibleBoundsIndex);
+        expect(entityRelatedEditorToolSource).toContain("entityPrefab.defaultDimensionsControlDisplay");
+        expect(entityRelatedEditorToolSource).toContain("? getEntityDisplaySize(");
         expect(entityRelatedEditorToolSource).toContain("visibleBounds?.width");
         expect(entityRelatedEditorToolSource).toContain("visibleBounds?.height");
         expect(entityRelatedEditorToolSource).toContain('entityPrefab.vegetation?.category === "tree"');

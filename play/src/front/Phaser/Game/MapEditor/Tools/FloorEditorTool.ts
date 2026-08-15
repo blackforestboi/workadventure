@@ -50,9 +50,9 @@ import {
 } from "../../../../Stores/MapEditorFloorStore";
 import { mapEditorVegetationStore } from "../../../../Stores/MapEditorVegetationStore";
 import {
-    BUILT_IN_TERRAIN_TILESET,
     getBuiltInTerrainAutotile,
-    getBuiltInTerrainTileIds,
+    getBuiltInTerrainTileIdsForTileset,
+    getBuiltInTerrainTileset,
     getBuiltInWaterFillTileId,
 } from "../../../../Services/BuiltInTerrainCatalog";
 import { DEPTH_OVERLAY_INDEX } from "../../DepthIndexes";
@@ -496,7 +496,7 @@ export class FloorEditorTool extends MapEditorTool {
             (candidate) =>
                 gid >= candidate.firstGid &&
                 gid < candidate.firstGid + candidate.tileCount &&
-                BUILT_IN_TERRAIN_TILESET.matchesImage(candidate.image),
+                getBuiltInTerrainTileset(candidate.image) !== undefined,
         );
         if (tileset === undefined) return undefined;
         const autotile = getBuiltInTerrainAutotile(gid - tileset.firstGid);
@@ -508,7 +508,7 @@ export class FloorEditorTool extends MapEditorTool {
             (candidate) =>
                 gid >= candidate.firstGid &&
                 gid < candidate.firstGid + candidate.tileCount &&
-                BUILT_IN_TERRAIN_TILESET.matchesImage(candidate.image),
+                getBuiltInTerrainTileset(candidate.image) !== undefined,
         );
         if (tileset === undefined) return undefined;
         const fillTileId = getBuiltInWaterFillTileId(gid - tileset.firstGid);
@@ -955,20 +955,27 @@ export class FloorEditorTool extends MapEditorTool {
                 const frame = this.scene.textures.getFrame(prefab.imagePath);
                 const visibleBounds =
                     prefab.vegetation?.category === "tree" ? TexturesHelper.getVisibleBounds(frame) : undefined;
-                const displaySize =
-                    getVegetationDisplaySize(
-                        frame.width,
-                        frame.height,
-                        prefab.vegetation?.category,
-                        visibleBounds?.width,
-                        visibleBounds?.height,
-                    ) ??
-                    getEntityDisplaySize(
-                        frame.width,
-                        frame.height,
-                        prefab.defaultSizeInTiles,
-                        prefab.defaultHeightInTiles,
-                    );
+                const displaySize = prefab.defaultDimensionsControlDisplay
+                    ? getEntityDisplaySize(
+                          frame.width,
+                          frame.height,
+                          prefab.defaultSizeInTiles,
+                          prefab.defaultHeightInTiles,
+                          true,
+                      )
+                    : (getVegetationDisplaySize(
+                          frame.width,
+                          frame.height,
+                          prefab.vegetation?.category,
+                          visibleBounds?.width,
+                          visibleBounds?.height,
+                      ) ??
+                      getEntityDisplaySize(
+                          frame.width,
+                          frame.height,
+                          prefab.defaultSizeInTiles,
+                          prefab.defaultHeightInTiles,
+                      ));
                 return {
                     prefabRef,
                     footprintWidth: Math.max(1, ...(prefab.collisionGrid?.map((row) => row.length) ?? [])),
@@ -1647,7 +1654,7 @@ export class FloorEditorTool extends MapEditorTool {
                 !("image" in tileset) ||
                 typeof tileset.image !== "string" ||
                 (!tileset.image.includes("/teapot/tileset-assets/") &&
-                    !BUILT_IN_TERRAIN_TILESET.matchesImage(tileset.image))
+                    getBuiltInTerrainTileset(tileset.image) === undefined)
             )
                 continue;
             const firstGid = tileset.firstgid ?? 1;
@@ -1721,9 +1728,11 @@ export class FloorEditorTool extends MapEditorTool {
                     : (tilesets[index + 1]?.firstgid ?? firstGid + 1) - firstGid;
             const columns = "columns" in tileset && typeof tileset.columns === "number" ? tileset.columns : 1;
             const resolvedImage = resolveTilesetImage(tileset.image, this.scene.getMapUrl());
-            const tileGids = BUILT_IN_TERRAIN_TILESET.matchesImage(resolvedImage)
-                ? getBuiltInTerrainTileIds().map((tileId) => firstGid + tileId)
-                : getTerrainTilesetGids(firstGid, tileCount, terrainGids);
+            const builtInTileset = getBuiltInTerrainTileset(resolvedImage);
+            const tileGids =
+                builtInTileset !== undefined
+                    ? getBuiltInTerrainTileIdsForTileset(builtInTileset.id).map((tileId) => firstGid + tileId)
+                    : getTerrainTilesetGids(firstGid, tileCount, terrainGids);
             if (tileGids.length === 0) return [];
             return [
                 {
@@ -1837,10 +1846,12 @@ function getMatchingTerrainFamilyGids(map: ITiledMap, selectedGid: number): Read
         selectedTileset.firstgid === undefined ||
         !("image" in selectedTileset) ||
         typeof selectedTileset.image !== "string" ||
-        !BUILT_IN_TERRAIN_TILESET.matchesImage(selectedTileset.image)
+        getBuiltInTerrainTileset(selectedTileset.image) === undefined
     ) {
         return new Set([selectedGid]);
     }
+    const selectedBuiltInTileset = getBuiltInTerrainTileset(selectedTileset.image);
+    if (selectedBuiltInTileset === undefined) return new Set([selectedGid]);
     const localAutotile = getBuiltInTerrainAutotile(selectedGid - selectedTileset.firstgid);
     if (localAutotile === undefined) return new Set([selectedGid]);
 
@@ -1850,7 +1861,7 @@ function getMatchingTerrainFamilyGids(map: ITiledMap, selectedGid: number): Read
             tileset.firstgid === undefined ||
             !("image" in tileset) ||
             typeof tileset.image !== "string" ||
-            !BUILT_IN_TERRAIN_TILESET.matchesImage(tileset.image)
+            getBuiltInTerrainTileset(tileset.image)?.id !== selectedBuiltInTileset.id
         ) {
             continue;
         }
@@ -1866,10 +1877,12 @@ function getTerrainAutotileFamilies(map: ITiledMap): TerrainAutotileFamily[] {
             tileset.firstgid === undefined ||
             !("image" in tileset) ||
             typeof tileset.image !== "string" ||
-            !BUILT_IN_TERRAIN_TILESET.matchesImage(tileset.image)
+            getBuiltInTerrainTileset(tileset.image) === undefined
         )
             continue;
-        for (const group of BUILT_IN_TERRAIN_TILESET.groups) {
+        const builtInTileset = getBuiltInTerrainTileset(tileset.image);
+        if (builtInTileset === undefined) continue;
+        for (const group of builtInTileset.groups) {
             if (group.id === "water" || group.autotile === undefined) continue;
             const translated = translateTerrainAutotileTiles(group.autotile, tileset.firstgid);
             families.push({ tiles: translated, gids: new Set(Object.values(translated)) });
@@ -1894,8 +1907,9 @@ function isShiftDown(pointer: Phaser.Input.Pointer, shiftKey: Phaser.Input.Keybo
 
 function resolveTilesetImage(image: string, mapUrl: string): string {
     // Treat root-relative legacy atlas entries and newly persisted absolute entries alike.
-    if (BUILT_IN_TERRAIN_TILESET.matchesImage(image)) {
-        return BUILT_IN_TERRAIN_TILESET.image;
+    const builtInTileset = getBuiltInTerrainTileset(image);
+    if (builtInTileset !== undefined) {
+        return builtInTileset.image;
     }
 
     try {

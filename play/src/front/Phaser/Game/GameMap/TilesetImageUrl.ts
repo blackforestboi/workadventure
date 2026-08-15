@@ -1,4 +1,4 @@
-import { BUILT_IN_TERRAIN_TILESET } from "../../../../common/Teapot/BuiltInTerrainCatalog";
+import { getBuiltInMapTileset } from "../../../../common/Teapot/BuiltInMapTilesetCatalog";
 
 /**
  * Resolves a tileset image independently from the map document's host.
@@ -8,8 +8,9 @@ import { BUILT_IN_TERRAIN_TILESET } from "../../../../common/Teapot/BuiltInTerra
  * root-relative URL, which otherwise incorrectly targets map-storage.
  */
 export function resolveTilesetImageUrl(image: string, mapUrl: string, playOrigin: string): string {
-    if (BUILT_IN_TERRAIN_TILESET.matchesImage(image)) {
-        return new URL(BUILT_IN_TERRAIN_TILESET.image, playOrigin).toString();
+    const builtInTileset = getBuiltInMapTileset(image);
+    if (builtInTileset !== undefined) {
+        return new URL(builtInTileset.image, playOrigin).toString();
     }
 
     return new URL(image, mapUrl).toString();

@@ -3,18 +3,32 @@ import { CreateEntityCommand } from "@workadventure/map-editor";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
 import type { RoomConnection } from "../../../../../Connection/RoomConnection";
+import { normalizeEntityDimensions } from "../../../../../Utils/EntityPrefabSize";
 import { DeleteEntityFrontCommand } from "./DeleteEntityFrontCommand";
 
 export class CreateEntityFrontCommand extends CreateEntityCommand implements FrontCommandInterface {
+    private readonly entityDimensions: EntityDimensions;
+
     constructor(
         wamFile: WamFile,
         entityId: string | undefined,
         entityData: WAMEntityData,
         commandId: string | undefined,
         private entitiesManager: EntitiesManager,
-        private entityDimensions: EntityDimensions,
+        entityDimensions: EntityDimensions,
     ) {
-        super(wamFile, entityId, entityData, commandId);
+        const normalizedDimensions = normalizeEntityDimensions(entityDimensions);
+        super(
+            wamFile,
+            entityId,
+            {
+                ...entityData,
+                width: normalizedDimensions.width,
+                height: normalizedDimensions.height,
+            },
+            commandId,
+        );
+        this.entityDimensions = normalizedDimensions;
     }
 
     public async execute(): Promise<void> {

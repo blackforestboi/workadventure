@@ -118,16 +118,31 @@ describe("getTerrainModeOptions", () => {
         expect(entityUploadSource).toContain(
             "createWallFoundationCollisionGrid(WALL_DEFAULT_WIDTH_TILES, WALL_DEFAULT_HEIGHT_TILES)",
         );
+        expect(entityUploadSource).toContain("projectionDepthTiles: WALL_DEFAULT_PROJECTION_DEPTH_TILES");
         expect(customEntityEditionFormSource).toContain("defaultSizeInTiles = WALL_DEFAULT_WIDTH_TILES");
         expect(customEntityEditionFormSource).toContain("defaultHeightInTiles = WALL_DEFAULT_HEIGHT_TILES");
         expect(customEntityEditionFormSource).toContain(
             "createWallFoundationCollisionGrid(WALL_DEFAULT_WIDTH_TILES, WALL_DEFAULT_HEIGHT_TILES)",
         );
+        expect(customEntityEditionFormSource).toContain(
+            "initialWall?.projectionDepthTiles ?? WALL_DEFAULT_PROJECTION_DEPTH_TILES",
+        );
     });
 
     it("presents water as one borderless underlay instead of shoreline variants", () => {
-        expect(floorEditorSource).toContain('group.autotile === undefined || group.id === "water"');
+        expect(floorEditorSource).toMatch(
+            /group\.autotile === undefined \|\|\s+terrainFamily\.group\.id === "water"/,
+        );
         expect(floorEditorSource).toContain('? " · underlay"');
+    });
+
+    it("keeps legacy tilesheets searchable and keyboard-accessible without offering terrain shapes", () => {
+        expect(floorEditorSource).toContain("BUILT_IN_LEGACY_MAP_TILESETS");
+        expect(floorEditorSource).toContain("Legacy map assets");
+        expect(floorEditorSource).toContain("matchesLegacyTileset");
+        expect(floorEditorSource).toContain("aria-pressed={gid !== undefined && state.selectedGid === gid}");
+        expect(floorEditorSource).toContain("${tileset.name} from ${tileset.source}");
+        expect(floorEditorSource).not.toContain("selectLibraryShape(state.selectedLayer, tileset");
     });
 
     it("keeps path modes active while treating a zero floor brush as the eraser", () => {

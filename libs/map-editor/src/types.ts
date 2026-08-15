@@ -291,12 +291,13 @@ export const CollisionGrid = z.array(z.array(z.number()));
 export const VegetationCategory = z.enum(["tree", "bush", "grass", "other"]);
 
 export const WallPlacementOrientation = z.enum(["horizontal", "vertical", "diagonal-up", "diagonal-down"]);
+export const WALL_DEFAULT_PROJECTION_DEPTH_TILES = 1;
 
 /** Semantic metadata for an image asset that can be painted as a continuous wall. */
 export const WallProfile = z.object({
     version: z.literal(1),
     style: z.string().min(1).max(80).optional(),
-    projectionDepthTiles: z.number().finite().min(0.25).max(1).default(0.5),
+    projectionDepthTiles: z.number().finite().min(0.25).max(1).default(WALL_DEFAULT_PROJECTION_DEPTH_TILES),
 });
 
 /** Per-instance rendering direction. Collision remains defined by the prefab. */
@@ -366,6 +367,7 @@ export const EntityRawPrefab = z.object({
     animation: VisualAssetAnimation.optional(),
     defaultSizeInTiles: z.number().positive().optional(),
     defaultHeightInTiles: z.number().positive().optional(),
+    defaultDimensionsControlDisplay: z.boolean().optional(),
     previewPadding: z.number().int().min(-64).max(64).optional(),
     previewOffsetX: z.number().int().min(-512).max(512).optional(),
     previewOffsetY: z.number().int().min(-512).max(512).optional(),
@@ -505,6 +507,7 @@ export const EntityCollectionRaw = z.object({
     collectionName: z.string(),
     tags: z.array(z.string()),
     collection: z.array(EntityRawPrefab),
+    defaultDimensionsControlDisplay: z.boolean().optional(),
     version: z.string().optional(),
 });
 

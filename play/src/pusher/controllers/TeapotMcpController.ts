@@ -11,8 +11,10 @@ import {
 import {
     BUILT_IN_ATLAS_ASSET_KINDS,
     BUILT_IN_ATLAS_ASSETS,
+    ALL_BUILT_IN_TERRAIN_ASSETS,
     BUILT_IN_TERRAIN_ASSETS,
     BUILT_IN_TERRAIN_CATALOG_VERSION,
+    BUILT_IN_TERRAIN_TILESETS,
     BUILT_IN_TERRAIN_TYPES,
     searchBuiltInAtlasAssets,
     searchBuiltInTerrainAssets,
@@ -283,8 +285,14 @@ export class TeapotMcpController extends BaseHttpController {
                         tileWidth: 32,
                         tileHeight: 32,
                     },
+                    tilesets: BUILT_IN_TERRAIN_TILESETS.map(({ id, image }) => ({
+                        id,
+                        image,
+                        tileWidth: 32,
+                        tileHeight: 32,
+                    })),
                     total: matches.length,
-                    available: BUILT_IN_TERRAIN_ASSETS.length,
+                    available: ALL_BUILT_IN_TERRAIN_ASSETS.length,
                     items,
                 });
                 return Promise.resolve();

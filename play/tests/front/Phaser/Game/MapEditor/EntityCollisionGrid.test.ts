@@ -5,6 +5,7 @@ import {
     getWallCollisionGridFrame,
 } from "../../../../../src/front/Phaser/Game/MapEditor/Entities/EntityCollisionGrid";
 import entityResizeHandlesSource from "../../../../../src/front/Phaser/Game/MapEditor/Entities/EntityResizeHandles.ts?raw";
+import entitySource from "../../../../../src/front/Phaser/ECS/Entity.ts?raw";
 import gameMapFrontWrapperSource from "../../../../../src/front/Phaser/Game/GameMap/GameMapFrontWrapper.ts?raw";
 import gameSceneSource from "../../../../../src/front/Phaser/Game/GameScene.ts?raw";
 import entityEditorToolSource from "../../../../../src/front/Phaser/Game/MapEditor/Tools/EntityEditorTool.ts?raw";
@@ -13,6 +14,48 @@ import wallTextureProjectorSource from "../../../../../src/front/Phaser/Game/Map
 import updateEntityFrontCommandSource from "../../../../../src/front/Phaser/Game/MapEditor/Commands/Entity/UpdateEntityFrontCommand.ts?raw";
 
 describe("EntityCollisionGrid", () => {
+    it("replaces legacy stored wall dimensions with the exact orientation geometry", () => {
+        expect(entitySource).toContain("const wallSize = getWallRenderSize(");
+        expect(entitySource).toContain("const migratedPosition = migrateLegacyWallPosition(");
+        expect(entitySource).toContain("this.setPosition(migratedPosition.x, migratedPosition.y);");
+        expect(entitySource).toContain("this.entityData.width = wallSize.width;");
+        expect(entitySource).toContain("this.entityData.height = wallSize.height;");
+        expect(wallTextureProjectorSource).toContain("entity.setDisplaySize(wallSize.width, wallSize.height);");
+    });
+
+    it("uses the same tile-edge anchor for wall preview and saved placement", () => {
+        expect(entityEditorToolSource).toContain("const topLeft = getWallTopLeftPosition(");
+        expect(entityEditorToolSource).toContain("snapWorldPointToWallPlacement(");
+        expect(entityEditorToolSource).not.toContain("snapWorldPointToWallTile(");
+        expect(entityEditorToolSource).toContain("x: topLeft.x,");
+        expect(entityEditorToolSource).toContain("y: topLeft.y,");
+        expect(entityEditorToolSource).toContain("this.setWallPreviewPosition(tile, orientation);");
+    });
+
+    it("serializes exact integer wall dimensions instead of Phaser display floats", () => {
+        const start = entityEditorToolSource.indexOf("private placeWallTile");
+        const end = entityEditorToolSource.indexOf("private updateWallPreviewForActivePointer", start);
+        const placeWallTileSource = entityEditorToolSource.slice(start, end);
+
+        expect(placeWallTileSource).toContain("const wallSize = getWallRenderSize(");
+        expect(placeWallTileSource).toContain("width: wallSize.width,");
+        expect(placeWallTileSource).toContain("height: wallSize.height,");
+        expect(placeWallTileSource).not.toContain("width: this.entityPrefabPreview.displayWidth");
+        expect(placeWallTileSource).not.toContain("height: this.entityPrefabPreview.displayHeight");
+    });
+
+    it("cycles and locks wall placement to the selected Shift rotation state", () => {
+        const start = entityEditorToolSource.indexOf("private startWallDrag");
+        const end = entityEditorToolSource.indexOf("private extendWallDrag", start);
+        const startWallDragSource = entityEditorToolSource.slice(start, end);
+
+        expect(entityEditorToolSource).toContain(
+            "this.wallPlacementOrientation = getNextWallPlacementOrientation(this.wallPlacementOrientation)",
+        );
+        expect(startWallDragSource).toContain("this.wallDragOrientation = this.wallPlacementOrientation;");
+        expect(entityEditorToolSource).not.toContain('this.shiftKey?.isDown ? "diagonal-down" : "horizontal"');
+    });
+
     it("places a vertical wall on a one-pixel blocking tile edge", () => {
         const frame = getWallCollisionGridFrame(
             [
@@ -68,11 +111,20 @@ describe("EntityCollisionGrid", () => {
         ]);
     });
 
-    it("draws the selected-object outline as the collision grid tiles", () => {
+    it("draws the asset's grid inside the rendered-object resize outline", () => {
         expect(entityResizeHandlesSource).toContain("getCollisionFrameBounds()");
         expect(entityResizeHandlesSource).toContain("this.outline.lineBetween");
-        expect(entityResizeHandlesSource).toContain("width: frame.width");
-        expect(entityResizeHandlesSource).toContain("height: frame.height");
+        expect(entityResizeHandlesSource).toContain("const bounds = this.getBounds();");
+        expect(entityResizeHandlesSource).toContain("const tileWidth = bounds.width / columns;");
+        expect(entityResizeHandlesSource).toContain("const tileHeight = bounds.height / collisionGrid.length;");
+    });
+
+    it("scales display-sized prefab collision grids with the rendered sprite", () => {
+        expect(entitySource).toContain("this.prefab.defaultDimensionsControlDisplay");
+        expect(entitySource).toContain("? this.width");
+        expect(entitySource).toContain("? this.height");
+        expect(entityEditorToolSource).toContain("? this.entityPrefabPreview.width");
+        expect(entityEditorToolSource).toContain("? this.entityPrefabPreview.height");
     });
 
     it("keeps entity collision geometry out of the map tile collision layer", () => {

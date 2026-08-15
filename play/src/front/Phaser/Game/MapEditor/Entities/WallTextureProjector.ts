@@ -2,6 +2,7 @@ import type { EntityPrefab, WallPlacementOrientation } from "@workadventure/map-
 import {
     getWallPlacementSize,
     getWallProjectionRise,
+    getWallRenderSize,
     isDiagonalWallOrientation,
     WALL_EDGE_RENDER_WIDTH,
     WALL_TILE_SIZE,
@@ -9,6 +10,65 @@ import {
 import type Phaser from "phaser";
 
 type WallTexture = { key: string; sourceWidth: number; sourceHeight: number; rise: number };
+type DiagonalWallOrientation = Extract<WallPlacementOrientation, "diagonal-up" | "diagonal-down">;
+
+export type WallProjectionTransform = {
+    scaleX: number;
+    scaleY: number;
+    shearY: number;
+    offsetY: number;
+};
+
+export function getWallProjectionTransform(
+    sourceWidth: number,
+    sourceHeight: number,
+    projectedWidth: number,
+    projectedHeight: number,
+    rise: number,
+    orientation: DiagonalWallOrientation,
+): WallProjectionTransform {
+    const direction = orientation === "diagonal-up" ? -1 : 1;
+    return {
+        scaleX: projectedWidth / sourceWidth,
+        scaleY: projectedHeight / sourceHeight,
+        shearY: direction * (rise / sourceWidth),
+        offsetY: orientation === "diagonal-up" ? rise : 0,
+    };
+}
+
+/** Affine-shears the complete source image, then redraws its parallel diagonal borders as crisp pixel lines. */
+export function drawDiagonalWallProjection(
+    context: CanvasRenderingContext2D,
+    source: CanvasImageSource,
+    sourceWidth: number,
+    sourceHeight: number,
+    projectedWidth: number,
+    projectedHeight: number,
+    rise: number,
+    orientation: DiagonalWallOrientation,
+): void {
+    const transform = getWallProjectionTransform(
+        sourceWidth,
+        sourceHeight,
+        projectedWidth,
+        projectedHeight,
+        rise,
+        orientation,
+    );
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.setTransform(transform.scaleX, transform.shearY, 0, transform.scaleY, 0, transform.offsetY);
+    context.drawImage(source, 0, 0);
+    context.restore();
+
+    context.fillStyle = "#000000";
+    for (let x = 0; x < projectedWidth; x += 1) {
+        const progress = projectedWidth <= 1 ? 0 : x / (projectedWidth - 1);
+        const topY = Math.round(orientation === "diagonal-up" ? rise * (1 - progress) : rise * progress);
+        context.fillRect(x, topY, 1, 1);
+        context.fillRect(x, topY + projectedHeight - 1, 1, 1);
+    }
+}
 
 function stableTextureSuffix(value: string): string {
     let hash = 5381;
@@ -25,7 +85,7 @@ function getSourceSize(source: CanvasImageSource): { width: number; height: numb
     return { width: canvas.width, height: canvas.height };
 }
 
-/** Builds and caches a column-projected raster so wall posts stay vertical while its edges recede in depth. */
+/** Builds and caches a full-raster diagonal projection with parallel sloped borders. */
 export function ensureWallTexture(
     scene: Phaser.Scene,
     prefab: EntityPrefab,
@@ -57,22 +117,31 @@ export function ensureWallTexture(
     }
 
     const projectedWidth = WALL_TILE_SIZE;
+    const projectedHeight =
+        getWallPlacementSize(orientation, prefab.defaultSizeInTiles, prefab.defaultHeightInTiles).heightInTiles *
+        WALL_TILE_SIZE;
     const rise = getWallProjectionRise(projectedWidth, prefab.wall.projectionDepthTiles);
-    const direction = orientation === "diagonal-up" ? "up" : "down";
-    const key = `wall-projection:${stableTextureSuffix(`${prefab.imagePath}:${direction}:${rise}`)}`;
+    const diagonalOrientation: DiagonalWallOrientation =
+        orientation === "diagonal-up" ? "diagonal-up" : "diagonal-down";
+    const key = `wall-projection-v5:${stableTextureSuffix(
+        `${prefab.imagePath}:${diagonalOrientation}:${projectedHeight}:${rise}`,
+    )}`;
     if (!scene.textures.exists(key)) {
         const canvas = document.createElement("canvas");
         canvas.width = projectedWidth;
-        canvas.height = sourceHeight + rise;
+        canvas.height = projectedHeight + rise;
         const context = canvas.getContext("2d");
         if (context === null) return { key: prefab.imagePath, sourceWidth, sourceHeight, rise: 0 };
-        context.imageSmoothingEnabled = false;
-        for (let x = 0; x < projectedWidth; x += 1) {
-            const progress = projectedWidth <= 1 ? 0 : x / (projectedWidth - 1);
-            const offset = Math.round(direction === "up" ? rise * (1 - progress) : rise * progress);
-            const sourceX = Math.min(sourceWidth - 1, Math.floor(progress * sourceWidth));
-            context.drawImage(source, sourceX, 0, 1, sourceHeight, x, offset, 1, sourceHeight);
-        }
+        drawDiagonalWallProjection(
+            context,
+            source,
+            sourceWidth,
+            sourceHeight,
+            projectedWidth,
+            projectedHeight,
+            rise,
+            diagonalOrientation,
+        );
         scene.textures.addCanvas(key, canvas);
     }
     return { key, sourceWidth: projectedWidth, sourceHeight, rise };
@@ -89,6 +158,8 @@ export function applyWallTextureToEntity(
         return;
     }
     entity.setTexture(ensureWallTexture(scene, prefab, orientation).key);
+    const wallSize = getWallRenderSize(orientation, prefab.defaultSizeInTiles, prefab.defaultHeightInTiles);
+    entity.setDisplaySize(wallSize.width, wallSize.height);
 }
 
 export function applyWallTextureToPreview(
@@ -101,14 +172,8 @@ export function applyWallTextureToPreview(
         preview.setTexture(prefab.imagePath);
         return;
     }
-    const placementSize = getWallPlacementSize(orientation, prefab.defaultSizeInTiles, prefab.defaultHeightInTiles);
-    const baseDisplayWidth =
-        placementSize.widthInTiles === 0 ? WALL_EDGE_RENDER_WIDTH : placementSize.widthInTiles * WALL_TILE_SIZE;
-    const baseDisplayHeight = placementSize.heightInTiles * WALL_TILE_SIZE;
     const texture = ensureWallTexture(scene, prefab, orientation);
     preview.setTexture(texture.key);
-    const projectedRise = isDiagonalWallOrientation(orientation)
-        ? baseDisplayWidth * prefab.wall.projectionDepthTiles
-        : 0;
-    preview.setDisplaySize(baseDisplayWidth, baseDisplayHeight + projectedRise);
+    const wallSize = getWallRenderSize(orientation, prefab.defaultSizeInTiles, prefab.defaultHeightInTiles);
+    preview.setDisplaySize(wallSize.width, wallSize.height);
 }

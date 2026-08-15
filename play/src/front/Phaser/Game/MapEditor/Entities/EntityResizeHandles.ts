@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import type { Entity } from "../../../ECS/Entity";
 import type { GameScene } from "../../GameScene";
+import { DEPTH_OVERLAY_INDEX } from "../../DepthIndexes";
 import {
     resizeBoundsFromCorner,
     type EntityBounds as Bounds,
@@ -8,6 +9,9 @@ import {
 } from "./EntityResizeMath";
 
 const HANDLE_SIZE = 10;
+// Resize handles are editor chrome, not world content. Keep them above the
+// foreground map band so terrain overlays cannot obscure them.
+const RESIZE_CONTROLS_DEPTH = DEPTH_OVERLAY_INDEX + 100;
 
 export class EntityResizeHandles {
     private readonly outline: Phaser.GameObjects.Graphics;
@@ -31,8 +35,8 @@ export class EntityResizeHandles {
     }
 
     public update(): void {
-        const bounds = this.getOutlineBounds();
-        const depth = this.entity.depth + 10;
+        const bounds = this.getBounds();
+        const depth = RESIZE_CONTROLS_DEPTH;
         this.outline.clear().lineStyle(2, 0x53d8fb, 0.95).strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
 
         const collisionGrid = this.entity.getCollisionFrameBounds().collisionGrid;
@@ -71,7 +75,7 @@ export class EntityResizeHandles {
         this.scene.input.setDraggable(handle);
         handle.on(Phaser.Input.Events.DRAG_START, () => {
             this.dragStart = this.getBounds();
-            this.dragStartFrame = this.getOutlineBounds();
+            this.dragStartFrame = this.dragStart;
             this.currentBounds = this.dragStart;
             this.entity.beginEditorResize(this.dragStart);
         });
@@ -112,24 +116,6 @@ export class EntityResizeHandles {
     }
 
     private getBounds(): Bounds {
-        return {
-            x: this.entity.x,
-            y: this.entity.y,
-            width: this.entity.displayWidth,
-            height: this.entity.displayHeight,
-        };
-    }
-
-    private getOutlineBounds(): Bounds {
-        const frame = this.entity.getCollisionFrameBounds();
-        if (!frame.collisionGrid?.length || !frame.collisionGrid[0]?.length) {
-            return this.getBounds();
-        }
-        return {
-            x: frame.x,
-            y: frame.y,
-            width: frame.width,
-            height: frame.height,
-        };
+        return this.entity.getEditorBounds();
     }
 }

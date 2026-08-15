@@ -3,6 +3,12 @@
 import type { Application, Request, RequestHandler, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
 
+const { checkTokenAuth, fetchMemberDataByUuid, verifyJWTToken } = vi.hoisted(() => ({
+    checkTokenAuth: vi.fn(),
+    fetchMemberDataByUuid: vi.fn(),
+    verifyJWTToken: vi.fn(),
+}));
+
 vi.mock("../../src/pusher/enums/EnvironmentVariable", async () => ({
     ...(await import("./mocks/pusherEnvironmentVariableMock")),
     TEAPOT_X_CLIENT_ID: "x-client",
@@ -10,7 +16,18 @@ vi.mock("../../src/pusher/enums/EnvironmentVariable", async () => ({
 }));
 
 vi.mock("../../src/pusher/services/AdminService", () => ({
-    adminService: { getCapabilities: vi.fn().mockResolvedValue({}) },
+    adminService: {
+        fetchMemberDataByUuid,
+        getCapabilities: vi.fn().mockResolvedValue({}),
+    },
+}));
+
+vi.mock("../../src/pusher/services/JWTTokenManager", () => ({
+    jwtTokenManager: { verifyJWTToken },
+}));
+
+vi.mock("../../src/pusher/services/OpenIDClient", () => ({
+    openIDClient: { checkTokenAuth },
 }));
 
 vi.mock("../../src/pusher/services/LoginProvider", () => ({
@@ -49,12 +66,57 @@ class RouteRecordingApp {
 
 class RecordingResponse {
     readonly cookie = vi.fn();
+    readonly json = vi.fn();
     readonly redirect = vi.fn();
     readonly send = vi.fn();
     readonly status = vi.fn(() => this);
 }
 
 describe("AuthenticateController", () => {
+    it("accepts a valid local session after its embedded OIDC access token expires", async () => {
+        verifyJWTToken.mockResolvedValue({
+            identifier: "john.doe@example.com",
+            accessToken: "expired-oidc-access-token",
+            tags: ["admin"],
+        });
+        fetchMemberDataByUuid.mockResolvedValue({
+            status: "ok",
+            userUuid: "john.doe@example.com",
+            email: "john.doe@example.com",
+        });
+        checkTokenAuth.mockRejectedValue(new Error("OIDC access token expired"));
+
+        const app = new RouteRecordingApp();
+        const response = new RecordingResponse();
+        new AuthenticateController(app as unknown as Application);
+
+        const handler = app.getRoutes.get("/me");
+        if (handler === undefined) throw new Error("Me route was not registered");
+
+        await handler(
+            {
+                header: vi.fn(),
+                method: "GET",
+                originalUrl: "/me",
+                query: {
+                    token: "valid-workadventure-session",
+                    playUri: "http://play.workadventure.localhost/~/maps/world.wam",
+                },
+            } as unknown as Request,
+            response as unknown as Response,
+            vi.fn(),
+        );
+
+        expect(checkTokenAuth).not.toHaveBeenCalled();
+        expect(response.status).not.toHaveBeenCalledWith(401);
+        expect(response.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                authToken: "valid-workadventure-session",
+                userUuid: "john.doe@example.com",
+            }),
+        );
+    });
+
     it("persists playUri before redirecting to X sign-in", async () => {
         const app = new RouteRecordingApp();
         const response = new RecordingResponse();

@@ -8,6 +8,7 @@
         Direction,
         ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT,
         WALL_DEFAULT_HEIGHT_TILES,
+        WALL_DEFAULT_PROJECTION_DEPTH_TILES,
         WALL_DEFAULT_WIDTH_TILES,
     } from "@workadventure/map-editor";
     import AssetGenerationPanel from "../../../AssetGeneration/AssetGenerationPanel.svelte";
@@ -228,7 +229,7 @@
                 ? {
                       version: 1,
                       style: "Wall",
-                      projectionDepthTiles: 0.5,
+                      projectionDepthTiles: WALL_DEFAULT_PROJECTION_DEPTH_TILES,
                   }
                 : undefined,
         };

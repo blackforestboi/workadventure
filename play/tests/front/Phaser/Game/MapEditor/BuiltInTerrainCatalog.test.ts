@@ -2,8 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import {
     BUILT_IN_ATLAS_ASSETS,
+    BUILT_IN_LEGACY_MAP_TILESETS,
+    BUILT_IN_MAP_TILESETS,
+    BUILT_IN_SUMMER_TERRAIN_ASSETS,
+    BUILT_IN_SUMMER_TERRAIN_TILESET,
     BUILT_IN_TERRAIN_ASSETS,
     BUILT_IN_TERRAIN_TILESET,
+    BUILT_IN_TERRAIN_TILESETS,
+    getBuiltInTerrainAssetsForTileset,
+    getBuiltInMapTileset,
+    getBuiltInTerrainTileset,
+    getBuiltInTerrainTileIdsForTileset,
     getBuiltInTerrainTileIds,
     getBuiltInWaterFillTileId,
     searchBuiltInAtlasAssets,
@@ -103,5 +112,63 @@ describe("built-in terrain catalog", () => {
             ),
         ).toBe(true);
         expect(BUILT_IN_TERRAIN_TILESET.matchesImage("/resources/tilesets/floor_tiles.png")).toBe(false);
+    });
+
+    it("registers the Craftpix Summer terrain fragments and both shape-ready road families", () => {
+        expect(BUILT_IN_TERRAIN_TILESETS).toContain(BUILT_IN_SUMMER_TERRAIN_TILESET);
+        expect(BUILT_IN_SUMMER_TERRAIN_TILESET).toMatchObject({
+            id: "craftpix-summer-terrain",
+            columns: 32,
+            rows: 82,
+            tileCount: 2624,
+        });
+        expect(BUILT_IN_SUMMER_TERRAIN_TILESET.groups).toHaveLength(23);
+        expect(BUILT_IN_SUMMER_TERRAIN_TILESET.groups.map(({ name }) => name)).toEqual(
+            expect.arrayContaining([
+                "Summer meadow texture",
+                "Summer river — bend",
+                "Summer sandstone path",
+                "Summer stone path",
+            ]),
+        );
+
+        const roadGroups = BUILT_IN_SUMMER_TERRAIN_TILESET.groups.filter(({ autotile }) => autotile !== undefined);
+        expect(roadGroups).toHaveLength(2);
+        expect(roadGroups.every(({ autotile }) => Object.values(autotile ?? {}).length === 13)).toBe(true);
+
+        const tileIds = getBuiltInTerrainTileIdsForTileset(BUILT_IN_SUMMER_TERRAIN_TILESET.id);
+        expect(tileIds).toHaveLength(BUILT_IN_SUMMER_TERRAIN_ASSETS.length);
+        expect(new Set(tileIds)).toHaveLength(tileIds.length);
+        expect(tileIds.every((tileId) => tileId >= 1024 && tileId < BUILT_IN_SUMMER_TERRAIN_TILESET.tileCount)).toBe(
+            true,
+        );
+        expect(getBuiltInTerrainAssetsForTileset(BUILT_IN_SUMMER_TERRAIN_TILESET.id)).toEqual(
+            BUILT_IN_SUMMER_TERRAIN_ASSETS,
+        );
+        expect(
+            getBuiltInTerrainTileset(
+                "http://play.workadventure.localhost/collections/CraftpixSummer/assets/terrain/craftpix-summer-terrain.png",
+            )?.id,
+        ).toBe(BUILT_IN_SUMMER_TERRAIN_TILESET.id);
+    });
+
+    it("registers every historical WorkAdventure map sheet separately from terrain metadata", () => {
+        expect(BUILT_IN_LEGACY_MAP_TILESETS).toHaveLength(19);
+        expect(BUILT_IN_LEGACY_MAP_TILESETS.map(({ category }) => category)).toEqual(
+            expect.arrayContaining(["Walls", "Floors", "Furniture", "Signage", "Decorations", "Streets"]),
+        );
+        expect(
+            BUILT_IN_LEGACY_MAP_TILESETS.every((tileset) => tileset.columns * tileset.rows === tileset.tileCount),
+        ).toBe(true);
+        expect(BUILT_IN_LEGACY_MAP_TILESETS.every((tileset) => tileset.attribution.includes("CC BY-SA 3.0"))).toBe(
+            true,
+        );
+        expect(BUILT_IN_TERRAIN_TILESETS.some((tileset) => tileset.id === "legacy-floor0-walls")).toBe(false);
+        expect(BUILT_IN_MAP_TILESETS).toEqual(expect.arrayContaining([...BUILT_IN_LEGACY_MAP_TILESETS]));
+        expect(
+            getBuiltInMapTileset(
+                "http://play.workadventure.localhost/collections/WorkAdventureLegacy/assets/Floor0/walls2.png",
+            )?.id,
+        ).toBe("legacy-floor0-walls2");
     });
 });

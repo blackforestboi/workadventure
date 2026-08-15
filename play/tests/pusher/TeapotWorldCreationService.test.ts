@@ -73,6 +73,10 @@ describe("TeapotWorldCreationService", () => {
                     url: "https://play.example.test/collections/CraftpixNature/CraftpixNatureCollection.json",
                     type: "file",
                 },
+                {
+                    url: "https://play.example.test/collections/CraftpixSummer/CraftpixSummerCollection.json",
+                    type: "file",
+                },
             ],
         });
     });

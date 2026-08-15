@@ -108,6 +108,7 @@ export class EntitiesCollectionsManager {
                                 animation: entity.animation,
                                 defaultSizeInTiles: entity.defaultSizeInTiles,
                                 defaultHeightInTiles: entity.defaultHeightInTiles,
+                                defaultDimensionsControlDisplay: entity.defaultDimensionsControlDisplay,
                                 previewPadding: entity.previewPadding,
                                 previewOffsetX: entity.previewOffsetX,
                                 previewOffsetY: entity.previewOffsetY,
@@ -261,7 +262,15 @@ export class EntitiesCollectionsManager {
             collectionName: rawCollection.collectionName,
             tags: [...rawCollection.tags],
             collection: rawCollection.collection.map((rawPrefab: EntityRawPrefab) =>
-                this.parseRawEntityPrefab(rawCollection.collectionName, rawPrefab, rawCollectionType),
+                this.parseRawEntityPrefab(
+                    rawCollection.collectionName,
+                    {
+                        ...rawPrefab,
+                        defaultDimensionsControlDisplay:
+                            rawPrefab.defaultDimensionsControlDisplay ?? rawCollection.defaultDimensionsControlDisplay,
+                    },
+                    rawCollectionType,
+                ),
             ),
         };
     }

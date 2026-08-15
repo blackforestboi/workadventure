@@ -1,6 +1,6 @@
 import { Direction, type EntityRawPrefab } from "@workadventure/map-editor";
 import { get } from "svelte/store";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { EntitiesCollectionsManager } from "../../../../src/front/Phaser/Game/MapEditor/EntitiesCollectionsManager";
 
 const uploadedEntity = (name: string): EntityRawPrefab => ({
@@ -13,6 +13,8 @@ const uploadedEntity = (name: string): EntityRawPrefab => ({
 });
 
 describe("EntitiesCollectionsManager", () => {
+    afterEach(() => vi.unstubAllGlobals());
+
     it("upserts a retried custom upload instead of exposing duplicate optimistic catalog entries", async () => {
         const manager = new EntitiesCollectionsManager();
         manager.loadCollections([]);
@@ -75,6 +77,31 @@ describe("EntitiesCollectionsManager", () => {
                 [0, 0],
                 [1, 1],
             ],
+        });
+    });
+
+    it("applies a collection-level rendered-size contract to every prefab", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(() =>
+                Promise.resolve({
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            version: "1.0.0",
+                            collectionName: "Sized collection",
+                            tags: [],
+                            defaultDimensionsControlDisplay: true,
+                            collection: [uploadedEntity("Sized tree")],
+                        }),
+                }),
+            ),
+        );
+        const manager = new EntitiesCollectionsManager();
+        manager.loadCollections([{ url: "https://example.test/collection.json", type: "Default" }]);
+
+        await expect(manager.getEntityPrefab("Sized collection", "generated-tree-id")).resolves.toMatchObject({
+            defaultDimensionsControlDisplay: true,
         });
     });
 });

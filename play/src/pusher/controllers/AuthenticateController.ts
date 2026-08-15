@@ -11,6 +11,7 @@ import type { AuthTokenData } from "../services/JWTTokenManager";
 import { jwtTokenManager } from "../services/JWTTokenManager";
 import { openIDClient } from "../services/OpenIDClient";
 import {
+    ADMIN_API_URL,
     DISABLE_ANONYMOUS,
     FRONT_URL,
     MATRIX_PUBLIC_URI,
@@ -261,7 +262,9 @@ export class AuthenticateController extends BaseHttpController {
                     return;
                 }
 
-                if (authTokenData.authProvider === "x") {
+                // Without an admin back office, the signed WorkAdventure JWT is the local session.
+                // Its embedded OIDC access token can expire earlier and must not invalidate that session.
+                if (authTokenData.authProvider === "x" || !ADMIN_API_URL) {
                     res.json({
                         authToken: token,
                         username: authTokenData.username,
