@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-    normalizeVegetationRectangle,
-    planVegetation,
-    VEGETATION_MAX_SELECTION_TILES,
-    type VegetationPlanningInput,
-} from "../src";
+import { normalizeVegetationRectangle, planVegetation, type VegetationPlanningInput } from "../src";
 
 const treeRef = { collectionName: "nature", id: "pine" };
 const grassRef = { collectionName: "nature", id: "grass" };
@@ -167,10 +162,12 @@ describe("vegetation authoring", () => {
         expect(result.skipped).toEqual([{ x: 0, y: 0, reason: "collision" }]);
     });
 
-    it("rejects oversized selections", () => {
-        expect(() =>
-            planVegetation(input({ rectangle: { x: 0, y: 0, width: VEGETATION_MAX_SELECTION_TILES + 1, height: 1 } })),
-        ).toThrow(/cannot exceed/);
+    it("plans selections larger than 64 by 64 tiles within the placement cap", () => {
+        const result = planVegetation(input({ rectangle: { x: 0, y: 0, width: 65, height: 65 } }));
+
+        expect(result.rectangle).toEqual({ x: 0, y: 0, width: 65, height: 65 });
+        expect(result.placements.length).toBeGreaterThan(0);
+        expect(result.placements.length).toBeLessThanOrEqual(500);
     });
 
     it("rejects presets whose species are unavailable", () => {

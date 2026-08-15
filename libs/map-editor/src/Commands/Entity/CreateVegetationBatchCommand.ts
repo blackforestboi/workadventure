@@ -1,9 +1,5 @@
 import type { VegetationPlacementPlan, WamFile, WAMEntityData } from "../..";
-import {
-    assertVegetationPlacementPlanDigest,
-    VEGETATION_MAX_PLACEMENTS,
-    VEGETATION_MAX_SELECTION_TILES,
-} from "../../Authoring/VegetationAuthoring";
+import { assertVegetationPlacementPlanDigest, VEGETATION_MAX_PLACEMENTS } from "../../Authoring/VegetationAuthoring";
 import { VegetationPlacementPlan as VegetationPlacementPlanSchema } from "../../types";
 import { Command } from "../Command";
 
@@ -21,11 +17,7 @@ export class CreateVegetationBatchCommand extends Command {
 
     public execute(): Promise<void> {
         assertVegetationPlacementPlanDigest(this.plan);
-        if (
-            this.plan.rectangle.width > VEGETATION_MAX_SELECTION_TILES ||
-            this.plan.rectangle.height > VEGETATION_MAX_SELECTION_TILES ||
-            this.plan.placements.length > VEGETATION_MAX_PLACEMENTS
-        )
+        if (this.plan.placements.length > VEGETATION_MAX_PLACEMENTS)
             throw new Error("Vegetation batch exceeds the configured limits");
         const ids = new Set<string>();
         for (const placement of this.plan.placements) {

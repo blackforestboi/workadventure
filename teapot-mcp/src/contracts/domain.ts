@@ -43,8 +43,8 @@ export const TeapotVegetationRectangle = z
   .object({
     x: z.number().int().min(-1_000_000).max(1_000_000),
     y: z.number().int().min(-1_000_000).max(1_000_000),
-    width: z.number().int().positive().max(64),
-    height: z.number().int().positive().max(64),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
   })
   .strict();
 
@@ -451,7 +451,7 @@ export const TEAPOT_AUTHORING_VOCABULARY = {
   },
   vegetation: {
     categories: ["tree", "bush", "grass", "other"],
-    selection: "tile-aligned rectangle up to 64x64 tiles",
+    selection: "positive tile-aligned rectangle",
     maximumAcceptedInstances: 500,
     deterministicPreview:
       "The same map revision, preset revision, rectangle, and seed resolves to the same concrete placements and digest.",

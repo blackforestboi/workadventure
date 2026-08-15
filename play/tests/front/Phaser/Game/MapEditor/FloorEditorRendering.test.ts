@@ -454,6 +454,21 @@ describe("floor editor rendering", () => {
         );
     });
 
+    it("updates only affected elevation chunks during a continuous sculpt", () => {
+        const incrementalRenderSource = elevationRendererSource.match(
+            /public renderElevationUpdates\([\s\S]*?\n {4}}\n\n {4}public updateWorldObjects/,
+        )?.[0];
+
+        expect(incrementalRenderSource).toBeDefined();
+        expect(incrementalRenderSource).toContain("getElevationRenderChunksForUpdates");
+        expect(incrementalRenderSource).toContain("rendered.mesh.vertices =");
+        expect(incrementalRenderSource).not.toContain("this.clearSurfaces()");
+        expect(incrementalRenderSource).not.toContain("capture.draw(");
+        expect(floorEditorToolSource).toContain(
+            "this.scene.getElevationRenderer().renderElevationUpdates(updated, mutation.elevationUpdates)",
+        );
+    });
+
     it("composites water underlays into the floor before applying elevation", () => {
         expect(elevationRendererSource).toContain("ELEVATION_COMPOSITE_LAYER_DATA_KEY");
         expect(elevationRendererSource).toContain(".phaserLayers.filter");

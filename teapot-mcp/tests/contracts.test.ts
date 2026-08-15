@@ -215,7 +215,7 @@ describe("Teapot MCP authoring contracts", () => {
     ).toBe(false);
   });
 
-  it("exposes bounded semantic vegetation presets and deterministic preview receipts", () => {
+  it("exposes semantic vegetation presets and deterministic preview receipts", () => {
     expect(
       TeapotVegetationPreset.safeParse({
         id: "forest",
@@ -234,6 +234,18 @@ describe("Teapot MCP authoring contracts", () => {
         seed: "seed-1",
         rectangle: { x: 0, y: 0, width: 65, height: 1 },
         acceptedCount: 1,
+        skippedCount: 0,
+        digest: "0".repeat(32),
+      }).success,
+    ).toBe(true);
+    expect(
+      TeapotVegetationFillPreview.safeParse({
+        mapRevision: "revision-7",
+        presetId: "forest",
+        presetRevision: 2,
+        seed: "seed-1",
+        rectangle: { x: 0, y: 0, width: 65, height: 1 },
+        acceptedCount: 501,
         skippedCount: 0,
         digest: "0".repeat(32),
       }).success,

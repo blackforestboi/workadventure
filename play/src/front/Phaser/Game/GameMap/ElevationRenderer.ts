@@ -2,11 +2,15 @@ import {
     createElevationSampler,
     ELEVATION_MESH_SUBDIVISIONS,
     ELEVATION_WORLD_LAYER,
+    getElevationCells,
     getElevationRenderChunks,
+    getElevationRenderChunksForUpdates,
     getElevationSurfaceMesh,
     getTileGridOffset,
     tileToWorldTopLeft,
     type ElevationSampler,
+    type ElevationSurfaceBounds,
+    type TeapotElevationUpdate,
     worldToElevatedTileCoordinates,
 } from "@workadventure/map-editor";
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
@@ -22,6 +26,7 @@ type ElevationCompositeSource =
 interface RenderedElevationSurface {
     mesh: Phaser.GameObjects.Mesh2D;
     capture: Phaser.GameObjects.RenderTexture;
+    bounds: ElevationSurfaceBounds;
 }
 
 export const ELEVATION_COMPOSITE_LAYER_DATA_KEY = "teapot:elevationCompositeLayer";
@@ -103,7 +108,7 @@ export class ElevationRenderer {
                     this.scene
                         .getGameRenderLayers()
                         .addToSameMapBand(referenceSource, mesh, referenceSource.depth + 0.5);
-                    this.surfaces.push({ mesh, capture });
+                    this.surfaces.push({ mesh, capture, bounds });
                 } catch (error) {
                     mesh?.destroy();
                     capture.destroy();
@@ -121,6 +126,45 @@ export class ElevationRenderer {
         for (const source of compositeSources) {
             source.setVisible(false);
             this.hiddenSources.add(source);
+        }
+        this.updateWorldObjects();
+        this.scene.markDirty();
+    }
+
+    /** Updates only meshes touched by a sculpt while preserving their captures and unchanged map chunks. */
+    public renderElevationUpdates(map: ITiledMap, updates: readonly TeapotElevationUpdate[]): void {
+        const renderer = this.scene.game.renderer;
+        if (
+            this.surfaces.length === 0 ||
+            !(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer) ||
+            getElevationCells(map).length === 0
+        ) {
+            this.render(map);
+            return;
+        }
+
+        this.map = map;
+        this.sampleElevation = createElevationSampler(map);
+        const affectedBounds = new Set(
+            getElevationRenderChunksForUpdates(
+                map,
+                Math.min(renderer.getMaxTextureSize(), MAXIMUM_CAPTURE_TEXTURE_SIZE),
+                updates,
+            ).map(boundsKey),
+        );
+        const stepHeight = (map.tileheight ?? 32) / 2;
+        for (const rendered of this.surfaces) {
+            if (!affectedBounds.has(boundsKey(rendered.bounds))) continue;
+            const surface = getElevationSurfaceMesh(
+                map,
+                ELEVATION_WORLD_LAYER,
+                ELEVATION_MESH_SUBDIVISIONS,
+                rendered.bounds,
+            );
+            rendered.mesh.vertices = surface.vertices.flatMap((vertex) => {
+                const world = tileToWorldTopLeft(map, vertex.x, vertex.y);
+                return [world.x, world.y - vertex.elevation * stepHeight, vertex.u, vertex.v];
+            });
         }
         this.updateWorldObjects();
         this.scene.markDirty();
@@ -189,4 +233,8 @@ export class ElevationRenderer {
         }
         this.hiddenSources.clear();
     }
+}
+
+function boundsKey(bounds: ElevationSurfaceBounds): string {
+    return `${bounds.minX},${bounds.minY},${bounds.maxX},${bounds.maxY}`;
 }

@@ -194,6 +194,25 @@ export function getElevationRenderChunks(
     return chunks;
 }
 
+/** Returns the existing render chunks whose interpolated vertices can change for the supplied cell updates. */
+export function getElevationRenderChunksForUpdates(
+    map: ITiledMap,
+    maximumTextureSize: number,
+    updates: readonly TeapotElevationUpdate[],
+    subdivisions = ELEVATION_MESH_SUBDIVISIONS,
+): ElevationSurfaceBounds[] {
+    if (updates.length === 0) return [];
+    return getElevationRenderChunks(map, maximumTextureSize, subdivisions).filter((bounds) =>
+        updates.some(
+            (update) =>
+                update.x - 0.5 < bounds.maxX &&
+                update.x + 1.5 > bounds.minX &&
+                update.y - 0.5 < bounds.maxY &&
+                update.y + 1.5 > bounds.minY,
+        ),
+    );
+}
+
 export function applyElevationUpdates(map: ITiledMap, updates: readonly TeapotElevationUpdate[]): ITiledMap {
     if (updates.length === 0) return structuredClone(map);
     const next = structuredClone(map);

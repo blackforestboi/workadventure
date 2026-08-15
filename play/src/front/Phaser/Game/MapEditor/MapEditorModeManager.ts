@@ -35,7 +35,11 @@ import { ExplorerTool } from "./Tools/ExplorerTool";
 import { CloseTool } from "./Tools/CloseTool";
 import { UpdateAreaFrontCommand } from "./Commands/Area/UpdateAreaFrontCommand";
 import { UploadEntityFrontCommand } from "./Commands/Entity/UploadEntityFrontCommand";
-import { getMapEditorHistoryAction, type MapEditorHistoryAction } from "./MapEditorKeyboardShortcuts";
+import {
+    getMapEditorHistoryAction,
+    releaseMapEditorKeyboardFocus,
+    type MapEditorHistoryAction,
+} from "./MapEditorKeyboardShortcuts";
 import { hasPointerDragged, isPrimaryPointerDown } from "./PanGesture";
 
 export enum EditorToolName {
@@ -90,6 +94,7 @@ export class MapEditorModeManager {
 
     private normalPanCandidate = false;
     private normalPanActive = false;
+    private readonly canvasPointerDownHandler = () => releaseMapEditorKeyboardFocus();
     private readonly normalPanPointerDownHandler = (pointer: Input.Pointer, gameObjects: GameObjects.GameObject[]) => {
         if (isPrimaryPointerDown(pointer)) {
             this.scene.getCameraManager().stopSpeed();
@@ -164,6 +169,8 @@ export class MapEditorModeManager {
         this.subscribeToStores();
         this.subscribeToGameMapFrontWrapperEvents();
         this.bindNormalPanEvents();
+        this.scene.game.canvas.addEventListener("pointerdown", this.canvasPointerDownHandler);
+        this.scene.game.canvas.addEventListener("click", this.canvasPointerDownHandler);
 
         this.currentRunningCommand = this.scene.getGameMapFrontWrapper().initializedPromise.promise;
     }
@@ -308,6 +315,8 @@ export class MapEditorModeManager {
     }
 
     public destroy(): void {
+        this.scene.game.canvas.removeEventListener("pointerdown", this.canvasPointerDownHandler);
+        this.scene.game.canvas.removeEventListener("click", this.canvasPointerDownHandler);
         this.unbindNormalPanEvents();
         for (const tool of Object.values(this.editorTools)) {
             tool.destroy();

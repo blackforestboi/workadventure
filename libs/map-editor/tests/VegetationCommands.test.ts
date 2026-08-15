@@ -90,6 +90,35 @@ describe("vegetation commands", () => {
         expect(file.getGameMapEntities().getEntity("tree-2")).toBeUndefined();
     });
 
+    it("creates a correctly digested batch for a selection larger than 64 tiles", async () => {
+        const file = new WamFile(wam());
+        const partial = {
+            version: 1 as const,
+            presetId: "forest",
+            presetRevision: 1,
+            seed: "large-selection",
+            rectangle: { x: 0, y: 0, width: 65, height: 65 },
+            placements: [
+                {
+                    id: "large-selection-tree",
+                    prefabRef: { collectionName: "nature", id: "pine" },
+                    x: 0.5,
+                    y: 0.5,
+                    width: 1,
+                    height: 1,
+                },
+            ],
+            skipped: [],
+        };
+        const normalized = VegetationPlacementPlanSchema.parse({ ...partial, digest: "0".repeat(32) });
+        const { digest: _placeholder, ...parsedContent } = normalized;
+        const plan: VegetationPlacementPlan = { ...normalized, digest: createVegetationPlanDigest(parsedContent) };
+
+        await new CreateVegetationBatchCommand(file, plan).execute();
+
+        expect(file.getGameMapEntities().getEntity("large-selection-tree")?.prefabRef.id).toBe("pine");
+    });
+
     it("blocks deletion while a vegetation prefab is referenced", async () => {
         const file = new WamFile(wam({ vegetationPresets: { version: 1, presets: [{ ...preset, revision: 1 }] } }));
         expect(() => new DeleteCustomEntityCommand({ id: "pine" }, file).execute()).toThrow(/in use/);

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { getMapEditorHistoryAction } from "../../../../../src/front/Phaser/Game/MapEditor/MapEditorKeyboardShortcuts";
+import {
+    getMapEditorHistoryAction,
+    releaseMapEditorKeyboardFocus,
+} from "../../../../../src/front/Phaser/Game/MapEditor/MapEditorKeyboardShortcuts";
 
 function keyboardEvent(overrides: Partial<KeyboardEvent> = {}): KeyboardEvent {
     return {
@@ -33,5 +36,16 @@ describe("getMapEditorHistoryAction", () => {
         ).toBeUndefined();
         expect(getMapEditorHistoryAction(keyboardEvent({ metaKey: true, altKey: true }))).toBeUndefined();
         expect(getMapEditorHistoryAction(keyboardEvent({ metaKey: true, key: "x" }))).toBeUndefined();
+    });
+
+    it("releases stale text focus when the user returns to editing the map", () => {
+        const input = document.createElement("input");
+        document.body.append(input);
+        input.focus();
+
+        releaseMapEditorKeyboardFocus();
+
+        expect(document.activeElement).not.toBe(input);
+        input.remove();
     });
 });

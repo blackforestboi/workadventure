@@ -389,7 +389,11 @@ export class FloorEditorTool extends MapEditorTool {
         this.previewRegions = [...this.previewRegions, ...patch.regions];
         this.updateChangedTileKeys(patch.regions, updated);
         this.renderRegions(patch.regions, updated);
-        this.scene.getElevationRenderer().render(updated);
+        if (mutation.elevationUpdates !== undefined) {
+            this.scene.getElevationRenderer().renderElevationUpdates(updated, mutation.elevationUpdates);
+        } else {
+            this.scene.getElevationRenderer().render(updated);
+        }
         if (edit !== undefined && this.activeEditGroup !== undefined) this.activeEditGroup.push(edit);
         this.setState({ status: "saving", changedTiles: this.changedTileKeys.size, error: undefined });
         return true;
@@ -1165,7 +1169,9 @@ export class FloorEditorTool extends MapEditorTool {
             this.updateChangedTileKeys(mutation.regions, updated);
             this.renderRegions(mutation.regions, updated);
         }
-        if (mutation.elevationUpdates !== undefined) this.scene.getElevationRenderer().render(updated);
+        if (mutation.elevationUpdates !== undefined) {
+            this.scene.getElevationRenderer().renderElevationUpdates(updated, mutation.elevationUpdates);
+        }
         this.saving = true;
         this.setState({ status: "saving", changedTiles: this.changedTileKeys.size, error: undefined });
     }

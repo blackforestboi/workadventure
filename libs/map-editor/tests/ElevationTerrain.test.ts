@@ -8,6 +8,7 @@ import {
     getElevationCells,
     getElevationCliffEdges,
     getElevationContours,
+    getElevationRenderChunksForUpdates,
     getElevationRenderChunks,
     getElevationSurfaceBounds,
     getElevationSurfaceMesh,
@@ -235,6 +236,19 @@ describe("elevation terrain", () => {
         expect(chunks[0]).toEqual({ minX: 0, minY: 0, maxX: 63, maxY: 63 });
         expect(chunks.at(-1)).toEqual({ minX: 126, minY: 63, maxX: 130, maxY: 70 });
         expect(() => getElevationRenderChunks(map, 0)).toThrow(/texture size/);
+    });
+
+    it("selects only render chunks whose sampled surface can change after an elevation update", () => {
+        const map = { ...createMap(), width: 130, height: 70, infinite: false };
+
+        expect(
+            getElevationRenderChunksForUpdates(map, 4096, [
+                { layer: ELEVATION_WORLD_LAYER, x: 63, y: 10, elevation: 1 },
+            ]),
+        ).toEqual([
+            { minX: 0, minY: 0, maxX: 63, maxY: 63 },
+            { minX: 63, minY: 0, maxX: 126, maxY: 63 },
+        ]);
     });
 
     it("samples one smooth world surface after collapsing overlapping legacy layers", () => {

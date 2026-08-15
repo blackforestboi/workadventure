@@ -7,7 +7,6 @@ import type {
     VegetationRectangle,
 } from "../types";
 
-export const VEGETATION_MAX_SELECTION_TILES = 64;
 export const VEGETATION_MAX_PLACEMENTS = 500;
 
 export interface VegetationSelectionCorners {
@@ -45,12 +44,6 @@ export function planVegetation(input: VegetationPlanningInput): VegetationPlacem
     if (!Number.isFinite(tileWidth) || tileWidth <= 0 || !Number.isFinite(tileHeight) || tileHeight <= 0) {
         throw new Error("Vegetation planning requires positive finite tile dimensions");
     }
-    if (rectangle.width > VEGETATION_MAX_SELECTION_TILES || rectangle.height > VEGETATION_MAX_SELECTION_TILES) {
-        throw new Error(
-            `Vegetation selections cannot exceed ${VEGETATION_MAX_SELECTION_TILES} by ${VEGETATION_MAX_SELECTION_TILES} tiles`,
-        );
-    }
-
     const speciesByReference = new Map(input.species.map((species) => [referenceKey(species.prefabRef), species]));
     for (const entry of preset.species) {
         if (!speciesByReference.has(referenceKey(entry.prefabRef))) {

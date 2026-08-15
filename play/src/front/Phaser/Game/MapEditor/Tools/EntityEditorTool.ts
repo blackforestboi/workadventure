@@ -502,9 +502,6 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
 
         if (get(mapEditorEntityModeStore) === "EDIT" && gameObjects.length === 0 && !clickedAreaPreview) {
             mapEditorEntityModeStore.set("ADD");
-            if (document.activeElement instanceof HTMLElement) {
-                document.activeElement.blur();
-            }
             mapEditorSelectedEntityStore.set(undefined);
         }
 

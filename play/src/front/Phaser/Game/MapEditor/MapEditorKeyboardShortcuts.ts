@@ -8,6 +8,12 @@ export function getMapEditorHistoryAction(event: HistoryKeyboardEvent): MapEdito
     return event.shiftKey ? "redo" : "undo";
 }
 
+export function releaseMapEditorKeyboardFocus(): void {
+    if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+    }
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
     if (target === null || typeof target !== "object") return false;
     const candidate = target as { isContentEditable?: unknown; tagName?: unknown };
