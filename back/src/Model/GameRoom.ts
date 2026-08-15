@@ -59,7 +59,7 @@ import type { EventSocket, RoomSocket, VariableSocket } from "../RoomManager";
 import { adminApi } from "../Services/AdminApi";
 import { MapLoadingError } from "../Services/MapLoadingError";
 import { getMapStorageClient } from "../Services/MapStorageClient";
-import { emitError, emitErrorOnRoomSocket, endUserConnectionWithReason } from "../Services/MessageHelpers";
+import { emitErrorOnRoomSocket, endUserConnectionWithReason } from "../Services/MessageHelpers";
 import { ModeratorTagFinder } from "../Services/ModeratorTagFinder";
 import { VariableError } from "../Services/VariableError";
 import { VariablesManager } from "../Services/VariablesManager";
@@ -1450,92 +1450,93 @@ export class GameRoom implements BrothersFinder {
         // We chain the map storage operations to avoid race conditions. Each operation will wait for the previous one to complete.
         // We also set a timeout of 20 seconds to avoid blocking the room forever in case of map storage issues.
         this.mapStorageLock = this.mapStorageLock.then(async () => {
-            if (await this.containsOccupiedTerrainDeletion(message)) {
-                this.writeEditMapCommandError(user, message.id, "A tile occupied by an avatar cannot be deleted");
-                return;
-            }
-            const timeoutSignal = AbortSignal.timeout(20000);
-            return raceAbort(
-                new Promise<void>((resolve, reject) => {
-                    if (!this._wamUrl) {
-                        const error = new Error("WAM file url is undefined. Cannot edit map without WAM file.");
-                        emitError(user.socket, error.message);
-                        reject(error);
-                        return;
-                    }
+            try {
+                if (await this.containsOccupiedTerrainDeletion(message)) {
+                    this.writeEditMapCommandError(user, message.id, "A tile occupied by an avatar cannot be deleted");
+                    return;
+                }
+                const timeoutSignal = AbortSignal.timeout(20000);
+                await raceAbort(
+                    new Promise<void>((resolve, reject) => {
+                        if (!this._wamUrl) {
+                            const error = new Error("WAM file url is undefined. Cannot edit map without WAM file.");
+                            reject(error);
+                            return;
+                        }
 
-                    const call = getMapStorageClient().handleEditMapCommandWithKeyMessage(
-                        {
-                            mapKey: this._wamUrl,
-                            editMapCommandMessage: message,
-                            connectedUserTags: user.tags,
-                            userCanEdit: user.canEdit,
-                            userUUID: user.uuid,
-                        },
-                        new Metadata(),
-                        { deadline: Date.now() + 20000 },
-                        (err: unknown, editMapCommandMessage: EditMapCommandMessage) => {
-                            timeoutSignal.removeEventListener("abort", onTimeout);
-                            if (timeoutSignal.aborted) {
-                                resolve();
-                                return;
-                            }
-                            if (err) {
-                                reject(asError(err));
-                                return;
-                            }
-                            if (editMapCommandMessage.editMapMessage?.message?.$case === "errorCommandMessage") {
-                                // Return the error message to the sender and don't dispatch it to the room
-                                user.write({
-                                    $case: "batchMessage",
-                                    batchMessage: {
-                                        event: "",
-                                        payload: [
-                                            {
-                                                message: {
-                                                    $case: "editMapCommandMessage",
-                                                    editMapCommandMessage,
+                        const call = getMapStorageClient().handleEditMapCommandWithKeyMessage(
+                            {
+                                mapKey: this._wamUrl,
+                                editMapCommandMessage: message,
+                                connectedUserTags: user.tags,
+                                userCanEdit: user.canEdit,
+                                userUUID: user.uuid,
+                            },
+                            new Metadata(),
+                            { deadline: Date.now() + 20000 },
+                            (err: unknown, editMapCommandMessage: EditMapCommandMessage) => {
+                                timeoutSignal.removeEventListener("abort", onTimeout);
+                                if (timeoutSignal.aborted) {
+                                    resolve();
+                                    return;
+                                }
+                                if (err) {
+                                    reject(asError(err));
+                                    return;
+                                }
+                                if (editMapCommandMessage.editMapMessage?.message?.$case === "errorCommandMessage") {
+                                    // Return the error message to the sender and don't dispatch it to the room
+                                    user.write({
+                                        $case: "batchMessage",
+                                        batchMessage: {
+                                            event: "",
+                                            payload: [
+                                                {
+                                                    message: {
+                                                        $case: "editMapCommandMessage",
+                                                        editMapCommandMessage,
+                                                    },
                                                 },
-                                            },
-                                        ],
-                                    },
-                                });
-                                resolve();
-                                return;
-                            }
-
-                            this.applyMapStorageCommandToLocalState(editMapCommandMessage)
-                                .then(() => {
-                                    this.dispatchRoomMessage({
-                                        message: {
-                                            $case: "editMapCommandMessage",
-                                            editMapCommandMessage,
+                                            ],
                                         },
                                     });
                                     resolve();
-                                })
-                                .catch((localError: unknown) => {
-                                    reject(asError(localError));
-                                });
-                        },
-                    );
+                                    return;
+                                }
 
-                    const onTimeout = () => {
-                        call?.cancel();
-                    };
-                    timeoutSignal.addEventListener("abort", onTimeout, { once: true });
-                }),
-                timeoutSignal,
-            ).catch((err) => {
+                                this.applyMapStorageCommandToLocalState(editMapCommandMessage)
+                                    .then(() => {
+                                        this.dispatchRoomMessage({
+                                            message: {
+                                                $case: "editMapCommandMessage",
+                                                editMapCommandMessage,
+                                            },
+                                        });
+                                        resolve();
+                                    })
+                                    .catch((localError: unknown) => {
+                                        reject(asError(localError));
+                                    });
+                            },
+                        );
+
+                        const onTimeout = () => {
+                            call?.cancel();
+                        };
+                        timeoutSignal.addEventListener("abort", onTimeout, { once: true });
+                    }),
+                    timeoutSignal,
+                );
+            } catch (err) {
                 const error = asError(err);
                 Sentry.captureException(error);
                 try {
-                    emitError(user.socket, error.message);
+                    this.writeEditMapCommandError(user, message.id, error.message);
                 } catch (err2) {
                     Sentry.captureException(err2);
-                    console.error("Could not emit error on user socket", err2);
+                    console.error("Could not return the map save error to the user", err2);
                 }
-            });
+            }
         });
     }
 

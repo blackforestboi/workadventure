@@ -30,12 +30,11 @@
         type WokaFrameSize,
         WOKA_DIRECTIONAL_FRAMES,
         WOKA_NEUTRAL_FRAME_INDEXES,
-        WOKA_STEP_FRAME_INDEXES,
     } from "../../Services/AssetGeneration/WokaDirectionalGeneration";
     import { aiGenerationSettingsVisibilityStore } from "../../Stores/AiGenerationSettingsVisibilityStore";
     import Button from "../UI/Button.svelte";
 
-    type WizardStep = "design" | "generating-design" | "review-design" | "directions" | "review-final" | "saving";
+    type WizardStep = "design" | "generating-design" | "directions" | "review-final" | "saving";
 
     interface Props {
         onclose: () => void;
@@ -63,12 +62,11 @@
     let frameInstructions: string[] = $state(Array.from({ length: 12 }, () => ""));
     let error = $state("");
     let checkpointMessage = $state("");
-    let controller: AbortController | null = null;
+    let controller: AbortController | null = $state(null);
     let checkpointQueue: Promise<void> = Promise.resolve();
-    // Presentation order is deliberately different from WorkAdventure's
-    // sheet order: editors compare the neutral idle first, then the two
-    // opposite stride contacts left-to-right.
-    const frameDisplayItems = ([10, 9, 11, 4, 3, 5, 7, 6, 8, 1, 0, 2] as const).map((index) => ({
+    // Put the front-facing row first so the generated core design is the
+    // first frame people see, followed by back, left, and right movement.
+    const frameDisplayItems = ([1, 0, 2, 10, 9, 11, 4, 3, 5, 7, 6, 8] as const).map((index) => ({
         index,
         frame: WOKA_DIRECTIONAL_FRAMES[index],
     }));
@@ -150,11 +148,12 @@
             directionFrames = Array.from({ length: 12 }, () => null);
             revokeDirectionFrameUrls();
             directionFrameUrls = Array.from({ length: 12 }, () => "");
-            completedFrames = 0;
+            setDirectionFrame(1, preserved);
+            completedFrames = 1;
             failedFrames = [];
             finalBlob = null;
             await queueCheckpoint();
-            step = "review-design";
+            step = "directions";
         } catch (reason) {
             if (!generationController.signal.aborted) error = errorMessage(reason, "Avatar design generation failed.");
             step = "design";
@@ -175,7 +174,7 @@
         try {
             const poseReferences = await loadDefaultWokaPoseReferences();
             const sourceFrameSize = await makeSourceResolutionConsistent();
-            setDirectionFrame(1, designBlob);
+            if (directionFrames[1] === null) setDirectionFrame(1, designBlob);
             completedFrames = directionFrames.filter(Boolean).length;
             await queueCheckpoint();
 
@@ -185,11 +184,15 @@
                     if (index === 7) {
                         const leftIdle = directionFrames[4];
                         if (leftIdle === null) throw new Error("The left idle frame is missing.");
+                        // Neutral directions are ordered because the right idle mirrors the completed left idle.
+                        // eslint-disable-next-line no-await-in-loop
                         setDirectionFrame(7, await mirrorWokaFrameHorizontally(leftIdle));
                         completedFrames = directionFrames.filter(Boolean).length;
+                        // eslint-disable-next-line no-await-in-loop
                         await queueCheckpoint();
                         continue;
                     }
+                    // eslint-disable-next-line no-await-in-loop
                     await generateDirectionalFrame(
                         index,
                         designBlob,
@@ -230,6 +233,8 @@
                     return index;
                 }),
             );
+            // This bulk operation owns the only active generation controller and its failure state.
+            // eslint-disable-next-line require-atomic-updates
             failedFrames = stepAOutcomes
                 .flatMap((outcome, position) => (outcome.status === "rejected" ? [stepAIndexes[position] ?? -1] : []))
                 .filter((index) => index >= 0);
@@ -260,6 +265,8 @@
                     return index;
                 }),
             );
+            // This bulk operation owns the only active generation controller and its failure state.
+            // eslint-disable-next-line require-atomic-updates
             failedFrames = stepBOutcomes
                 .flatMap((outcome, position) => (outcome.status === "rejected" ? [stepBIndexes[position] ?? -1] : []))
                 .filter((index) => index >= 0);
@@ -267,8 +274,8 @@
                 const leftStepA = directionFrames[3];
                 const leftStepB = directionFrames[5];
                 if (leftStepA === null || leftStepB === null) throw new Error("The left walking frames are missing.");
-                setDirectionFrame(6, await mirrorWokaFrameHorizontally(leftStepA));
-                setDirectionFrame(8, await mirrorWokaFrameHorizontally(leftStepB));
+                if (directionFrames[6] === null) setDirectionFrame(6, await mirrorWokaFrameHorizontally(leftStepA));
+                if (directionFrames[8] === null) setDirectionFrame(8, await mirrorWokaFrameHorizontally(leftStepB));
                 completedFrames = directionFrames.filter(Boolean).length;
                 await queueCheckpoint();
             }
@@ -276,10 +283,8 @@
                 error = `${failedFrames.length} frame${failedFrames.length === 1 ? "" : "s"} failed after one automatic retry.`;
                 return;
             }
-            const completed = directionFrames.filter((frame): frame is Blob => frame !== null);
-            finalBlob = await assembleWokaSpriteSheet(completed, sourceFrameSize);
+            await refreshFinalAvatar(sourceFrameSize);
             await queueCheckpoint();
-            step = "review-final";
         } catch (reason) {
             if (!generationController.signal.aborted) error = errorMessage(reason, "Directional generation failed.");
         } finally {
@@ -295,18 +300,15 @@
         const generationController = new AbortController();
         controller = generationController;
         try {
-            const sourceFrameSize = await largestSquareFrameSize([designBlob]);
+            const sourceFrameSize = await largestSquareFrameSize([
+                designBlob,
+                ...directionFrames.filter((frame): frame is Blob => frame !== null),
+            ]);
             const anchorIndex = neutralAnchorFrameIndex(index);
-            const isStepB = index === 2 || index === 5 || index === 11;
-            const anchor =
-                index === 1 ? designBlob : anchorIndex === undefined ? undefined : directionFrames[anchorIndex];
-            const source = isStepB ? directionFrames[index - 2] : anchor;
-            if (source === undefined || source === null)
-                throw new Error(
-                    isStepB
-                        ? "The direction's Step A source is missing."
-                        : "The direction's neutral anchor is missing.",
-                );
+            const isStepB = index === 2 || index === 5 || index === 8 || index === 11;
+            const completedStepA = isStepB ? directionFrames[index - 2] : null;
+            const neutralAnchor = anchorIndex === undefined ? null : directionFrames[anchorIndex];
+            const source = completedStepA ?? neutralAnchor ?? designBlob;
             await generateDirectionalFrame(
                 index,
                 source,
@@ -315,12 +317,11 @@
                 selection,
                 generationController.signal,
                 frameInstructions[index]?.trim(),
-                isStepB,
+                completedStepA !== null,
             );
-            if (directionFrames.every((candidate): candidate is Blob => candidate !== null)) {
-                finalBlob = await assembleWokaSpriteSheet(directionFrames, sourceFrameSize);
-                await queueCheckpoint();
-            }
+            failedFrames = failedFrames.filter((failedIndex) => failedIndex !== index);
+            await refreshFinalAvatar(sourceFrameSize);
+            await queueCheckpoint();
         } catch (reason) {
             if (!generationController.signal.aborted)
                 error = errorMessage(reason, "This frame could not be regenerated.");
@@ -328,6 +329,52 @@
             regeneratingFrameIndexes = regeneratingFrameIndexes.filter((candidate) => candidate !== index);
             if (controller === generationController) controller = null;
         }
+    }
+
+    async function uploadFrame(index: number, file: File | undefined): Promise<void> {
+        if (file === undefined || designBlob === null || WOKA_DIRECTIONAL_FRAMES[index] === undefined) return;
+        error = "";
+        regeneratingFrameIndexes = [...new Set([...regeneratingFrameIndexes, index])];
+        try {
+            const sourceFrameSize = await largestSquareFrameSize([
+                designBlob,
+                ...directionFrames.filter((frame): frame is Blob => frame !== null),
+                file,
+            ]);
+            const normalized = await normalizeGeneratedRaster(
+                file,
+                { ...sourceFrameSize, pixelated: false },
+                { removeOpaqueEdgeBackground: true },
+            );
+            setDirectionFrame(index, normalized);
+            completedFrames = directionFrames.filter(Boolean).length;
+            failedFrames = failedFrames.filter((failedIndex) => failedIndex !== index);
+            await refreshFinalAvatar(sourceFrameSize);
+            await queueCheckpoint();
+        } catch (reason) {
+            error = errorMessage(reason, "This asset could not be added to the frame.");
+        } finally {
+            regeneratingFrameIndexes = regeneratingFrameIndexes.filter((candidate) => candidate !== index);
+        }
+    }
+
+    function handleFrameUpload(index: number, input: HTMLInputElement): void {
+        const file = input.files?.[0];
+        input.value = "";
+        uploadFrame(index, file).catch(() => undefined);
+    }
+
+    async function refreshFinalAvatar(sourceFrameSize?: WokaFrameSize): Promise<void> {
+        if (!directionFrames.every((candidate): candidate is Blob => candidate !== null)) {
+            finalBlob = null;
+            if (step === "review-final") step = "directions";
+            return;
+        }
+        finalBlob = await assembleWokaSpriteSheet(
+            directionFrames,
+            sourceFrameSize ?? (await largestSquareFrameSize(directionFrames)),
+        );
+        if (step !== "saving") step = "review-final";
     }
 
     async function generateDirectionalFrame(
@@ -470,7 +517,6 @@
                     : Promise.resolve(null),
             ),
         );
-        await replaceRightFramesWithMirrors(consistentFrames);
         // The wizard permits only one active generation controller; these snapshots cannot be replaced concurrently.
         // eslint-disable-next-line require-atomic-updates
         designBlob = consistentDesign;
@@ -501,6 +547,10 @@
         directionFrameUrls = directionFrames.map((frame) => (frame ? URL.createObjectURL(frame) : ""));
         completedFrames = directionFrames.filter(Boolean).length;
         finalBlob = draft.finalBlob;
+        if (directionFrames[1] === null) {
+            setDirectionFrame(1, designBlob);
+            completedFrames = directionFrames.filter(Boolean).length;
+        }
         if (draft.finalBlob !== null) {
             if (completedFrames === WOKA_DIRECTIONAL_FRAMES.length) {
                 const sourceFrameSize = await makeSourceResolutionConsistent();
@@ -509,7 +559,7 @@
             }
             step = "review-final";
         } else {
-            step = "review-design";
+            step = "directions";
         }
         checkpointMessage =
             completedFrames > 0
@@ -520,7 +570,6 @@
 
     async function restoreSavedAvatar(avatar: { name: string; sheet: Blob }): Promise<void> {
         const frames = await splitWokaSpriteSheet(avatar.sheet);
-        await replaceRightFramesWithMirrors(frames);
         description = avatar.name.replace(/^Avatar:\s*/i, "");
         style = "custom";
         customStyle = "Preserve the existing avatar's visual style exactly.";
@@ -533,17 +582,6 @@
         finalBlob = await assembleWokaSpriteSheet(frames, await largestSquareFrameSize(frames));
         checkpointMessage = "";
         step = "review-final";
-    }
-
-    async function replaceRightFramesWithMirrors(frames: Array<Blob | null>): Promise<void> {
-        for (const [leftIndex, rightIndex] of [
-            [3, 6],
-            [4, 7],
-            [5, 8],
-        ] as const) {
-            const left = frames[leftIndex];
-            if (left !== null && left !== undefined) frames[rightIndex] = await mirrorWokaFrameHorizontally(left);
-        }
     }
 
     function revokeDirectionFrameUrls(): void {
@@ -598,7 +636,7 @@
     aria-label="AI avatar generator"
 >
     <section
-        class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#17263d] text-white shadow-2xl"
+        class="flex max-h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#17263d] text-white shadow-2xl"
     >
         <header class="flex items-start justify-between gap-4 border-b border-white/10 p-5">
             <div>
@@ -617,7 +655,7 @@
 
         <div class="grid grid-cols-3 border-b border-white/10 text-center text-xs">
             <div
-                class={`p-3 ${step === "design" || step === "generating-design" || step === "review-design" ? "bg-secondary/25 text-white" : "text-white/50"}`}
+                class={`p-3 ${step === "design" || step === "generating-design" ? "bg-secondary/25 text-white" : "text-white/50"}`}
             >
                 1. Design avatar
             </div>
@@ -775,95 +813,104 @@
                     </div>
                     <p class="mt-4 text-sm text-white/65">Creating one detailed front-facing design</p>
                 </div>
-            {:else if step === "review-design"}
-                <div class="flex flex-col items-center">
-                    <img
-                        src={designUrl}
-                        alt="Generated avatar design"
-                        class="h-[320px] w-[320px] rounded-xl border border-white/15 object-contain"
-                    />
-                    <h3 class="mt-4 text-lg font-semibold">Does this design look right?</h3>
-                    <p class="mt-1 max-w-lg text-center text-sm text-white/60">
-                        This design becomes the source for your finished playable avatar.
-                    </p>
-                    <div class="mt-5 flex gap-2">
-                        <Button appearance="border" onclick={() => (step = "design")}>Change design</Button>
-                        <Button variant="primary" onclick={generateDirections}>Finalize avatar</Button>
+            {:else if step === "directions" || step === "review-final" || step === "saving"}
+                <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold">Build your movement set</h3>
+                        <p class="mt-1 text-sm text-white/60">
+                            {completedFrames} of {WOKA_DIRECTIONAL_FRAMES.length} frames ready. Generate the rest with AI,
+                            or customize any frame yourself.
+                        </p>
+                    </div>
+                    <div class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                        <Button
+                            appearance="border"
+                            disabled={controller !== null || step === "saving"}
+                            onclick={() => (step = "design")}>Edit core design</Button
+                        >
+                        <Button
+                            variant="primary"
+                            disabled={controller !== null ||
+                                step === "saving" ||
+                                completedFrames === WOKA_DIRECTIONAL_FRAMES.length}
+                            onclick={generateDirections}
+                        >
+                            {controller !== null ? "Generating…" : "Generate all"}
+                        </Button>
                     </div>
                 </div>
-            {:else if step === "directions"}
-                <div class="py-6 text-center">
-                    <h3 class="text-xl font-semibold">Generating directions and movement</h3>
-                    <p class="mt-2 text-sm text-white/60">
-                        {Math.max(0, completedFrames - 1)} of {WOKA_NEUTRAL_FRAME_INDEXES.length +
-                            WOKA_STEP_FRAME_INDEXES.length} generated frames complete
-                    </p>
-                    <p class="mt-1 text-xs text-white/45">
-                        Neutral directions are completed first; each walk step then uses its own neutral direction as
-                        its visual anchor.
-                    </p>
-                    <div class="mx-auto mt-5 w-fit">
-                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {#each frameDisplayItems as item (item.index)}
-                                <div
-                                    class={`flex min-h-36 w-32 flex-col overflow-hidden rounded-xl border text-xs ${directionFrames[item.index] ? "border-emerald-300/40 bg-emerald-900/20 text-emerald-100" : failedFrames.includes(item.index) ? "border-red-300/40 bg-red-950/30 text-red-200" : "animate-pulse border-white/10 bg-white/5 text-white/45"}`}
-                                >
-                                    <div class="flex h-28 items-center justify-center bg-black/20 p-2">
-                                        {#if directionFrameUrls[item.index]}
-                                            <img
-                                                src={directionFrameUrls[item.index]}
-                                                alt={`${item.frame.direction} ${item.frame.motion}`}
-                                                class="h-full w-full object-contain"
-                                            />
-                                        {:else}
-                                            <strong class="text-2xl"
-                                                >{failedFrames.includes(item.index) ? "!" : "…"}</strong
-                                            >
-                                        {/if}
-                                    </div>
-                                    <div class="flex items-center justify-between gap-2 px-2 py-2">
-                                        <span class="truncate capitalize"
-                                            >{item.frame.direction} · {item.frame.motion.replace("walking ", "")}</span
-                                        >
-                                        {#if directionFrames[item.index]}<strong>✓</strong>{/if}
-                                    </div>
-                                </div>
-                            {/each}
-                        </div>
-                    </div>
-                    {#if failedFrames.length > 0}
-                        <div class="mt-5">
-                            <Button variant="primary" onclick={generateDirections}>Retry failed frames</Button>
-                        </div>
-                    {/if}
-                </div>
-            {:else if step === "review-final" || step === "saving"}
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {#each frameDisplayItems as item (item.index)}
-                        <article class="overflow-hidden rounded-xl border border-white/10 bg-black/15 p-2">
-                            <img
-                                src={directionFrameUrls[item.index]}
-                                alt={`${item.frame.direction} ${item.frame.motion}`}
-                                class="h-36 w-full rounded-lg bg-black/20 object-contain"
-                            />
-                            <p class="mt-2 text-xs font-semibold capitalize">
-                                {item.frame.direction} · {item.frame.motion.replace("walking ", "")}
-                            </p>
+                        <article
+                            class={`overflow-hidden rounded-xl border p-3 ${directionFrames[item.index] ? "border-white/15 bg-black/15" : failedFrames.includes(item.index) ? "border-red-300/35 bg-red-950/20" : "border-dashed border-white/20 bg-black/10"}`}
+                        >
+                            <div class="flex h-44 items-center justify-center rounded-lg bg-black/25 p-3 sm:h-48">
+                                {#if directionFrameUrls[item.index]}
+                                    <img
+                                        src={directionFrameUrls[item.index]}
+                                        alt={`${item.frame.direction} ${item.frame.motion}`}
+                                        class="h-full w-full object-contain"
+                                    />
+                                {:else}
+                                    <div class="text-center text-white/45">
+                                        <span class="text-2xl">{failedFrames.includes(item.index) ? "!" : "+"}</span>
+                                        <p class="mt-2 text-xs">
+                                            {failedFrames.includes(item.index) ? "Generation failed" : "No asset yet"}
+                                        </p>
+                                    </div>
+                                {/if}
+                            </div>
+                            <div class="mt-3 flex items-center justify-between gap-3">
+                                <p class="text-sm font-semibold capitalize">
+                                    {item.frame.direction} · {item.frame.motion.replace("walking ", "")}
+                                </p>
+                                {#if item.index === 1}
+                                    <span
+                                        class="rounded-full bg-secondary/25 px-2 py-1 text-[10px] uppercase tracking-wide text-white/75"
+                                        >Core design</span
+                                    >
+                                {/if}
+                            </div>
                             <textarea
                                 bind:value={frameInstructions[item.index]}
                                 rows="2"
-                                class="mt-2 w-full resize-y rounded-md bg-black/30 p-2 text-xs"
+                                class="mt-3 w-full resize-y rounded-md bg-black/30 p-2 text-xs"
                                 placeholder="Optional changes for this frame…"
                             ></textarea>
-                            <Button
-                                size="sm"
-                                appearance="border"
-                                class="mt-2 w-full"
-                                disabled={step === "saving" || regeneratingFrameIndexes.includes(item.index)}
-                                onclick={() => regenerateFrame(item.index)}
-                            >
-                                {regeneratingFrameIndexes.includes(item.index) ? "Regenerating…" : "Regenerate frame"}
-                            </Button>
+                            <div class="mt-2 grid grid-cols-2 gap-2">
+                                <Button
+                                    size="sm"
+                                    appearance="border"
+                                    class="w-full"
+                                    disabled={controller !== null ||
+                                        step === "saving" ||
+                                        regeneratingFrameIndexes.includes(item.index)}
+                                    onclick={() => regenerateFrame(item.index)}
+                                >
+                                    {regeneratingFrameIndexes.includes(item.index)
+                                        ? "Working…"
+                                        : directionFrames[item.index]
+                                          ? "Regenerate with AI"
+                                          : "Generate with AI"}
+                                </Button>
+                                <label
+                                    class={`btn btn-border btn-sm flex w-full items-center justify-center text-center ${controller !== null || step === "saving" || regeneratingFrameIndexes.includes(item.index) ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                                >
+                                    <span class="btn-label">
+                                        {directionFrames[item.index] ? "Replace asset" : "Upload asset"}
+                                    </span>
+                                    <input
+                                        class="sr-only"
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        disabled={controller !== null ||
+                                            step === "saving" ||
+                                            regeneratingFrameIndexes.includes(item.index)}
+                                        onchange={(event) => handleFrameUpload(item.index, event.currentTarget)}
+                                    />
+                                </label>
+                            </div>
                         </article>
                     {/each}
                 </div>

@@ -8,6 +8,7 @@ import type { EditMapCommandMessage } from "@workadventure/messages";
 import pLimit from "p-limit";
 import debug from "debug";
 import { deepmergeInto } from "deepmerge-ts";
+import { asError } from "catch-unknown";
 import type { RoomConnection } from "../../../Connection/RoomConnection";
 import type { GameScene } from "../GameScene";
 import { hasMovedEventName } from "../../Player/Player";
@@ -20,6 +21,7 @@ import {
 } from "../../../Stores/MapEditorStore";
 import { mapEditorActivated, mapEditorActivatedForThematics } from "../../../Stores/MenuStore";
 import { localUserStore } from "../../../Connection/LocalUserStore";
+import { errorStore } from "../../../Stores/ErrorStore";
 import LL from "../../../../i18n/i18n-svelte";
 import { gameManager } from "../GameManager";
 import { isInsidePersonalAreaStore, personalAreaDataStore } from "../../../Stores/PersonalDeskStore";
@@ -36,7 +38,7 @@ import { CloseTool } from "./Tools/CloseTool";
 import { UpdateAreaFrontCommand } from "./Commands/Area/UpdateAreaFrontCommand";
 import { UploadEntityFrontCommand } from "./Commands/Entity/UploadEntityFrontCommand";
 import {
-    getMapEditorHistoryAction,
+    registerMapEditorHistoryShortcut,
     releaseMapEditorKeyboardFocus,
     type MapEditorHistoryAction,
 } from "./MapEditorKeyboardShortcuts";
@@ -95,6 +97,7 @@ export class MapEditorModeManager {
     private normalPanCandidate = false;
     private normalPanActive = false;
     private readonly canvasPointerDownHandler = () => releaseMapEditorKeyboardFocus();
+    private readonly unregisterNativeHistoryShortcut: () => void;
     private readonly normalPanPointerDownHandler = (pointer: Input.Pointer, gameObjects: GameObjects.GameObject[]) => {
         if (isPrimaryPointerDown(pointer)) {
             this.scene.getCameraManager().stopSpeed();
@@ -171,6 +174,14 @@ export class MapEditorModeManager {
         this.bindNormalPanEvents();
         this.scene.game.canvas.addEventListener("pointerdown", this.canvasPointerDownHandler);
         this.scene.game.canvas.addEventListener("click", this.canvasPointerDownHandler);
+        this.unregisterNativeHistoryShortcut = registerMapEditorHistoryShortcut(
+            (historyAction) => {
+                if (!this.currentlyActiveTool?.handleHistoryAction?.(historyAction)) {
+                    this.queueHistoryAction(historyAction);
+                }
+            },
+            () => get(mapEditorModeStore),
+        );
 
         this.currentRunningCommand = this.scene.getGameMapFrontWrapper().initializedPromise.promise;
     }
@@ -211,14 +222,16 @@ export class MapEditorModeManager {
                 this.scene.getGameMap().getWamFile()?.updateLastCommandIdProperty(command.commandId);
                 return;
             } catch (error) {
+                const submissionError = asError(error);
                 if (command instanceof UploadEntityFrontCommand) {
                     await this.rejectPendingUpload(
                         command,
-                        error instanceof Error ? error.message : "The upload could not be submitted.",
+                        submissionError.message || "The upload could not be submitted.",
                     );
                 }
-                console.error(error);
-                Sentry.captureException(error);
+                this.reportMapSaveFailure(submissionError.message || "The map change could not be submitted.");
+                console.error(submissionError);
+                Sentry.captureException(submissionError);
                 return;
             }
         }));
@@ -317,6 +330,7 @@ export class MapEditorModeManager {
     public destroy(): void {
         this.scene.game.canvas.removeEventListener("pointerdown", this.canvasPointerDownHandler);
         this.scene.game.canvas.removeEventListener("click", this.canvasPointerDownHandler);
+        this.unregisterNativeHistoryShortcut();
         this.unbindNormalPanEvents();
         for (const tool of Object.values(this.editorTools)) {
             tool.destroy();
@@ -337,15 +351,6 @@ export class MapEditorModeManager {
         }
 
         this.currentlyActiveTool?.handleKeyDownEvent(event);
-
-        const historyAction = getMapEditorHistoryAction(event);
-        if (historyAction !== undefined) {
-            event.preventDefault();
-            if (!this.currentlyActiveTool?.handleHistoryAction?.(historyAction)) {
-                this.queueHistoryAction(historyAction);
-            }
-            return true;
-        }
 
         const mapEditorModeActivated = get(mapEditorActivated);
         switch (event.key.toLowerCase()) {
@@ -412,6 +417,7 @@ export class MapEditorModeManager {
                 if (editMapCommandMessage.editMapMessage?.message?.$case === "errorCommandMessage") {
                     const errorCommandMessage = editMapCommandMessage.editMapMessage.message.errorCommandMessage;
                     logger("ErrorCommandMessage received", errorCommandMessage);
+                    this.reportMapSaveFailure(errorCommandMessage.reason);
                     const command = this.pendingCommands.find(
                         (command) => command.commandId === editMapCommandMessage.id,
                     );
@@ -522,6 +528,13 @@ export class MapEditorModeManager {
             if (historyIndex <= this.currentCommandIndex) this.currentCommandIndex -= 1;
         }
         command.onRejected?.(reason);
+    }
+
+    private reportMapSaveFailure(reason: string): void {
+        const detail = reason.trim();
+        errorStore.addErrorMessage(
+            detail === "" ? "The map change could not be saved. Please try again." : `Map change not saved: ${detail}`,
+        );
     }
 
     private async revertPendingCommands(): Promise<void> {

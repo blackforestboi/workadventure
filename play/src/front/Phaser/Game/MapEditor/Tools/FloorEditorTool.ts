@@ -523,7 +523,6 @@ export class FloorEditorTool extends MapEditorTool {
         this.scene.input.on(Phaser.Input.Events.POINTER_MOVE, this.pointerMoveEventHandler);
         this.scene.input.on(Phaser.Input.Events.POINTER_DOWN, this.pointerDownEventHandler);
         this.scene.input.on(Phaser.Input.Events.POINTER_UP, this.pointerUpEventHandler);
-        this.scene.input.on(Phaser.Input.Events.POINTER_OUT, this.pointerOutEventHandler);
         this.scene.input.on(Phaser.Input.Events.GAME_OUT, this.pointerOutEventHandler);
     }
 
@@ -531,7 +530,6 @@ export class FloorEditorTool extends MapEditorTool {
         this.scene.input.off(Phaser.Input.Events.POINTER_MOVE, this.pointerMoveEventHandler);
         this.scene.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownEventHandler);
         this.scene.input.off(Phaser.Input.Events.POINTER_UP, this.pointerUpEventHandler);
-        this.scene.input.off(Phaser.Input.Events.POINTER_OUT, this.pointerOutEventHandler);
         this.scene.input.off(Phaser.Input.Events.GAME_OUT, this.pointerOutEventHandler);
         this.scene.input.setDefaultCursor("auto");
         this.stopPanning();

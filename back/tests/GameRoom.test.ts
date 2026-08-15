@@ -5,6 +5,7 @@ import {
     JoinRoomMessage,
     PositionMessage_Direction,
     RoomJoinedMessage,
+    type ServerToClientMessage,
 } from "@workadventure/messages";
 import { LocalUrlError } from "@workadventure/map-editor/src/LocalUrlError";
 import { mapFetcher } from "@workadventure/map-editor/src/MapFetcher";
@@ -35,6 +36,20 @@ function createMockUserSocket() {
         write,
         end,
     };
+}
+
+function createMockMapEditorUser() {
+    const { socket } = createMockUserSocket();
+    const write = vi.fn<(chunk: NonNullable<ServerToClientMessage["message"]>) => boolean>().mockReturnValue(true);
+    const user = {
+        uuid: "editor",
+        tags: [],
+        canEdit: true,
+        write,
+        socket,
+    } as unknown as User;
+
+    return { user, write };
 }
 
 function createJoinRoomMessage(uuid: string, x: number, y: number, tabId?: string): JoinRoomMessage {
@@ -109,6 +124,72 @@ function createWorld(): Promise<GameRoom> {
 }
 
 describe("GameRoom", () => {
+    it("returns a command-scoped error when a map edit cannot reach map storage", async () => {
+        const world = await createWorld();
+        const { user, write } = createMockMapEditorUser();
+        const command = EditMapCommandMessage.fromPartial({
+            id: "save-command",
+            editMapMessage: {
+                message: {
+                    $case: "deleteEntityMessage",
+                    deleteEntityMessage: { id: "tree" },
+                },
+            },
+        });
+
+        world.forwardEditMapCommandMessage(user, command);
+        await vi.waitFor(() => expect(write).toHaveBeenCalledOnce());
+
+        const response = write.mock.calls[0]?.[0];
+        expect(response?.$case).toBe("batchMessage");
+        if (response?.$case !== "batchMessage") throw new Error("Expected a batch response");
+        const responseMessage = response.batchMessage.payload[0]?.message;
+        expect(responseMessage?.$case).toBe("editMapCommandMessage");
+        if (responseMessage?.$case !== "editMapCommandMessage") throw new Error("Expected a map edit response");
+        expect(responseMessage.editMapCommandMessage.id).toBe("save-command");
+        const editMapMessage = responseMessage.editMapCommandMessage.editMapMessage?.message;
+        expect(editMapMessage?.$case).toBe("errorCommandMessage");
+        if (editMapMessage?.$case !== "errorCommandMessage") throw new Error("Expected a command error");
+        expect(editMapMessage.errorCommandMessage.reason).not.toBe("");
+    });
+
+    it("continues processing map edits after a save preflight fails", async () => {
+        const world = await createWorld();
+        const { user, write } = createMockMapEditorUser();
+        vi.spyOn(mapFetcher, "fetchMap").mockRejectedValueOnce(new Error("The map could not be loaded for validation"));
+        world.forwardEditMapCommandMessage(
+            user,
+            EditMapCommandMessage.fromPartial({
+                id: "first-save",
+                editMapMessage: {
+                    message: {
+                        $case: "modifyTerrainMessage",
+                        modifyTerrainMessage: {
+                            mapUrl: "https://example.com/map.tmj",
+                            regions: [{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [1] }],
+                            tilesetJson: "",
+                            removeTileset: false,
+                        },
+                    },
+                },
+            }),
+        );
+        world.forwardEditMapCommandMessage(
+            user,
+            EditMapCommandMessage.fromPartial({
+                id: "second-save",
+                editMapMessage: {
+                    message: {
+                        $case: "deleteEntityMessage",
+                        deleteEntityMessage: { id: "tree" },
+                    },
+                },
+            }),
+        );
+
+        await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(2));
+    });
+
     it("detects a persisted terrain deletion under any live room user", async () => {
         vi.spyOn(mapFetcher, "fetchMap").mockResolvedValueOnce({
             orientation: "orthogonal",

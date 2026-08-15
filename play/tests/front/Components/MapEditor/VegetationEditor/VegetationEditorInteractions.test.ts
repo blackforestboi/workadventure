@@ -89,6 +89,16 @@ describe("vegetation editor interactions", () => {
         expect(pointerDownFunction).toContain("this.getVegetationTileAtPointer(pointer)");
     });
 
+    it("keeps vegetation rectangle drags active while crossing interactive entities", () => {
+        const pointerBindings = floorEditorToolSource.slice(
+            floorEditorToolSource.indexOf("private bindPointerEvents("),
+            floorEditorToolSource.indexOf("private handlePointerMove("),
+        );
+
+        expect(pointerBindings).toContain("Phaser.Input.Events.GAME_OUT");
+        expect(pointerBindings).not.toContain("Phaser.Input.Events.POINTER_OUT");
+    });
+
     it("renders area previews with the selected vegetation artwork instead of circles", () => {
         const renderFunction = floorEditorToolSource.slice(
             floorEditorToolSource.indexOf("private renderVegetationGhosts("),

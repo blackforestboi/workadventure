@@ -461,7 +461,7 @@ describe("floor editor rendering", () => {
 
         expect(incrementalRenderSource).toBeDefined();
         expect(incrementalRenderSource).toContain("getElevationRenderChunksForUpdates");
-        expect(incrementalRenderSource).toContain("rendered.mesh.vertices =");
+        expect(incrementalRenderSource).toContain("rendered.mesh.vertices = getMeshVertices");
         expect(incrementalRenderSource).not.toContain("this.clearSurfaces()");
         expect(incrementalRenderSource).not.toContain("capture.draw(");
         expect(floorEditorToolSource).toContain(

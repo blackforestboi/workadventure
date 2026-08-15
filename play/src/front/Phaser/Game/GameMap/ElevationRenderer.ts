@@ -10,6 +10,7 @@ import {
     tileToWorldTopLeft,
     type ElevationSampler,
     type ElevationSurfaceBounds,
+    type ElevationSurfaceVertex,
     type TeapotElevationUpdate,
     worldToElevatedTileCoordinates,
 } from "@workadventure/map-editor";
@@ -94,10 +95,7 @@ export class ElevationRenderer {
                 let mesh: Phaser.GameObjects.Mesh2D | undefined;
                 try {
                     capture.draw(compositeSources, -topLeft.x, -topLeft.y).render();
-                    const vertices = surface.vertices.flatMap((vertex) => {
-                        const world = tileToWorldTopLeft(map, vertex.x, vertex.y);
-                        return [world.x, world.y - vertex.elevation * stepHeight, vertex.u, vertex.v];
-                    });
+                    const vertices = getMeshVertices(map, surface.vertices, stepHeight);
                     const indices = surface.indices.flatMap((index, position) =>
                         position % 3 === 2 ? [index, 0] : [index],
                     );
@@ -161,10 +159,7 @@ export class ElevationRenderer {
                 ELEVATION_MESH_SUBDIVISIONS,
                 rendered.bounds,
             );
-            rendered.mesh.vertices = surface.vertices.flatMap((vertex) => {
-                const world = tileToWorldTopLeft(map, vertex.x, vertex.y);
-                return [world.x, world.y - vertex.elevation * stepHeight, vertex.u, vertex.v];
-            });
+            rendered.mesh.vertices = getMeshVertices(map, surface.vertices, stepHeight);
         }
         this.updateWorldObjects();
         this.scene.markDirty();
@@ -237,4 +232,11 @@ export class ElevationRenderer {
 
 function boundsKey(bounds: ElevationSurfaceBounds): string {
     return `${bounds.minX},${bounds.minY},${bounds.maxX},${bounds.maxY}`;
+}
+
+function getMeshVertices(map: ITiledMap, vertices: readonly ElevationSurfaceVertex[], stepHeight: number): number[] {
+    return vertices.flatMap((vertex) => {
+        const world = tileToWorldTopLeft(map, vertex.x, vertex.y);
+        return [world.x, world.y - vertex.elevation * stepHeight, vertex.u, vertex.v];
+    });
 }

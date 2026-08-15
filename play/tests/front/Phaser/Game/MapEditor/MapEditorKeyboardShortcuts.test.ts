@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
     getMapEditorHistoryAction,
+    registerMapEditorHistoryShortcut,
     releaseMapEditorKeyboardFocus,
 } from "../../../../../src/front/Phaser/Game/MapEditor/MapEditorKeyboardShortcuts";
 
@@ -18,14 +19,40 @@ function keyboardEvent(overrides: Partial<KeyboardEvent> = {}): KeyboardEvent {
 }
 
 describe("getMapEditorHistoryAction", () => {
-    it("maps Cmd+Z and Ctrl+Z to undo", () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("maps the native macOS Cmd shortcuts to undo and redo", () => {
+        vi.stubGlobal("navigator", { platform: "MacIntel", userAgent: "Macintosh" });
+
         expect(getMapEditorHistoryAction(keyboardEvent({ metaKey: true }))).toBe("undo");
-        expect(getMapEditorHistoryAction(keyboardEvent({ ctrlKey: true }))).toBe("undo");
+        expect(getMapEditorHistoryAction(keyboardEvent({ metaKey: true, shiftKey: true }))).toBe("redo");
+        expect(getMapEditorHistoryAction(keyboardEvent({ ctrlKey: true }))).toBeUndefined();
     });
 
-    it("maps Cmd/Ctrl+Shift+Z to redo", () => {
-        expect(getMapEditorHistoryAction(keyboardEvent({ metaKey: true, shiftKey: true }))).toBe("redo");
+    it("maps the native non-Mac Ctrl shortcuts to undo and redo", () => {
+        vi.stubGlobal("navigator", { platform: "Win32", userAgent: "Windows" });
+
+        expect(getMapEditorHistoryAction(keyboardEvent({ ctrlKey: true }))).toBe("undo");
         expect(getMapEditorHistoryAction(keyboardEvent({ ctrlKey: true, shiftKey: true }))).toBe("redo");
+    });
+
+    it("delivers a real macOS window Cmd+Z event directly to the undo handler", () => {
+        vi.stubGlobal("navigator", { platform: "MacIntel", userAgent: "Macintosh" });
+        const handleAction = vi.fn();
+        const unregister = registerMapEditorHistoryShortcut(handleAction, () => true);
+        const event = new KeyboardEvent("keydown", {
+            key: "z",
+            metaKey: true,
+            bubbles: true,
+            cancelable: true,
+        });
+
+        window.dispatchEvent(event);
+
+        expect(handleAction).toHaveBeenCalledOnce();
+        expect(handleAction).toHaveBeenCalledWith("undo");
+        expect(event.defaultPrevented).toBe(true);
+        unregister();
     });
 
     it("leaves native text editing and unrelated shortcuts alone", () => {
