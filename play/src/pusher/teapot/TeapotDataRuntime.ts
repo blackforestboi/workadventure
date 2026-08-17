@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 
 import {
+    MAP_EDITOR_ALLOW_ALL_USERS,
     TEAPOT_DATABASE_URL,
     TEAPOT_MIGRATIONS_DIRECTORY,
     TEAPOT_REQUIRE_PERSISTENCE,
@@ -16,7 +17,9 @@ import { PostgresTeapotDataRepository } from "./PostgresTeapotDataRepository";
 import { createTeapotDataServices } from "./createTeapotDataServices";
 import type { TeapotDataServices } from "./createTeapotDataServices";
 
-let services = createTeapotDataServices(new InMemoryTeapotDataRepository());
+let services = createTeapotDataServices(new InMemoryTeapotDataRepository(), {
+    allowAllSignedInWamEditors: MAP_EDITOR_ALLOW_ALL_USERS,
+});
 let initialization: Promise<void> | undefined;
 let postgresPool: Pool | undefined;
 let unregisterPostgresPoolErrorHandler: (() => void) | undefined;
@@ -86,7 +89,9 @@ async function initialize(): Promise<void> {
     await new PostgresMigrationRunner(adapter, resolveMigrationsDirectory()).migrate();
 
     postgresPool = pool;
-    services = createTeapotDataServices(new PostgresTeapotDataRepository(adapter));
+    services = createTeapotDataServices(new PostgresTeapotDataRepository(adapter), {
+        allowAllSignedInWamEditors: MAP_EDITOR_ALLOW_ALL_USERS,
+    });
     durable = true;
 }
 

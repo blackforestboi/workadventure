@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* eslint-disable @typescript-eslint/require-await -- synchronous test doubles implement asynchronous revision contracts */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/pusher/enums/EnvironmentVariable", () => import("./mocks/pusherEnvironmentVariableMock"));
 
@@ -28,6 +28,8 @@ async function setup() {
 }
 
 describe("TeapotWamRevisionCoordinator", () => {
+    afterEach(() => vi.useRealTimers());
+
     it("allows a guest temporary root-room access even when the durable policy is locked", async () => {
         const { coordinator, identity, identityResolver, repository } = await setup();
         await repository.replaceRoomEditorPolicy({
@@ -61,6 +63,53 @@ describe("TeapotWamRevisionCoordinator", () => {
         await coordinator.acknowledgeFailure("guest-command");
     });
 
+    it("separates signed-in access from ordinary guest eligibility under restrictive policy", async () => {
+        const { coordinator, identity, identityResolver, repository } = await setup();
+        await repository.replaceRoomEditorPolicy({
+            mapId: "https://maps.test/world.tmj",
+            mode: "nobody",
+            expectedVersion: null,
+            editorIds: [],
+            actorId: identity.id,
+        });
+
+        const signedInJoin = {
+            roomId: "https://play.test/~/world.wam",
+            actorIdentifier: identity.id,
+            legacyCanEdit: false,
+            managementUiAccess: false,
+            isLogged: true,
+        };
+        await expect(coordinator.resolveJoinAccess(signedInJoin)).resolves.toMatchObject({ canEdit: true });
+        await expect(
+            coordinator.begin({
+                commandId: "signed-in-command",
+                roomId: signedInJoin.roomId,
+                actorIdentifier: identity.id,
+                legacyCanEdit: false,
+                isLogged: true,
+            }),
+        ).resolves.toBeUndefined();
+        await coordinator.acknowledgeFailure("signed-in-command");
+
+        await expect(
+            coordinator.resolveJoinAccess({
+                ...signedInJoin,
+                isLogged: false,
+            }),
+        ).resolves.toMatchObject({ canEdit: false });
+        expect(identityResolver).toHaveBeenLastCalledWith(identity.id, false);
+        await expect(
+            coordinator.begin({
+                commandId: "ordinary-guest-command",
+                roomId: signedInJoin.roomId,
+                actorIdentifier: identity.id,
+                legacyCanEdit: false,
+                isLogged: false,
+            }),
+        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+    });
+
     it("holds the shared map lease until the durable WAM acknowledgement", async () => {
         const { coordinator, identity, repository, services } = await setup();
 
@@ -69,6 +118,7 @@ describe("TeapotWamRevisionCoordinator", () => {
             roomId: "https://play.test/~/world.wam",
             actorIdentifier: identity.id,
             legacyCanEdit: true,
+            isLogged: true,
         });
         await expect(
             services.mapRevisions.acquire({
@@ -95,6 +145,7 @@ describe("TeapotWamRevisionCoordinator", () => {
             roomId: "https://play.test/~/world.wam",
             actorIdentifier: identity.id,
             legacyCanEdit: true,
+            isLogged: true,
         });
         await coordinator.acknowledgeFailure("command-rejected");
 
@@ -109,16 +160,39 @@ describe("TeapotWamRevisionCoordinator", () => {
         ).resolves.toMatchObject({ mapId: "https://maps.test/world.tmj" });
     });
 
+    it("rejects a success acknowledgement after its revision lease has already timed out", async () => {
+        vi.useFakeTimers();
+        const { coordinator, identity } = await setup();
+
+        await coordinator.begin({
+            commandId: "late-command",
+            roomId: "https://play.test/~/world.wam",
+            actorIdentifier: identity.id,
+            legacyCanEdit: true,
+            isLogged: false,
+        });
+        await vi.advanceTimersToNextTimerAsync();
+
+        await expect(coordinator.acknowledgeSuccess("late-command")).rejects.toThrow("no active revision lease");
+    });
+
     it("queues rapid WAM commands instead of rejecting normal editor bursts", async () => {
         const { coordinator, identity, repository } = await setup();
         const roomId = "https://play.test/~/world.wam";
 
-        await coordinator.begin({ commandId: "command-1", roomId, actorIdentifier: identity.id, legacyCanEdit: true });
+        await coordinator.begin({
+            commandId: "command-1",
+            roomId,
+            actorIdentifier: identity.id,
+            legacyCanEdit: true,
+            isLogged: true,
+        });
         const secondBegin = coordinator.begin({
             commandId: "command-2",
             roomId,
             actorIdentifier: identity.id,
             legacyCanEdit: true,
+            isLogged: true,
         });
         let secondStarted = false;
         secondBegin
@@ -150,6 +224,7 @@ describe("TeapotWamRevisionCoordinator", () => {
                 actorIdentifier: identity.id,
                 legacyCanEdit: true,
                 managementUiAccess: true,
+                isLogged: true,
             }),
         ).resolves.toBe(false);
     });
@@ -170,6 +245,7 @@ describe("TeapotWamRevisionCoordinator", () => {
                 actorIdentifier: identity.id,
                 legacyCanEdit: false,
                 managementUiAccess: true,
+                isLogged: true,
             }),
         ).resolves.toBe(true);
         await expect(
@@ -179,6 +255,7 @@ describe("TeapotWamRevisionCoordinator", () => {
                 actorIdentifier: identity.id,
                 legacyCanEdit: false,
                 legacyCanAdmin: true,
+                isLogged: true,
             }),
         ).resolves.toBeUndefined();
         await coordinator.acknowledgeFailure("admin-content-edit");
@@ -199,6 +276,7 @@ describe("TeapotWamRevisionCoordinator", () => {
             actorIdentifier: identity.id,
             legacyCanEdit: false,
             managementUiAccess: false,
+            isLogged: true,
         };
         await expect(coordinator.resolveJoinAccess(join)).rejects.toBeInstanceOf(TeapotAuthorizationError);
         await expect(repository.listRoomVisitors("https://maps.test/world.tmj")).resolves.toEqual([]);

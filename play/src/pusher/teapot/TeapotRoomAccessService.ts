@@ -11,7 +11,7 @@ export type TeapotRoomEditContext =
           legacyCanEdit: boolean;
           legacyCanAdmin?: boolean;
           temporaryRootEditor?: boolean;
-          isLogged?: boolean;
+          isLogged: boolean;
       }
     | {
           kind: "direct";
@@ -44,6 +44,7 @@ export class TeapotRoomAccessService {
     public constructor(
         private readonly repository: TeapotDataRepository,
         private readonly authorization: TeapotAuthorizationService,
+        private readonly allowAllSignedInWamEditors = true,
     ) {}
 
     public async assertCanView(input: TeapotRoomJoinAccessInput): Promise<void> {
@@ -80,20 +81,26 @@ export class TeapotRoomAccessService {
             );
         }
 
+        if (
+            this.allowAllSignedInWamEditors &&
+            input.context.kind === "wam" &&
+            input.context.successfulJoin &&
+            input.context.isLogged
+        ) {
+            return;
+        }
+
         if (input.context.kind === "wam" && input.context.legacyCanAdmin) return;
         if (input.context.kind === "wam" && input.context.temporaryRootEditor) return;
         const everyoneEligible =
             input.context.kind === "direct" ||
-            (input.context.successfulJoin && input.context.isLogged !== false);
+            (input.context.successfulJoin &&
+                (input.context.isLogged || input.context.legacyCanEdit || input.context.temporaryRootEditor === true));
         if (await this.roleAllows(input.actorId, input.mapId, "admin", everyoneEligible)) return;
 
         const policy = await this.repository.getRoomAccessPolicy(input.mapId, "edit");
         if (policy === null) {
-            if (
-                input.context.kind === "direct" ||
-                (input.context.successfulJoin && input.context.isLogged !== false)
-            )
-                return;
+            if (everyoneEligible) return;
         } else if (await this.policyAllows(input.actorId, input.mapId, "edit", policy.mode, everyoneEligible)) {
             return;
         }

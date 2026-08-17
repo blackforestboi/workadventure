@@ -35,7 +35,7 @@ export interface BeginWamMutationInput {
     legacyCanEdit: boolean;
     legacyCanAdmin?: boolean;
     temporaryRootEditor?: boolean;
-    isLogged?: boolean;
+    isLogged: boolean;
 }
 
 export interface ResolveWamJoinAccessInput {
@@ -45,7 +45,7 @@ export interface ResolveWamJoinAccessInput {
     legacyCanEdit: boolean;
     managementUiAccess: boolean;
     temporaryRootEditor?: boolean;
-    isLogged?: boolean;
+    isLogged: boolean;
 }
 
 export interface ResolvedWamJoinAccess {
@@ -129,7 +129,8 @@ export class TeapotWamRevisionCoordinator {
         if (input.actorIdentifier.trim().length === 0) {
             throw new TeapotAuthorizationError("Room access requires a stable user identity");
         }
-        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit || input.temporaryRootEditor === true;
+        const isAuthenticated = input.isLogged === true;
+        const isAuthoringSession = isAuthenticated || input.legacyCanEdit || input.temporaryRootEditor === true;
         const [mapId, identity] = await Promise.all([
             this.mapUrlResolver.resolve(input.roomId, input.authToken),
             this.identityResolver(input.actorIdentifier, isAuthoringSession),
@@ -155,7 +156,7 @@ export class TeapotWamRevisionCoordinator {
                               legacyCanEdit: input.legacyCanEdit,
                               legacyCanAdmin: input.managementUiAccess,
                               temporaryRootEditor: input.temporaryRootEditor,
-                              isLogged: isAuthoringSession,
+                              isLogged: isAuthenticated,
                           },
                       }),
                   )
@@ -175,7 +176,8 @@ export class TeapotWamRevisionCoordinator {
 
     public async begin(input: BeginWamMutationInput): Promise<void> {
         if (input.commandId.trim().length === 0) throw new Error("Map commands require a command ID");
-        const isAuthoringSession = input.isLogged !== false || input.legacyCanEdit || input.temporaryRootEditor === true;
+        const isAuthenticated = input.isLogged === true;
+        const isAuthoringSession = isAuthenticated || input.legacyCanEdit || input.temporaryRootEditor === true;
         if (!isAuthoringSession) throw new TeapotAuthorizationError("Map editing requires login");
         const duplicate = this.pending.get(input.commandId);
         if (duplicate !== undefined) {
@@ -186,7 +188,7 @@ export class TeapotWamRevisionCoordinator {
         }
 
         const [identity, mapId] = await Promise.all([
-            this.identityResolver(input.actorIdentifier, true),
+            this.identityResolver(input.actorIdentifier, isAuthoringSession),
             this.mapUrlResolver.resolve(input.roomId, input.authToken),
         ]);
         const previous = this.mapQueues.get(mapId) ?? Promise.resolve();
@@ -214,7 +216,7 @@ export class TeapotWamRevisionCoordinator {
                     legacyCanEdit: input.legacyCanEdit,
                     legacyCanAdmin: input.legacyCanAdmin,
                     temporaryRootEditor: input.temporaryRootEditor,
-                    isLogged: isAuthoringSession,
+                    isLogged: isAuthenticated,
                 },
             });
         } catch (error: unknown) {
@@ -269,7 +271,11 @@ export class TeapotWamRevisionCoordinator {
         if (activeFinalization !== undefined) return activeFinalization;
 
         const entry = this.pending.get(commandId);
-        if (entry === undefined) return Promise.resolve();
+        if (entry === undefined) {
+            return succeeded
+                ? Promise.reject(new Error(`Map command ${commandId} has no active revision lease`))
+                : Promise.resolve();
+        }
         this.pending.delete(commandId);
         clearTimeout(entry.timeout);
 

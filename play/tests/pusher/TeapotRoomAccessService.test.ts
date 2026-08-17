@@ -8,10 +8,10 @@ import { InMemoryTeapotDataRepository } from "../../src/pusher/teapot/InMemoryTe
 
 const MAP_ID = "https://maps.test/world.tmj";
 
-async function setup() {
+async function setup(options: { allowAllSignedInWamEditors?: boolean } = {}) {
     let nextId = 0;
     const repository = new InMemoryTeapotDataRepository({ createId: () => `record-${++nextId}` });
-    const services = createTeapotDataServices(repository);
+    const services = createTeapotDataServices(repository, options);
     const creator = await services.localIdentity.resolve({ localSubject: "creator", initialRoles: ["creator"] });
     const member = await services.localIdentity.resolve({ localSubject: "member" });
     const operator = await services.localIdentity.resolve({ localSubject: "operator", initialRoles: ["operator"] });
@@ -26,7 +26,7 @@ describe("TeapotRoomAccessService", () => {
             services.roomAccess.assertCanEdit({
                 actorId: member.id,
                 mapId: MAP_ID,
-                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true },
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true, isLogged: true },
             }),
         ).resolves.toBeUndefined();
         await expect(
@@ -41,6 +41,13 @@ describe("TeapotRoomAccessService", () => {
                 actorId: member.id,
                 mapId: MAP_ID,
                 context: { kind: "wam", successfulJoin: true, legacyCanEdit: true, isLogged: false },
+            }),
+        ).resolves.toBeUndefined();
+        await expect(
+            services.roomAccess.assertCanEdit({
+                actorId: member.id,
+                mapId: MAP_ID,
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: false },
             }),
         ).rejects.toBeInstanceOf(TeapotAuthorizationError);
         await expect(
@@ -73,7 +80,7 @@ describe("TeapotRoomAccessService", () => {
             services.roomAccess.assertCanEdit({
                 actorId: member.id,
                 mapId: MAP_ID,
-                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false },
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: true },
             }),
         ).resolves.toBeUndefined();
         await expect(
@@ -92,7 +99,7 @@ describe("TeapotRoomAccessService", () => {
         ).resolves.toBeUndefined();
     });
 
-    it("requires an explicit grant in specific mode", async () => {
+    it("allows signed-in WAM users without an explicit grant in specific mode", async () => {
         const { repository, services, creator, member } = await setup();
         await repository.replaceRoomEditorPolicy({
             mapId: MAP_ID,
@@ -106,19 +113,19 @@ describe("TeapotRoomAccessService", () => {
             services.roomAccess.assertCanEdit({
                 actorId: member.id,
                 mapId: MAP_ID,
-                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false },
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: true },
             }),
         ).resolves.toBeUndefined();
         await expect(
             services.roomAccess.assertCanEdit({
                 actorId: creator.id,
                 mapId: MAP_ID,
-                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true },
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true, isLogged: true },
             }),
-        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+        ).resolves.toBeUndefined();
     });
 
-    it("re-checks the current policy before each revision lease", async () => {
+    it("keeps signed-in WAM access when the durable policy becomes restrictive", async () => {
         const { repository, services, creator, member } = await setup();
         const created = await repository.replaceRoomEditorPolicy({
             mapId: MAP_ID,
@@ -127,7 +134,7 @@ describe("TeapotRoomAccessService", () => {
             editorIds: [member.id],
             actorId: creator.id,
         });
-        const editContext = { kind: "wam", successfulJoin: true, legacyCanEdit: false } as const;
+        const editContext = { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: true } as const;
         const lease = await services.mapRevisions.acquire({
             actorId: member.id,
             mapId: MAP_ID,
@@ -144,18 +151,17 @@ describe("TeapotRoomAccessService", () => {
             actorId: creator.id,
         });
 
-        await expect(
-            services.mapRevisions.acquire({
-                actorId: member.id,
-                mapId: MAP_ID,
-                expectedRevision: 0,
-                source: "wam",
-                editContext,
-            }),
-        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+        const secondLease = await services.mapRevisions.acquire({
+            actorId: member.id,
+            mapId: MAP_ID,
+            expectedRevision: 0,
+            source: "wam",
+            editContext,
+        });
+        await repository.releaseMapWriterLease(MAP_ID, secondLease.leaseToken, member.id);
     });
 
-    it("denies ordinary users in nobody mode but preserves the recovery override", async () => {
+    it("allows signed-in WAM users in nobody mode but preserves direct recovery access", async () => {
         const { repository, services, creator, operator } = await setup();
         await repository.replaceRoomEditorPolicy({
             mapId: MAP_ID,
@@ -169,9 +175,9 @@ describe("TeapotRoomAccessService", () => {
             services.roomAccess.assertCanEdit({
                 actorId: creator.id,
                 mapId: MAP_ID,
-                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true },
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true, isLogged: true },
             }),
-        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+        ).resolves.toBeUndefined();
         await expect(
             services.roomAccess.assertCanEdit({
                 actorId: operator.id,
@@ -190,6 +196,40 @@ describe("TeapotRoomAccessService", () => {
                 actorId: operator.id,
                 mapId: MAP_ID,
                 context: { kind: "direct", requiredCapability: "map.publish" },
+            }),
+        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+
+        await expect(
+            services.roomAccess.assertCanEdit({
+                actorId: operator.id,
+                mapId: MAP_ID,
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: true, isLogged: true },
+            }),
+        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+    });
+
+    it("keeps restrictive policies authoritative for guests and when the rollout setting is disabled", async () => {
+        const { repository, services, creator, member } = await setup({ allowAllSignedInWamEditors: false });
+        await repository.replaceRoomEditorPolicy({
+            mapId: MAP_ID,
+            mode: "nobody",
+            expectedVersion: null,
+            editorIds: [],
+            actorId: creator.id,
+        });
+
+        await expect(
+            services.roomAccess.assertCanEdit({
+                actorId: member.id,
+                mapId: MAP_ID,
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: true },
+            }),
+        ).rejects.toBeInstanceOf(TeapotAuthorizationError);
+        await expect(
+            services.roomAccess.assertCanEdit({
+                actorId: member.id,
+                mapId: MAP_ID,
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: false },
             }),
         ).rejects.toBeInstanceOf(TeapotAuthorizationError);
     });
@@ -272,7 +312,7 @@ describe("TeapotRoomAccessService", () => {
             services.roomAccess.assertCanEdit({
                 actorId: member.id,
                 mapId: MAP_ID,
-                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false },
+                context: { kind: "wam", successfulJoin: true, legacyCanEdit: false, isLogged: true },
             }),
         ).resolves.toBeUndefined();
         await expect(services.roomAccess.assertCanView(join)).resolves.toBeUndefined();

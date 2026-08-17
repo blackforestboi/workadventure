@@ -4,10 +4,21 @@ import { TeapotAuthorizationService } from "./TeapotAuthorizationService";
 import { TeapotMapRevisionService } from "./TeapotMapRevisionService";
 import { TeapotRoomAccessService } from "./TeapotRoomAccessService";
 
-export function createTeapotDataServices(repository: TeapotDataRepository) {
+export interface CreateTeapotDataServicesOptions {
+    allowAllSignedInWamEditors?: boolean;
+}
+
+export function createTeapotDataServices(
+    repository: TeapotDataRepository,
+    options: CreateTeapotDataServicesOptions = {},
+) {
     const authorization = new TeapotAuthorizationService(repository);
     const identity = new TeapotIdentityService(repository, authorization);
-    const roomAccess = new TeapotRoomAccessService(repository, authorization);
+    const roomAccess = new TeapotRoomAccessService(
+        repository,
+        authorization,
+        options.allowAllSignedInWamEditors ?? true,
+    );
     return {
         repository,
         authorization,
