@@ -9,6 +9,7 @@ export async function persistTerrainMutation(
     wamFile: WamFile,
     wamUrl: URL,
     message: ModifyTerrainMessage,
+    commandId: string,
 ): Promise<void> {
     const configuredMapUrl = new URL(wamFile.getWam().mapUrl, wamUrl).toString();
     if (message.mapUrl !== configuredMapUrl) throw new Error("The terrain edit belongs to a different map");
@@ -29,5 +30,16 @@ export async function persistTerrainMutation(
         beforeLayer: message.beforeLayer || undefined,
         elevationUpdates: message.elevationUpdates,
     });
-    await fileSystem.writeStringAsFile(mapKey, JSON.stringify(updated));
+    const serialized = JSON.stringify(updated);
+    await fileSystem.writeStringAsFile(mapKey, serialized);
+
+    const stored = await fileSystem.readFileAsString(mapKey);
+    if (stored !== serialized) {
+        const expectedBytes = Buffer.byteLength(serialized, "utf8");
+        const storedBytes = Buffer.byteLength(stored, "utf8");
+        throw new Error(
+            `Terrain command ${commandId} could not be confirmed in remote storage for ${mapKey} ` +
+                `(expected ${expectedBytes} bytes, read ${storedBytes})`,
+        );
+    }
 }

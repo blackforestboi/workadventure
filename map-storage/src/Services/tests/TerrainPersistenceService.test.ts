@@ -97,10 +97,16 @@ function floorLayer(map: ITiledMap) {
 }
 
 describe("persistTerrainMutation", () => {
+    let storedMap: string;
+
     beforeEach(() => {
         vi.resetAllMocks();
-        fileSystemMock.readFileAsString.mockResolvedValue(sourceMap);
-        fileSystemMock.writeStringAsFile.mockResolvedValue(undefined);
+        storedMap = sourceMap;
+        fileSystemMock.readFileAsString.mockImplementation(() => Promise.resolve(storedMap));
+        fileSystemMock.writeStringAsFile.mockImplementation((_key: string, content: string) => {
+            storedMap = content;
+            return Promise.resolve();
+        });
     });
 
     it("persists signed edits without moving previously stored coordinates", async () => {
@@ -108,17 +114,18 @@ describe("persistTerrainMutation", () => {
             new WamFile(wam),
             new URL("http://maps.example.test/maps/map.wam"),
             message([{ layer: "floor", x: -3, y: -2, width: 1, height: 1, gids: [8] }]),
+            "command-1",
         );
 
         const firstPersisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;
         expect(getTileLayerGid(floorLayer(firstPersisted), -3, -2)).toBe(8);
         expect(getTileLayerGid(floorLayer(firstPersisted), 0, 0)).toBe(1);
 
-        fileSystemMock.readFileAsString.mockResolvedValue(JSON.stringify(firstPersisted));
         await persistTerrainMutation(
             new WamFile(wam),
             new URL("http://maps.example.test/maps/map.wam"),
             message([{ layer: "floor", x: 4, y: 3, width: 1, height: 1, gids: [7] }]),
+            "command-2",
         );
 
         const secondPersisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[1][1] as string) as ITiledMap;
@@ -129,10 +136,15 @@ describe("persistTerrainMutation", () => {
     });
 
     it("persists sparse elevation independently of floor tiles", async () => {
-        await persistTerrainMutation(new WamFile(wam), new URL("http://maps.example.test/maps/map.wam"), {
-            ...message([]),
-            elevationUpdates: [{ layer: "floor", x: -3, y: -2, elevation: 2 }],
-        });
+        await persistTerrainMutation(
+            new WamFile(wam),
+            new URL("http://maps.example.test/maps/map.wam"),
+            {
+                ...message([]),
+                elevationUpdates: [{ layer: "floor", x: -3, y: -2, elevation: 2 }],
+            },
+            "command-elevation",
+        );
 
         const persisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;
         expect(getTileLayerGid(floorLayer(persisted), 0, 0)).toBe(1);
@@ -146,14 +158,19 @@ describe("persistTerrainMutation", () => {
     it("persists an atomic water underlay and surface cutout", async () => {
         const map = JSON.parse(sourceMap) as ITiledMap;
         const underlay = createWaterUnderlayLayer(map, "floor");
-        await persistTerrainMutation(new WamFile(wam), new URL("http://maps.example.test/maps/map.wam"), {
-            ...message([
-                { layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [0] },
-                { layer: underlay.name, x: 0, y: 0, width: 1, height: 1, gids: [8] },
-            ]),
-            layerJson: JSON.stringify(underlay),
-            beforeLayer: "floor",
-        });
+        await persistTerrainMutation(
+            new WamFile(wam),
+            new URL("http://maps.example.test/maps/map.wam"),
+            {
+                ...message([
+                    { layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [0] },
+                    { layer: underlay.name, x: 0, y: 0, width: 1, height: 1, gids: [8] },
+                ]),
+                layerJson: JSON.stringify(underlay),
+                beforeLayer: "floor",
+            },
+            "command-water",
+        );
 
         const persisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;
         const persistedUnderlay = persisted.layers[0];
@@ -164,23 +181,42 @@ describe("persistTerrainMutation", () => {
         expect(persistedFloor?.type === "tilelayer" ? getTileLayerGid(persistedFloor, 0, 0) : -1).toBe(0);
     });
 
+    it("rejects a terrain save when remote read-back does not contain the written map", async () => {
+        fileSystemMock.readFileAsString.mockResolvedValueOnce(sourceMap).mockResolvedValueOnce(sourceMap);
+
+        await expect(
+            persistTerrainMutation(
+                new WamFile(wam),
+                new URL("http://maps.example.test/maps/map.wam"),
+                message([{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }]),
+                "command-unconfirmed",
+            ),
+        ).rejects.toThrow("could not be confirmed in remote storage");
+    });
+
     it("rejects edits targeting a different TMJ", async () => {
         await expect(
-            persistTerrainMutation(new WamFile(wam), new URL("http://maps.example.test/maps/map.wam"), {
-                ...message([{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }]),
-                mapUrl: "http://maps.example.test/maps/other.tmj",
-            }),
+            persistTerrainMutation(
+                new WamFile(wam),
+                new URL("http://maps.example.test/maps/map.wam"),
+                {
+                    ...message([{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }]),
+                    mapUrl: "http://maps.example.test/maps/other.tmj",
+                },
+                "command-wrong-map",
+            ),
         ).rejects.toThrow("different map");
         expect(fileSystemMock.writeStringAsFile).not.toHaveBeenCalled();
     });
 
     it("persists a legacy finite source without rebasing it", async () => {
-        fileSystemMock.readFileAsString.mockResolvedValue(JSON.stringify(createFiniteSource()));
+        storedMap = JSON.stringify(createFiniteSource());
 
         await persistTerrainMutation(
             new WamFile(wam),
             new URL("http://maps.example.test/maps/map.wam"),
             message([{ layer: "floor", x: 0, y: 0, width: 1, height: 1, gids: [8] }]),
+            "command-legacy",
         );
 
         const persisted = JSON.parse(fileSystemMock.writeStringAsFile.mock.calls[0][1] as string) as ITiledMap;

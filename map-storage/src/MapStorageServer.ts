@@ -409,7 +409,7 @@ const mapStorageServer: MapStorageServer = {
                         break;
                     }
                     case "modifyTerrainMessage": {
-                        await persistTerrainMutation(wamFile, mapUrl, editMapMessage.modifyTerrainMessage);
+                        await persistTerrainMutation(wamFile, mapUrl, editMapMessage.modifyTerrainMessage, commandId);
                         break;
                     }
                     case "upsertVegetationPresetMessage": {

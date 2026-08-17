@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { Request, Response, NextFunction } from "express";
 import { mapPath } from "../Services/PathMapper";
 import type { FileSystemInterface } from "../Upload/FileSystemInterface";
@@ -10,9 +11,10 @@ export function proxyFiles(fileSystem: FileSystemInterface) {
         const unescapedPath = decodeURIComponent(req.path.replace(/\+/g, " "));
         const virtualPath = mapPath(unescapedPath, req);
 
-        const fileName = req.path.split("/").pop();
+        const fileName = path.posix.basename(unescapedPath);
 
         if (fileName) {
+            const fileExtension = path.posix.extname(fileName).slice(1).toLowerCase();
             // Use a regular expression to check if the file has a unique alphanumeric identifier of length between 6 and 32 characters in its name, and capture the file extension
             const regex = /[.-]([a-f0-9]{8})\.([a-z]{2,4})$/i;
             const match = fileName.match(regex);
@@ -22,7 +24,10 @@ export function proxyFiles(fileSystem: FileSystemInterface) {
             const matchUuid = fileName.match(regexUuid);
 
             // Check if the regular expression matched and the file extension is one of the common static file extensions
-            if (match && staticFileExtensions.includes(match[2])) {
+            if (fileExtension === "wam" || fileExtension === "tmj") {
+                // These files are edited in place. A cached response can make a durable edit disappear after reload.
+                res.set("Cache-Control", "no-store");
+            } else if (match && staticFileExtensions.includes(match[2])) {
                 // Set the cache-control header to cache the file forever
                 res.set("Cache-Control", "public, max-age=31536000, immutable");
             } else if (matchUuid && staticFileExtensions.includes(matchUuid[2])) {
