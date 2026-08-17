@@ -3,6 +3,7 @@ import Debug from "debug";
 import type { ClientDuplexStream } from "@grpc/grpc-js";
 import * as Sentry from "@sentry/node";
 import type { WAMFileFormat } from "@workadventure/map-editor";
+import { asError } from "catch-unknown";
 
 import { GRPC_MAX_MESSAGE_SIZE } from "../enums/EnvironmentVariable";
 import { apiClientRepository } from "../services/ApiClientRepository";
@@ -151,16 +152,38 @@ export class PusherRoom {
                         case "editMapCommandMessage": {
                             const command = message.message.editMapCommandMessage;
                             const isError = command.editMapMessage?.message?.$case === "errorCommandMessage";
-                            const finalization = isError
-                                ? teapotWamRevisionCoordinator.acknowledgeFailure(command.id)
-                                : teapotWamRevisionCoordinator.acknowledgeSuccess(command.id);
-                            finalization
+                            if (isError) {
+                                teapotWamRevisionCoordinator
+                                    .acknowledgeFailure(command.id)
+                                    .catch((error: unknown) => {
+                                        Sentry.captureException(error, {
+                                            tags: { roomUrl: this.roomUrl, teapotCommandId: command.id },
+                                        });
+                                    })
+                                    .finally(() => this.broadcastEditMapCommand(command));
+                                break;
+                            }
+
+                            teapotWamRevisionCoordinator
+                                .acknowledgeSuccess(command.id)
+                                .then(() => this.broadcastEditMapCommand(command))
                                 .catch((error: unknown) => {
-                                    Sentry.captureException(error, {
+                                    const revisionError = asError(error);
+                                    Sentry.captureException(revisionError, {
                                         tags: { roomUrl: this.roomUrl, teapotCommandId: command.id },
                                     });
-                                })
-                                .finally(() => this.broadcastEditMapCommand(command));
+                                    this.broadcastEditMapCommand({
+                                        id: command.id,
+                                        editMapMessage: {
+                                            message: {
+                                                $case: "errorCommandMessage",
+                                                errorCommandMessage: {
+                                                    reason: `The map revision could not be committed: ${revisionError.message}`,
+                                                },
+                                            },
+                                        },
+                                    });
+                                });
                             break;
                         }
                         case "errorMessage": {

@@ -15,12 +15,9 @@ import { WEB_HOOK_URL } from "./Enum/EnvironmentVariable";
  */
 const EDITION_LOCK_TIMEOUT_MS = 10_000;
 
-class MapsManager {
+export class MapsManager {
     private loadedMaps: Map<string, WamFile>;
     private loadedMapsCommandsQueue: Map<string, EditMapCommandMessage[]>;
-
-    private saveMapIntervals: Map<string, NodeJS.Timeout>;
-    private mapLastChangeTimestamp: Map<string, number>;
 
     private readonly editionLocks = new LockByKey<string>(
         (error, key, timeoutMs) => {
@@ -40,23 +37,13 @@ class MapsManager {
     private mapListService: MapListService;
 
     /**
-     * Attempt to save the map from memory to file every time interval
-     */
-    private readonly AUTO_SAVE_INTERVAL_MS: number = 15 * 1000; // 15 seconds
-    /**
      * Time after which the command will be removed from the commands queue
      */
-    private readonly COMMAND_TIME_IN_QUEUE_MS: number = this.AUTO_SAVE_INTERVAL_MS * 2;
-    /**
-     * Kill saving map interval after given time of no changes done to the map
-     */
-    private readonly NO_CHANGE_DETECTED_MS: number = 1 * 20 * 1000; // 20 seconds
+    private readonly COMMAND_TIME_IN_QUEUE_MS = 30_000;
 
     constructor() {
         this.loadedMaps = new Map<string, WamFile>();
         this.loadedMapsCommandsQueue = new Map<string, EditMapCommandMessage[]>();
-        this.saveMapIntervals = new Map<string, NodeJS.Timeout>();
-        this.mapLastChangeTimestamp = new Map<string, number>();
         this.mapListService = new MapListService(fileSystem, new WebHookService(WEB_HOOK_URL));
     }
 
@@ -69,17 +56,14 @@ class MapsManager {
         if (!wamFile) {
             throw new Error('Could not find WAM file with key "' + mapKey + '"');
         }
-        this.mapLastChangeTimestamp.set(mapKey, +new Date());
-        if (!this.saveMapIntervals.has(mapKey)) {
-            this.startSavingMapInterval(mapKey, this.AUTO_SAVE_INTERVAL_MS);
-        }
         const updatedWamFile = await command.execute();
+        wamFile.updateLastCommandIdProperty(command.commandId);
 
         // Security check: Check that the map is valid after the change (it should be, but better safe than sorry)
         WAMFileFormat.parse(wamFile.getWam());
 
-        // An acknowledged editor command must already be durable. The background interval remains as a safety net,
-        // but connected players only receive the command after this write has completed.
+        // An acknowledged editor command must already be durable. Do not schedule a later whole-map rewrite here:
+        // another map-storage instance may have persisted newer state by the time that delayed write runs.
         await fileSystem.writeStringAsFile(mapKey, JSON.stringify(wamFile.getWam()));
 
         if (updatedWamFile != undefined) {
@@ -103,7 +87,6 @@ class MapsManager {
         WAMFileFormat.parse(candidate.getWam());
         await fileSystem.writeStringAsFile(mapKey, JSON.stringify(candidate.getWam()));
         this.loadedMaps.set(mapKey, candidate);
-        this.mapLastChangeTimestamp.set(mapKey, +new Date());
         if (updatedWamFile !== undefined) {
             this.mapListService
                 .updateWAMFileInCache(domain, mapKey.replace(domain, ""), updatedWamFile)
@@ -161,7 +144,6 @@ class MapsManager {
         console.info(`[${new Date().toISOString()}] UPLOAD/DELETE DETECTED. CLEAR CACHE FOR: ${key}`);
         this.loadedMaps.delete(key);
         this.loadedMapsCommandsQueue.delete(key);
-        this.clearSaveMapInterval(key);
     }
 
     public addCommandToQueue(mapKey: string, message: EditMapCommandMessage): void {
@@ -173,17 +155,6 @@ class MapsManager {
         queue.push(message);
         this.setCommandDeletionTimeout(mapKey, message.id);
         this.loadedMaps.get(mapKey)?.updateLastCommandIdProperty(message.id);
-    }
-
-    private clearSaveMapInterval(key: string): boolean {
-        const interval = this.saveMapIntervals.get(key);
-        if (interval) {
-            clearInterval(interval);
-            this.saveMapIntervals.delete(key);
-            this.mapLastChangeTimestamp.delete(key);
-            return true;
-        }
-        return false;
     }
 
     private setCommandDeletionTimeout(mapKey: string, commandId: string): void {
@@ -226,35 +197,6 @@ class MapsManager {
                 );
             }
         }, this.COMMAND_TIME_IN_QUEUE_MS);
-    }
-
-    private startSavingMapInterval(key: string, intervalMS: number): void {
-        this.saveMapIntervals.set(
-            key,
-            setInterval(() => {
-                (async () => {
-                    console.info(`[${new Date().toISOString()}] saving map ${key}`);
-                    const wamFile = this.loadedMaps.get(key);
-                    if (wamFile) {
-                        await fileSystem.writeStringAsFile(key, JSON.stringify(wamFile.getWam()));
-                    }
-                    const lastChangeTimestamp = this.mapLastChangeTimestamp.get(key);
-                    if (lastChangeTimestamp === undefined) {
-                        return;
-                    }
-                    if (lastChangeTimestamp + this.NO_CHANGE_DETECTED_MS < +new Date()) {
-                        console.info(
-                            `[${new Date().toISOString()}] NO CHANGES ON THE MAP ${key} DETECTED. STOP AUTOSAVING`,
-                        );
-                        this.clearSaveMapInterval(key);
-                    }
-                })().catch((e) => {
-                    console.error(`[${new Date().toISOString()}]`, e, "STOP AUTOSAVING");
-                    this.clearSaveMapInterval(key);
-                    Sentry.captureException(e);
-                });
-            }, intervalMS),
-        );
     }
 }
 

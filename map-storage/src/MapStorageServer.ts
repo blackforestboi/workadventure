@@ -135,16 +135,7 @@ const mapStorageServer: MapStorageServer = {
                     return;
                 }
                 const editMapMessage = editMapCommandMessage.editMapMessage.message;
-                const wamFile = await mapsManager.getOrLoadWamFile(mapKey);
-
                 const { connectedUserTags, userCanEdit, userUUID } = call.request;
-
-                const gameMapAreas = wamFile.getGameMapAreas();
-                const entityCommandPermissions = gameMapAreas
-                    ? new EntityPermissions(gameMapAreas, connectedUserTags, userCanEdit, userUUID)
-                    : undefined;
-
-                const commandId = editMapCommandMessage.id;
 
                 if (!userCanEdit && !COMMANDS_ACCESSIBLE_WITHOUT_CAN_EDIT.has(editMapMessage.$case)) {
                     // A user tried to bypass security!
@@ -152,6 +143,16 @@ const mapStorageServer: MapStorageServer = {
                         `User ${userUUID} is not allowed to edit the map but tried to execute command: ${editMapMessage.$case} on map ${mapUrl}`,
                     );
                 }
+
+                // Map-storage can run with multiple instances. Always base a whole-map write on the durable
+                // snapshot rather than this process's read cache so an older instance cannot erase newer edits.
+                const wamFile = await mapsManager.loadWAMToMemory(mapKey);
+                const gameMapAreas = wamFile.getGameMapAreas();
+                const entityCommandPermissions = gameMapAreas
+                    ? new EntityPermissions(gameMapAreas, connectedUserTags, userCanEdit, userUUID)
+                    : undefined;
+
+                const commandId = editMapCommandMessage.id;
 
                 switch (editMapMessage.$case) {
                     case "modifyAreaMessage": {

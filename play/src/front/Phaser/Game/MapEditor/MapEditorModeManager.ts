@@ -22,6 +22,7 @@ import {
 import { mapEditorActivated, mapEditorActivatedForThematics } from "../../../Stores/MenuStore";
 import { localUserStore } from "../../../Connection/LocalUserStore";
 import { errorStore } from "../../../Stores/ErrorStore";
+import { pendingMapChangesStore } from "../../../Stores/RefreshPromptStore";
 import LL from "../../../../i18n/i18n-svelte";
 import { gameManager } from "../GameManager";
 import { isInsidePersonalAreaStore, personalAreaDataStore } from "../../../Stores/PersonalDeskStore";
@@ -87,6 +88,7 @@ export class MapEditorModeManager {
      * Commands sent by us that are still to be acknowledged by the server
      */
     private pendingCommands: FrontCommand[];
+    private readonly submittedCommandIds = new Set<string>();
     /**
      * Which command was called most recently
      */
@@ -151,6 +153,7 @@ export class MapEditorModeManager {
 
         this.localCommandsHistory = [];
         this.pendingCommands = [];
+        pendingMapChangesStore.set(0);
         this.currentCommandIndex = -1;
 
         this.active = false;
@@ -222,6 +225,7 @@ export class MapEditorModeManager {
                 this.scene.getGameMap().getWamFile()?.updateLastCommandIdProperty(command.commandId);
                 return;
             } catch (error) {
+                this.removeSubmittedCommand(command.commandId);
                 const submissionError = asError(error);
                 if (command instanceof UploadEntityFrontCommand) {
                     await this.rejectPendingUpload(
@@ -274,8 +278,10 @@ export class MapEditorModeManager {
         } catch (e) {
             this.localCommandsHistory.splice(this.currentCommandIndex, 1);
             this.currentCommandIndex -= 1;
-            console.error(e);
-            Sentry.captureException(e);
+            const submissionError = asError(e);
+            this.reportMapSaveFailure(submissionError.message || "The undo could not be submitted.");
+            console.error(submissionError);
+            Sentry.captureException(submissionError);
         }
     }
 
@@ -302,8 +308,10 @@ export class MapEditorModeManager {
         } catch (e) {
             this.localCommandsHistory.splice(this.currentCommandIndex, 1);
             this.currentCommandIndex -= 1;
-            console.error(e);
-            Sentry.captureException(e);
+            const submissionError = asError(e);
+            this.reportMapSaveFailure(submissionError.message || "The redo could not be submitted.");
+            console.error(submissionError);
+            Sentry.captureException(submissionError);
         }
     }
 
@@ -328,6 +336,8 @@ export class MapEditorModeManager {
     }
 
     public destroy(): void {
+        this.submittedCommandIds.clear();
+        pendingMapChangesStore.set(0);
         this.scene.game.canvas.removeEventListener("pointerdown", this.canvasPointerDownHandler);
         this.scene.game.canvas.removeEventListener("click", this.canvasPointerDownHandler);
         this.unregisterNativeHistoryShortcut();
@@ -412,65 +422,88 @@ export class MapEditorModeManager {
         const limit = pLimit(1);
         // The editMapCommandMessageStream stream is completed in the RoomConnection. No need to unsubscribe.
         //eslint-disable-next-line rxjs/no-ignored-subscription, svelte/no-ignored-unsubscribe
-        connection.editMapCommandMessageStream.subscribe((editMapCommandMessage) => {
-            limit(async () => {
-                if (editMapCommandMessage.editMapMessage?.message?.$case === "errorCommandMessage") {
-                    const errorCommandMessage = editMapCommandMessage.editMapMessage.message.errorCommandMessage;
-                    logger("ErrorCommandMessage received", errorCommandMessage);
-                    this.reportMapSaveFailure(errorCommandMessage.reason);
-                    const command = this.pendingCommands.find(
-                        (command) => command.commandId === editMapCommandMessage.id,
-                    );
-                    if (command) {
-                        logger("removing command of pendingList : ", editMapCommandMessage.id);
-                        this.pendingCommands.splice(this.pendingCommands.indexOf(command), 1);
-                        if (command instanceof UploadEntityFrontCommand) {
-                            await this.rejectPendingUpload(command, errorCommandMessage.reason);
-                        } else {
-                            await this.rejectPendingCommand(command, errorCommandMessage.reason);
+        connection.editMapCommandMessageStream.subscribe(
+            (editMapCommandMessage) => {
+                limit(async () => {
+                    if (editMapCommandMessage.editMapMessage?.message?.$case === "errorCommandMessage") {
+                        const errorCommandMessage = editMapCommandMessage.editMapMessage.message.errorCommandMessage;
+                        logger("ErrorCommandMessage received", errorCommandMessage);
+                        if (!this.removeSubmittedCommand(editMapCommandMessage.id)) {
+                            return;
                         }
-                    }
-                    return;
-                }
-
-                logger("Received command from server", editMapCommandMessage.id);
-
-                // Local command execution (undo/redo)
-                if (this.pendingCommands.length > 0) {
-                    if (this.pendingCommands[0].commandId === editMapCommandMessage.id) {
-                        logger("removing command of pendingList : ", editMapCommandMessage.id);
-                        const command = this.pendingCommands.shift();
-
-                        const message = editMapCommandMessage.editMapMessage?.message;
-
-                        if (
-                            command instanceof UpdateAreaFrontCommand &&
-                            message &&
-                            message.$case === "modifyAreaMessage" &&
-                            message.modifyAreaMessage.modifyServerData === true
-                        ) {
-                            command.setNewConfig(message.modifyAreaMessage);
-                            await command.execute();
+                        this.reportMapSaveFailure(errorCommandMessage.reason);
+                        const command = this.pendingCommands.find(
+                            (command) => command.commandId === editMapCommandMessage.id,
+                        );
+                        if (command) {
+                            logger("removing command of pendingList : ", editMapCommandMessage.id);
+                            this.pendingCommands.splice(this.pendingCommands.indexOf(command), 1);
+                            if (command instanceof UploadEntityFrontCommand) {
+                                await this.rejectPendingUpload(command, errorCommandMessage.reason);
+                            } else {
+                                await this.rejectPendingCommand(command, errorCommandMessage.reason);
+                            }
                         }
-
-                        if (command instanceof UploadEntityFrontCommand) {
-                            this.acknowledgePendingUpload(command.commandId);
-                        }
-
-                        command?.onAcknowledged?.();
-
                         return;
                     }
-                    await this.revertPendingCommands();
-                }
 
-                // Remote command execution
-                for (const tool of Object.values(this.editorTools)) {
-                    //eslint-disable-next-line no-await-in-loop
-                    await tool.handleIncomingCommandMessage(editMapCommandMessage);
+                    logger("Received command from server", editMapCommandMessage.id);
+                    const wasSubmittedLocally = this.removeSubmittedCommand(editMapCommandMessage.id);
+
+                    // Local command execution (undo/redo)
+                    if (this.pendingCommands.length > 0) {
+                        if (this.pendingCommands[0].commandId === editMapCommandMessage.id) {
+                            logger("removing command of pendingList : ", editMapCommandMessage.id);
+                            const command = this.pendingCommands.shift();
+
+                            const message = editMapCommandMessage.editMapMessage?.message;
+
+                            if (
+                                command instanceof UpdateAreaFrontCommand &&
+                                message &&
+                                message.$case === "modifyAreaMessage" &&
+                                message.modifyAreaMessage.modifyServerData === true
+                            ) {
+                                command.setNewConfig(message.modifyAreaMessage);
+                                await command.execute();
+                            }
+
+                            if (command instanceof UploadEntityFrontCommand) {
+                                this.acknowledgePendingUpload(command.commandId);
+                            }
+
+                            command?.onAcknowledged?.();
+
+                            return;
+                        }
+                        await this.revertPendingCommands();
+                    }
+
+                    if (wasSubmittedLocally) {
+                        return;
+                    }
+
+                    // Remote command execution
+                    for (const tool of Object.values(this.editorTools)) {
+                        //eslint-disable-next-line no-await-in-loop
+                        await tool.handleIncomingCommandMessage(editMapCommandMessage);
+                    }
+                }).catch((e) => console.error(e));
+            },
+            undefined,
+            () => {
+                const pendingSaveCount = this.getPendingSaveCount();
+                if (pendingSaveCount > 0) {
+                    this.reportMapSaveFailure(
+                        `The connection closed before ${pendingSaveCount} map change(s) were confirmed. Reload before continuing.`,
+                    );
                 }
-            }).catch((e) => console.error(e));
-        });
+            },
+        );
+    }
+
+    public getPendingSaveCount(): number {
+        return this.submittedCommandIds.size;
     }
 
     private acknowledgePendingUpload(commandId: string): void {
@@ -544,6 +577,7 @@ export class MapEditorModeManager {
             while (this.pendingCommands.length > 0) {
                 const command = this.pendingCommands.pop();
                 if (command) {
+                    this.removeSubmittedCommand(command.commandId);
                     //eslint-disable-next-line no-await-in-loop
                     await command.getUndoCommand().execute();
                     // also remove from local history of commands as this is invalid
@@ -590,18 +624,33 @@ export class MapEditorModeManager {
         return false;
     }
 
-    private emitMapEditorUpdate(command: FrontCommandInterface, delay = 0): void {
+    private emitMapEditorUpdate(command: Command & FrontCommandInterface, delay = 0): void {
+        this.submittedCommandIds.add(command.commandId);
+        pendingMapChangesStore.set(this.submittedCommandIds.size);
         const func = () => {
-            if (this.scene.connection === undefined) {
-                throw new Error("No connection attached to room to emit map editor update");
+            try {
+                if (this.scene.connection === undefined) {
+                    throw new Error("No connection attached to room to emit map editor update");
+                }
+                command.emitEvent(this.scene.connection);
+            } catch (error) {
+                this.removeSubmittedCommand(command.commandId);
+                throw error;
             }
-            command.emitEvent(this.scene.connection);
         };
         if (delay === 0) {
             func();
             return;
         }
         setTimeout(func, delay);
+    }
+
+    private removeSubmittedCommand(commandId: string): boolean {
+        const removed = this.submittedCommandIds.delete(commandId);
+        if (removed) {
+            pendingMapChangesStore.set(this.submittedCommandIds.size);
+        }
+        return removed;
     }
 
     /**

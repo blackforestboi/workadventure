@@ -3,6 +3,8 @@ import type { BaseTranslation } from "../i18n-types";
 const mapEditor: BaseTranslation = {
     map: {
         refreshPrompt: "New version of map detected. Refresh needed",
+        pendingChangesBeforeRefresh:
+            "{count} map change(s) are still waiting for save confirmation. Automatic refresh has been paused to avoid losing them.",
         deletePrompt: "This map has been deleted",
         deletePromptSubtitle: "You have been disconnected from this room.",
         deletePromptDetails: "Refreshing will not restore this map because it no longer exists.",

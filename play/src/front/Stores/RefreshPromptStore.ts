@@ -5,3 +5,4 @@ export interface RefreshPromptConfig {
 }
 
 export const refreshPromptStore = writable<RefreshPromptConfig | undefined>(undefined);
+export const pendingMapChangesStore = writable(0);
