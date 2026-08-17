@@ -67,6 +67,7 @@ import {
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { isElevatableTerrainGid } from "../../GameMap/ElevationEligibility";
 import { ELEVATION_COMPOSITE_LAYER_DATA_KEY } from "../../GameMap/ElevationRenderer";
+import { getCompositeTileLayerBaseName, getCompositeTileLayerDepthOffset } from "../../GameMap/CompositeTileLayerOrder";
 import type { GameScene } from "../../GameScene";
 import { ModifyTerrainFrontCommand } from "../Commands/Terrain/ModifyTerrainFrontCommand";
 import { CreateVegetationBatchFrontCommand } from "../Commands/Entity/CreateVegetationBatchFrontCommand";
@@ -78,6 +79,7 @@ import { collapseTileRegions, createFloorEdit, type FloorEdit } from "./FloorEdi
 import {
     collectTerrainGids,
     findTopmostErasableLayer,
+    findTopmostSurfaceLayer,
     getTerrainTilesetGids,
     resolveVegetationSelectionLayer,
 } from "./FloorEditorCatalog";
@@ -718,12 +720,16 @@ export class FloorEditorTool extends MapEditorTool {
             this.scene.getElevationRenderer().getTileCoordinatesAtWorldPoint(pointer.worldX, pointer.worldY) ??
             worldToTileCoordinates(visibleMap, pointer.worldX, pointer.worldY);
         const elevationMode = get(mapEditorFloorStateStore)?.toolMode === "elevation";
+        const waterMode = this.selectedWaterFillGid !== undefined;
         const surfaceLayerName = this.getSurfaceOverlayLayerName();
         const targetLayer = elevationMode
             ? (findTopmostErasableLayer(visibleMap.layers, coordinates.x, coordinates.y) ?? this.selectedLayer)
-            : this.selectedGid === 0 && getAuthoringPathOverlayKind(this.selectedLayer) === undefined
-              ? (findTopmostErasableLayer(visibleMap.layers, coordinates.x, coordinates.y) ?? this.selectedLayer)
-              : (surfaceLayerName ?? this.selectedLayer);
+            : waterMode
+              ? (findTopmostSurfaceLayer(visibleMap.layers, this.selectedLayer, coordinates.x, coordinates.y) ??
+                this.selectedLayer)
+              : this.selectedGid === 0 && getAuthoringPathOverlayKind(this.selectedLayer) === undefined
+                ? (findTopmostErasableLayer(visibleMap.layers, coordinates.x, coordinates.y) ?? this.selectedLayer)
+                : (surfaceLayerName ?? this.selectedLayer);
         const layer = findLayer(visibleMap.layers, targetLayer);
         if (layer?.type !== "tilelayer" && targetLayer !== surfaceLayerName) return undefined;
         return { layer: targetLayer, ...coordinates };
@@ -1559,9 +1565,10 @@ export class FloorEditorTool extends MapEditorTool {
         const underlayCoverLayer = waterUnderlayCoverLayerName(layer);
         const surfaceCoverLayer = surfaceOverlayCoverLayerName(layer);
         const compositeCoverLayer = underlayCoverLayer ?? surfaceCoverLayer;
+        const compositeBaseLayer = getCompositeTileLayerBaseName(layer);
         const renderReferenceLayer =
             phaserLayer ??
-            (compositeCoverLayer === undefined ? undefined : gameMapFrontWrapper.findPhaserLayer(compositeCoverLayer));
+            (compositeBaseLayer === layer ? undefined : gameMapFrontWrapper.findPhaserLayer(compositeBaseLayer));
         const pathOverlayKind = getAuthoringPathOverlayKind(layer);
         if (pathOverlayKind !== undefined) {
             // Collision markers must stay non-empty for Arcade Physics; checker overlays own all path visuals.
@@ -1583,7 +1590,7 @@ export class FloorEditorTool extends MapEditorTool {
                     tileTexture.frame,
                     map,
                     renderReferenceLayer,
-                    underlayCoverLayer === undefined ? 0.01 : -0.01,
+                    compositeCoverLayer === undefined ? 0.01 : getCompositeTileLayerDepthOffset(map.layers, layer),
                     compositeCoverLayer ?? layer,
                 );
                 return;

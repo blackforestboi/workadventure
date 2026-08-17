@@ -21,6 +21,7 @@ import {
     surfaceOverlayCoverLayerName,
     tileToLayerIndex,
     type TeapotTileRegion,
+    waterUnderlayCoverLayerName,
     worldToTileCoordinates,
 } from "@workadventure/map-editor";
 import { MathUtils } from "@workadventure/math-utils";
@@ -41,6 +42,7 @@ import type { ITiledPlace } from "../GameMapPropertiesListener";
 import type { DepthGameObject, GameRenderLayers, MapRenderBand } from "../GameRenderLayers";
 import type { GameScene } from "../GameScene";
 import { collisionRectanglesOverlap, type EntityCollisionRectangle } from "../MapEditor/Entities/EntityCollisionGrid";
+import { getCompositeTileLayerBaseName, getCompositeTileLayerDepthOffset } from "./CompositeTileLayerOrder";
 import { EntitiesManager } from "./EntitiesManager";
 import { AreasManager } from "./AreasManager";
 import { replacePhaserTileProperties } from "./TilePropertySync";
@@ -184,22 +186,30 @@ export class GameMapFrontWrapper {
     private getTileLayerRenderBands(): Map<string, MapRenderBand> {
         let renderBand: MapRenderBand = "background";
         const layerRenderBands = new Map<string, MapRenderBand>();
+        const coverLayerNames = new Map<string, string>();
         for (const layer of this.gameMap.flatLayers) {
             if (layer.type === "tilelayer") {
-                const overlayCoverLayer = surfaceOverlayCoverLayerName(layer.name);
-                const layerRenderBand =
-                    (overlayCoverLayer === undefined ? undefined : layerRenderBands.get(overlayCoverLayer)) ??
-                    renderBand;
-                layerRenderBands.set(layer.name, layerRenderBand);
+                layerRenderBands.set(layer.name, renderBand);
+                const coverLayerName =
+                    surfaceOverlayCoverLayerName(layer.name) ?? waterUnderlayCoverLayerName(layer.name);
+                if (coverLayerName !== undefined) coverLayerNames.set(layer.name, coverLayerName);
             }
             if (layer.type === "objectgroup" && layer.name === "floorLayer") renderBand = "foreground";
         }
-        for (const layer of this.gameMap.flatLayers) {
-            if (layer.type !== "tilelayer") continue;
-            const overlayCoverLayer = surfaceOverlayCoverLayerName(layer.name);
-            if (overlayCoverLayer === undefined) continue;
-            const overlayRenderBand = layerRenderBands.get(overlayCoverLayer) ?? layerRenderBands.get(layer.name);
-            if (overlayRenderBand !== undefined) layerRenderBands.set(layer.name, overlayRenderBand);
+
+        const resolvingLayerNames = new Set<string>();
+        const resolveLayerRenderBand = (layerName: string): MapRenderBand | undefined => {
+            const ownRenderBand = layerRenderBands.get(layerName);
+            const coverLayerName = coverLayerNames.get(layerName);
+            if (coverLayerName === undefined || resolvingLayerNames.has(layerName)) return ownRenderBand;
+            resolvingLayerNames.add(layerName);
+            const resolvedRenderBand = resolveLayerRenderBand(coverLayerName) ?? ownRenderBand;
+            resolvingLayerNames.delete(layerName);
+            if (resolvedRenderBand !== undefined) layerRenderBands.set(layerName, resolvedRenderBand);
+            return resolvedRenderBand;
+        };
+        for (const layerName of layerRenderBands.keys()) {
+            resolveLayerRenderBand(layerName);
         }
         return layerRenderBands;
     }
@@ -232,16 +242,19 @@ export class GameMapFrontWrapper {
                         .setScrollFactor(layer.parallaxx ?? 1, layer.parallaxy ?? 1)
                         .setAlpha(layer.opacity)
                         .setVisible(isCollisionStorageLayer(layer.name) ? false : layer.visible);
-                    const overlayCoverLayer = surfaceOverlayCoverLayerName(layer.name);
-                    const coverPhaserLayer =
-                        overlayCoverLayer === undefined ? undefined : renderedTileLayers.get(overlayCoverLayer);
-                    if (coverPhaserLayer === undefined) {
+                    const compositeBaseLayerName = getCompositeTileLayerBaseName(layer.name);
+                    const basePhaserLayer =
+                        compositeBaseLayerName === layer.name
+                            ? undefined
+                            : renderedTileLayers.get(compositeBaseLayerName);
+                    if (basePhaserLayer === undefined) {
                         this.gameRenderLayers.addMapLayer(phaserLayer, layerRenderBand, localDepth[layerRenderBand]++);
                     } else {
                         this.gameRenderLayers.addToSameMapBand(
-                            coverPhaserLayer,
+                            basePhaserLayer,
                             phaserLayer,
-                            coverPhaserLayer.depth + 0.01,
+                            basePhaserLayer.depth +
+                                getCompositeTileLayerDepthOffset(this.gameMap.flatLayers, layer.name),
                         );
                     }
                     this.phaserLayers.push(phaserLayer);

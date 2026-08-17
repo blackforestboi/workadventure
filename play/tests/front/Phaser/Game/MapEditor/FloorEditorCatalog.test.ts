@@ -1,3 +1,4 @@
+import { surfaceOverlayLayerName, waterUnderlayLayerName } from "@workadventure/map-editor";
 import type { ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
@@ -5,6 +6,7 @@ import {
     chooseDefaultPaintLayer,
     collectTerrainGids,
     findTopmostErasableLayer,
+    findTopmostSurfaceLayer,
     getTerrainTilesetGids,
     resolveVegetationSelectionLayer,
     resolveBrushLayer,
@@ -80,5 +82,27 @@ describe("terrain editor catalog", () => {
         expect(findTopmostErasableLayer(layers, 0, 0)).toBe("floor");
         floor.data = [0];
         expect(findTopmostErasableLayer(layers, 0, 0)).toBeUndefined();
+    });
+
+    it("targets the topmost visible surface overlay when placing water", () => {
+        const floor = tileLayer("floor", [11, 12, 13]);
+        const lowerSurface = tileLayer(surfaceOverlayLayerName("floor", 101, "lower"), [101, 0, 0]);
+        const upperSurface = tileLayer(surfaceOverlayLayerName("floor", 201, "upper"), [201, 202, 0]);
+        const unrelatedWall = tileLayer("walls", [301, 302]);
+
+        expect(findTopmostSurfaceLayer([floor, lowerSurface, upperSurface, unrelatedWall], "floor", 0, 0)).toBe(
+            upperSurface.name,
+        );
+        expect(findTopmostSurfaceLayer([floor, lowerSurface, { ...upperSurface, visible: false }], "floor", 0, 0)).toBe(
+            lowerSurface.name,
+        );
+        expect(findTopmostSurfaceLayer([floor, lowerSurface, upperSurface], "floor", 1, 0)).toBe(upperSurface.name);
+        expect(findTopmostSurfaceLayer([floor, lowerSurface, upperSurface], "floor", 2, 0)).toBe("floor");
+
+        upperSurface.data = [0, 202, 0];
+        const upperWater = tileLayer(waterUnderlayLayerName(upperSurface.name), [901, 0, 0]);
+        expect(findTopmostSurfaceLayer([floor, lowerSurface, upperWater, upperSurface], "floor", 0, 0)).toBe(
+            upperSurface.name,
+        );
     });
 });

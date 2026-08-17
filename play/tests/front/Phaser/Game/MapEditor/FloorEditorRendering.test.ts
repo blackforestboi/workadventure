@@ -59,7 +59,7 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).toContain("beforeLayer: tile.layer");
         expect(floorEditorToolSource).toContain("appendWaterCollisionRegions");
         expect(floorEditorToolSource).toContain("waterUnderlayCoverLayerName");
-        expect(floorEditorToolSource).toContain("underlayCoverLayer === undefined ? 0.01 : -0.01");
+        expect(floorEditorToolSource).toContain("getCompositeTileLayerDepthOffset(map.layers, layer)");
     });
 
     it("stacks custom surfaces above the existing floor instead of replacing it", () => {
@@ -371,6 +371,16 @@ describe("floor editor rendering", () => {
         expect(pointerSource).toBeDefined();
         expect(pointerSource).toContain("findTopmostErasableLayer");
         expect(pointerSource).toContain("getAuthoringPathOverlayKind(this.selectedLayer) === undefined");
+    });
+
+    it("places water beneath the topmost visible surface overlay", () => {
+        const pointerSource = floorEditorToolSource.match(
+            /private getTileAtPointer\([\s\S]*?\n {4}private paintTile/,
+        )?.[0];
+
+        expect(pointerSource).toBeDefined();
+        expect(pointerSource).toContain("this.selectedWaterFillGid !== undefined");
+        expect(pointerSource).toContain("findTopmostSurfaceLayer");
     });
 
     it("accepts another eraser click while the previous terrain mutation is saving", () => {

@@ -1,4 +1,9 @@
-import { forEachTileInLayer, getTileLayerGid } from "@workadventure/map-editor";
+import {
+    forEachTileInLayer,
+    getTileLayerGid,
+    surfaceOverlayCoverLayerName,
+    waterUnderlayCoverLayerName,
+} from "@workadventure/map-editor";
 import type { ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 
 const TERRAIN_LAYER_PATTERN = /(^|[\s/_-])(floor|ground|terrain|surface)([\s/_-]|$)/i;
@@ -37,6 +42,43 @@ export function findTopmostErasableLayer(layers: readonly ITiledMapLayer[], x: n
         ) {
             continue;
         }
+        if (getTileLayerGid(candidate.layer, x, y) !== 0) return candidate.layer.name;
+    }
+    return undefined;
+}
+
+/** Finds the visible surface that should border water without targeting unrelated layers above it. */
+export function findTopmostSurfaceLayer(
+    layers: readonly ITiledMapLayer[],
+    coverLayerName: string,
+    x: number,
+    y: number,
+): string | undefined {
+    const flattenedLayers = flattenLayersWithVisibility(layers);
+    const surfaceLayerNames = new Set(
+        flattenedLayers
+            .filter(
+                (candidate) =>
+                    candidate.visible &&
+                    candidate.layer.type === "tilelayer" &&
+                    (candidate.layer.name === coverLayerName ||
+                        surfaceOverlayCoverLayerName(candidate.layer.name) === coverLayerName),
+            )
+            .map((candidate) => candidate.layer.name),
+    );
+    for (let index = flattenedLayers.length - 1; index >= 0; index -= 1) {
+        const candidate = flattenedLayers[index];
+        if (candidate === undefined || !candidate.visible || candidate.layer.type !== "tilelayer") continue;
+        const underlayCoverLayerName = waterUnderlayCoverLayerName(candidate.layer.name);
+        if (
+            underlayCoverLayerName !== undefined &&
+            surfaceLayerNames.has(underlayCoverLayerName) &&
+            getTileLayerGid(candidate.layer, x, y) !== 0
+        ) {
+            return underlayCoverLayerName;
+        }
+        const overlayCoverLayerName = surfaceOverlayCoverLayerName(candidate.layer.name);
+        if (candidate.layer.name !== coverLayerName && overlayCoverLayerName !== coverLayerName) continue;
         if (getTileLayerGid(candidate.layer, x, y) !== 0) return candidate.layer.name;
     }
     return undefined;
