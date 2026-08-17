@@ -5,6 +5,7 @@ import type { FileSystemInterface } from "../Upload/FileSystemInterface";
 import { CACHE_CONTROL } from "../Enum/EnvironmentVariable";
 
 const staticFileExtensions = ["png", "css", "js", "jpg", "jpeg", "ico", "svg", "html", "htm", "jpeg"];
+export const MUTABLE_MAP_CACHE_CONTROL = "no-store";
 
 export function proxyFiles(fileSystem: FileSystemInterface) {
     return (req: Request, res: Response, next: NextFunction) => {
@@ -26,7 +27,7 @@ export function proxyFiles(fileSystem: FileSystemInterface) {
             // Check if the regular expression matched and the file extension is one of the common static file extensions
             if (fileExtension === "wam" || fileExtension === "tmj") {
                 // These files are edited in place. A cached response can make a durable edit disappear after reload.
-                res.set("Cache-Control", "no-store");
+                res.set("Cache-Control", MUTABLE_MAP_CACHE_CONTROL);
             } else if (match && staticFileExtensions.includes(match[2])) {
                 // Set the cache-control header to cache the file forever
                 res.set("Cache-Control", "public, max-age=31536000, immutable");

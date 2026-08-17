@@ -9,7 +9,7 @@ import bodyParser from "body-parser";
 import { setErrorHandler } from "@workadventure/shared-utils/src/ErrorHandler";
 import { mapStorageServer } from "./MapStorageServer";
 
-import { proxyFiles } from "./FileFetcher/FileFetcher";
+import { MUTABLE_MAP_CACHE_CONTROL, proxyFiles } from "./FileFetcher/FileFetcher";
 import { UploadController } from "./Upload/UploadController";
 import { fileSystem } from "./fileSystem";
 import { passportStrategies } from "./Services/Authentication";
@@ -112,10 +112,7 @@ app.get(/.*\.wam$/, (req, res, next) => {
     const key = mapPathUsingDomain(wamPath, domain);
 
     res.setHeader("Content-Type", "application/json");
-    // Let's disable any kind of cache (we allow for a 5 seconds cache just to avoid spamming the server and
-    // to allow a CDN to take over the load). 5 seconds is ok, because it is lower than the 30 seconds of
-    // the command queue.
-    res.setHeader("Cache-Control", "max-age=5");
+    res.setHeader("Cache-Control", MUTABLE_MAP_CACHE_CONTROL);
 
     // Let's load the map, but do not put it in memory (because it might become outdated if another map-storage
     // changes the map)
@@ -186,9 +183,7 @@ new PingController(app);
 app.get(/^\/maps\/+resources\/tilesets\/lpc-outdoor-terrain\.png$/, async (_req, res) => {
     try {
         const playAssetBaseUrl = process.env.PLAY_ASSET_INTERNAL_URL ?? "http://play:3000";
-        const assetResponse = await fetch(
-            new URL("/resources/tilesets/lpc-outdoor-terrain.png", playAssetBaseUrl),
-        );
+        const assetResponse = await fetch(new URL("/resources/tilesets/lpc-outdoor-terrain.png", playAssetBaseUrl));
         if (!assetResponse.ok) {
             res.sendStatus(assetResponse.status);
             return;
