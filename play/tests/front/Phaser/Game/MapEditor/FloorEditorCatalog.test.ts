@@ -6,6 +6,7 @@ import {
     chooseDefaultPaintLayer,
     collectTerrainGids,
     findTopmostErasableLayer,
+    findSurfaceStackLayers,
     findTopmostSurfaceLayer,
     getTerrainTilesetGids,
     resolveVegetationSelectionLayer,
@@ -104,5 +105,8 @@ describe("terrain editor catalog", () => {
         expect(findTopmostSurfaceLayer([floor, lowerSurface, upperWater, upperSurface], "floor", 0, 0)).toBe(
             upperSurface.name,
         );
+        expect(
+            findSurfaceStackLayers([floor, lowerSurface, upperSurface], upperSurface.name).map((layer) => layer.name),
+        ).toEqual([upperSurface.name, lowerSurface.name, floor.name]);
     });
 });

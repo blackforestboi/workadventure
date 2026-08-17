@@ -40,6 +40,7 @@ import {
     translateTerrainAutotileTiles,
     type TerrainAutotileTiles,
     type TerrainAutotileFamily,
+    type WaterTerrainComposition,
 } from "../../../../../common/Teapot/TerrainAutotile";
 import {
     mapEditorFloorActionStore,
@@ -78,6 +79,7 @@ import { getEntityDisplaySize, getVegetationDisplaySize } from "../../../../Util
 import { collapseTileRegions, createFloorEdit, type FloorEdit } from "./FloorEditorHistory";
 import {
     collectTerrainGids,
+    findSurfaceStackLayers,
     findTopmostErasableLayer,
     findTopmostSurfaceLayer,
     getTerrainTilesetGids,
@@ -823,15 +825,22 @@ export class FloorEditorTool extends MapEditorTool {
     ): void {
         const waterLayerName = waterUnderlayLayerName(tile.layer);
         const waterLayer = findLayer(visibleMap.layers, waterLayerName);
-        const composition = createWaterTerrainBrushRegions(
-            tile.layer,
+        const coverLayers = findSurfaceStackLayers(visibleMap.layers, tile.layer);
+        const composition = composeWaterAcrossSurfaceLayers(
+            coverLayers.length > 0 ? coverLayers : [coverLayer],
             waterLayerName,
-            previous,
-            tile,
-            waterGid,
-            collectTerrainTiles(coverLayer, previous, tile, 3),
             waterLayer?.type === "tilelayer" ? collectTerrainTiles(waterLayer, previous, tile, 3) : [],
-            getTerrainAutotileFamilies(visibleMap),
+            (surfaceLayer, existingWaterTiles) =>
+                createWaterTerrainBrushRegions(
+                    surfaceLayer.name,
+                    waterLayerName,
+                    previous,
+                    tile,
+                    waterGid,
+                    collectTerrainTiles(surfaceLayer, previous, tile, 3),
+                    existingWaterTiles,
+                    getTerrainAutotileFamilies(visibleMap),
+                ),
         );
         const regions = appendWaterCollisionRegions(visibleMap, composition.regions, composition.visibleWater);
         const addedLayer = waterLayer === undefined ? createWaterUnderlayLayer(visibleMap, tile.layer) : undefined;
@@ -867,15 +876,22 @@ export class FloorEditorTool extends MapEditorTool {
         if (brush.kind === "water" && terrainLayer?.type === "tilelayer") {
             const waterLayerName = waterUnderlayLayerName(start.layer);
             const waterLayer = findLayer(source.layers, waterLayerName);
-            const composition = createWaterTerrainRectangleRegions(
-                start.layer,
+            const coverLayers = findSurfaceStackLayers(source.layers, start.layer);
+            const composition = composeWaterAcrossSurfaceLayers(
+                coverLayers.length > 0 ? coverLayers : [terrainLayer],
                 waterLayerName,
-                start,
-                end,
-                brush.gid,
-                collectTerrainTiles(terrainLayer, start, end, 2),
                 waterLayer?.type === "tilelayer" ? collectTerrainTiles(waterLayer, start, end, 2) : [],
-                getTerrainAutotileFamilies(source),
+                (surfaceLayer, existingWaterTiles) =>
+                    createWaterTerrainRectangleRegions(
+                        surfaceLayer.name,
+                        waterLayerName,
+                        start,
+                        end,
+                        brush.gid,
+                        collectTerrainTiles(surfaceLayer, start, end, 2),
+                        existingWaterTiles,
+                        getTerrainAutotileFamilies(source),
+                    ),
             );
             const regions = appendWaterCollisionRegions(source, composition.regions, composition.visibleWater);
             const addedLayer = waterLayer === undefined ? createWaterUnderlayLayer(source, start.layer) : undefined;
@@ -1845,6 +1861,41 @@ function collectTerrainTiles(
         }
     }
     return result;
+}
+
+function composeWaterAcrossSurfaceLayers(
+    coverLayers: readonly ITiledMapTileLayer[],
+    waterLayerName: string,
+    existingWaterTiles: readonly { x: number; y: number; gid: number }[],
+    compose: (
+        coverLayer: ITiledMapTileLayer,
+        existingWaterTiles: readonly { x: number; y: number; gid: number }[],
+    ) => WaterTerrainComposition,
+): WaterTerrainComposition {
+    const waterTiles = new Map(existingWaterTiles.map((tile) => [`${tile.x},${tile.y}`, tile]));
+    const regions: TeapotTileRegion[] = [];
+    const visibleWater = new Map<string, { x: number; y: number }>();
+    for (const coverLayer of coverLayers) {
+        const composition = compose(coverLayer, [...waterTiles.values()]);
+        regions.push(...composition.regions);
+        for (const coordinate of composition.visibleWater) {
+            visibleWater.set(`${coordinate.x},${coordinate.y}`, coordinate);
+        }
+        for (const region of composition.regions) {
+            if (region.layer !== waterLayerName) continue;
+            for (let y = 0; y < region.height; y += 1) {
+                for (let x = 0; x < region.width; x += 1) {
+                    const gid = region.gids[y * region.width + x] ?? 0;
+                    if (gid !== 0) {
+                        const absoluteX = region.x + x;
+                        const absoluteY = region.y + y;
+                        waterTiles.set(`${absoluteX},${absoluteY}`, { x: absoluteX, y: absoluteY, gid });
+                    }
+                }
+            }
+        }
+    }
+    return { regions, visibleWater: [...visibleWater.values()] };
 }
 
 function getMatchingTerrainFamilyGids(map: ITiledMap, selectedGid: number): ReadonlySet<number> {
