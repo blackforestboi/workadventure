@@ -59,8 +59,6 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).toContain("beforeLayer: tile.layer");
         expect(floorEditorToolSource).toContain("appendWaterCollisionRegions");
         expect(floorEditorToolSource).toContain("waterUnderlayCoverLayerName");
-        expect(floorEditorToolSource).toContain("composeWaterAcrossSurfaceLayers");
-        expect(floorEditorToolSource).toContain("findSurfaceStackLayers");
         expect(floorEditorToolSource).toContain("getCompositeTileLayerDepthOffset(map.layers, layer)");
     });
 

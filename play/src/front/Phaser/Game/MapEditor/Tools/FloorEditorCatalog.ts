@@ -84,28 +84,6 @@ export function findTopmostSurfaceLayer(
     return undefined;
 }
 
-/** Returns the selected surface and all lower surfaces that can contribute its water boundary. */
-export function findSurfaceStackLayers(
-    layers: readonly ITiledMapLayer[],
-    targetLayerName: string,
-): Extract<ITiledMapLayer, { type: "tilelayer" }>[] {
-    const flattenedLayers = flattenLayersWithVisibility(layers);
-    const targetIndex = flattenedLayers.findIndex((candidate) => candidate.layer.name === targetLayerName);
-    if (targetIndex < 0) return [];
-    const baseLayerName = surfaceOverlayCoverLayerName(targetLayerName) ?? targetLayerName;
-    return flattenedLayers
-        .slice(0, targetIndex + 1)
-        .filter(
-            (candidate): candidate is { layer: Extract<ITiledMapLayer, { type: "tilelayer" }>; visible: boolean } =>
-                candidate.visible &&
-                candidate.layer.type === "tilelayer" &&
-                (candidate.layer.name === baseLayerName ||
-                    surfaceOverlayCoverLayerName(candidate.layer.name) === baseLayerName),
-        )
-        .map((candidate) => candidate.layer)
-        .reverse();
-}
-
 /**
  * Returns only map tiles that have already been used as a surface. This prevents legacy
  * furniture spritesheets from being presented as hundreds of chopped-up terrain assets.
