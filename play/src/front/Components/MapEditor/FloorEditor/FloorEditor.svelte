@@ -323,14 +323,20 @@
                 <span
                     class="h-2 w-2 shrink-0 rounded-full {$mapEditorFloorStateStore.status === 'failed'
                         ? 'bg-red-400'
-                        : 'bg-green-400'}"
+                        : $mapEditorFloorStateStore.status === 'saving'
+                          ? 'bg-amber-300'
+                          : $mapEditorFloorStateStore.status === 'saved'
+                            ? 'bg-green-400'
+                            : 'bg-white/40'}"
                 ></span>
                 <strong class="truncate">
                     {$mapEditorFloorStateStore.status === "saving"
                         ? "Saving live…"
                         : $mapEditorFloorStateStore.status === "failed"
                           ? "Could not save"
-                          : "All changes saved live"}
+                          : $mapEditorFloorStateStore.status === "saved"
+                            ? "All changes saved live"
+                            : "Ready to edit"}
                 </strong>
             </div>
         {/if}
