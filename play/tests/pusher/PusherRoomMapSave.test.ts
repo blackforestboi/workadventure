@@ -48,7 +48,7 @@ describe("PusherRoom map save finalization", () => {
         emitInBatch = vi.fn();
     });
 
-    it("returns a command error instead of acknowledging a failed durable revision commit", async () => {
+    it("acknowledges a remotely persisted map even when revision bookkeeping fails afterward", async () => {
         acknowledgeSuccess.mockRejectedValueOnce(new Error("revision database unavailable"));
         const room = new PusherRoom("https://play.test/world.wam", {} as unknown as ZoneEventListener);
         await room.init();
@@ -85,10 +85,8 @@ describe("PusherRoom map save finalization", () => {
                     id: "command-1",
                     editMapMessage: {
                         message: {
-                            $case: "errorCommandMessage",
-                            errorCommandMessage: {
-                                reason: "The map revision could not be committed: revision database unavailable",
-                            },
+                            $case: "deleteEntityMessage",
+                            deleteEntityMessage: { id: "tree" },
                         },
                     },
                 },

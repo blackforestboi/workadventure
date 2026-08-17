@@ -166,24 +166,13 @@ export class PusherRoom {
 
                             teapotWamRevisionCoordinator
                                 .acknowledgeSuccess(command.id)
-                                .then(() => this.broadcastEditMapCommand(command))
                                 .catch((error: unknown) => {
                                     const revisionError = asError(error);
                                     Sentry.captureException(revisionError, {
                                         tags: { roomUrl: this.roomUrl, teapotCommandId: command.id },
                                     });
-                                    this.broadcastEditMapCommand({
-                                        id: command.id,
-                                        editMapMessage: {
-                                            message: {
-                                                $case: "errorCommandMessage",
-                                                errorCommandMessage: {
-                                                    reason: `The map revision could not be committed: ${revisionError.message}`,
-                                                },
-                                            },
-                                        },
-                                    });
-                                });
+                                })
+                                .finally(() => this.broadcastEditMapCommand(command));
                             break;
                         }
                         case "errorMessage": {

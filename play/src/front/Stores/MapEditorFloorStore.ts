@@ -44,6 +44,17 @@ export interface MapEditorFloorState {
     error?: string;
 }
 
+export type MapEditorFloorSaveStatus = MapEditorFloorState["status"];
+
+export function resolveMapEditorFloorSaveStatus(
+    floorStatus: MapEditorFloorSaveStatus,
+    pendingMapChanges: number,
+): MapEditorFloorSaveStatus {
+    if (floorStatus === "failed") return "failed";
+    if (floorStatus === "saving" || pendingMapChanges > 0) return "saving";
+    return floorStatus === "saved" ? "saved" : "idle";
+}
+
 export type MapEditorFloorAction =
     | { id: string; type: "preview"; patch: TeapotTilePatch }
     | { id: string; type: "select-brush"; layer: string; gid: number }

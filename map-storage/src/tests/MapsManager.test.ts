@@ -1,4 +1,5 @@
 import { Command, type WAMFileFormat } from "@workadventure/map-editor";
+import { Deferred } from "@workadventure/shared-utils/src/Deferred";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fileSystemMock = vi.hoisted(() => ({
@@ -54,6 +55,29 @@ describe("MapsManager", () => {
         vi.useRealTimers();
     });
 
+    it("keeps later map operations queued while a slow save is still running", async () => {
+        const manager = new MapsManager();
+        const slowSaveGate = new Deferred<void>();
+        const slowSave = manager.waitForLock(mapKey, () => slowSaveGate.promise);
+        const slowSaveOutcome = slowSave.then(
+            () => "resolved",
+            () => "rejected",
+        );
+        let nextSaveStarted = false;
+        const nextSave = manager.waitForLock(mapKey, () => {
+            nextSaveStarted = true;
+            return Promise.resolve();
+        });
+
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        expect(nextSaveStarted).toBe(false);
+        slowSaveGate.resolve();
+        await expect(slowSaveOutcome).resolves.toBe("resolved");
+        await nextSave;
+        expect(nextSaveStarted).toBe(true);
+    });
+
     it("does not rewrite an acknowledged map later from a background snapshot", async () => {
         const manager = new MapsManager();
         const wamFile = await manager.loadWAMToMemory(mapKey);
@@ -68,6 +92,39 @@ describe("MapsManager", () => {
         await vi.advanceTimersByTimeAsync(60_000);
 
         expect(fileSystemMock.writeStringAsFile).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not acknowledge a save until remote storage returns the written command revision", async () => {
+        const manager = new MapsManager();
+        const wamFile = await manager.loadWAMToMemory(mapKey);
+        fileSystemMock.writeStringAsFile.mockResolvedValueOnce(undefined);
+
+        await expect(
+            manager.executeCommand(
+                mapKey,
+                "maps.example.test",
+                new SetMetadataFieldCommand(wamFile.getWam(), "name", "Unconfirmed edit", "command-remote"),
+            ),
+        ).rejects.toThrow("could not be confirmed in remote storage");
+
+        expect(fileSystemMock.readFileAsString).toHaveBeenCalledTimes(2);
+    });
+
+    it("evicts an in-memory mutation when remote persistence fails", async () => {
+        const manager = new MapsManager();
+        const wamFile = await manager.loadWAMToMemory(mapKey);
+        fileSystemMock.writeStringAsFile.mockRejectedValueOnce(new Error("storage unavailable"));
+
+        await expect(
+            manager.executeCommand(
+                mapKey,
+                "maps.example.test",
+                new SetMetadataFieldCommand(wamFile.getWam(), "name", "Unsaved edit", "command-failed"),
+            ),
+        ).rejects.toThrow("storage unavailable");
+
+        expect(manager.getWamFile(mapKey)).toBeUndefined();
+        expect(JSON.parse(persistedWam)).not.toHaveProperty("metadata.name", "Unsaved edit");
     });
 
     it("reloads durable state so a stale instance preserves previously acknowledged edits", async () => {

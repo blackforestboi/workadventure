@@ -1331,7 +1331,7 @@ export class FloorEditorTool extends MapEditorTool {
                         this.pendingTilesetSelection = undefined;
                         this.activateEmbeddedSelection(pendingSelection, firstGid, tileCount);
                     } else if (pendingSelection === undefined) {
-                        this.setState({ status: "saved", error: undefined });
+                        this.setState({ status: "idle", error: undefined });
                     }
                 })
                 .catch((error: unknown) => {

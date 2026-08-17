@@ -1,8 +1,13 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import type { VisualAssetAnimation } from "@workadventure/map-editor";
-    import type { MapEditorFloorTileset } from "../../../Stores/MapEditorFloorStore";
-    import { mapEditorFloorStateStore, dispatchMapEditorFloorAction } from "../../../Stores/MapEditorFloorStore";
+    import type { MapEditorFloorSaveStatus, MapEditorFloorTileset } from "../../../Stores/MapEditorFloorStore";
+    import {
+        mapEditorFloorStateStore,
+        dispatchMapEditorFloorAction,
+        resolveMapEditorFloorSaveStatus,
+    } from "../../../Stores/MapEditorFloorStore";
+    import { pendingMapChangesStore } from "../../../Stores/RefreshPromptStore";
     import { selectCategoryStore } from "../../../Stores/MapEditorStore";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
@@ -65,7 +70,17 @@
         tileset.groups.map((group) => ({ tileset, group })),
     );
     const legacyCategories = [...new Set(BUILT_IN_LEGACY_MAP_TILESETS.map((tileset) => tileset.category))];
+    const saveStatusPresentation: Record<MapEditorFloorSaveStatus, { dotClass: string; label: string }> = {
+        idle: { dotClass: "bg-white/40", label: "Ready to edit" },
+        saving: { dotClass: "bg-amber-300", label: "Saving live…" },
+        saved: { dotClass: "bg-green-400", label: "All changes saved live" },
+        failed: { dotClass: "bg-red-400", label: "Could not save" },
+    };
     let selectedFamily = $derived(terrainFamilies.find(({ group }) => group.id === selectedFamilyId));
+    let saveStatus = $derived(
+        resolveMapEditorFloorSaveStatus($mapEditorFloorStateStore?.status ?? "idle", $pendingMapChangesStore),
+    );
+    let savePresentation = $derived(saveStatusPresentation[saveStatus]);
 
     onMount(() => {
         let active = true;
@@ -320,23 +335,9 @@
         <h2 class="m-0 text-xl font-semibold">Terrain</h2>
         {#if $mapEditorFloorStateStore !== undefined}
             <div class="flex min-w-0 items-center justify-end gap-1.5 text-right text-[11px]">
-                <span
-                    class="h-2 w-2 shrink-0 rounded-full {$mapEditorFloorStateStore.status === 'failed'
-                        ? 'bg-red-400'
-                        : $mapEditorFloorStateStore.status === 'saving'
-                          ? 'bg-amber-300'
-                          : $mapEditorFloorStateStore.status === 'saved'
-                            ? 'bg-green-400'
-                            : 'bg-white/40'}"
-                ></span>
+                <span class="h-2 w-2 shrink-0 rounded-full {savePresentation.dotClass}"></span>
                 <strong class="truncate">
-                    {$mapEditorFloorStateStore.status === "saving"
-                        ? "Saving live…"
-                        : $mapEditorFloorStateStore.status === "failed"
-                          ? "Could not save"
-                          : $mapEditorFloorStateStore.status === "saved"
-                            ? "All changes saved live"
-                            : "Ready to edit"}
+                    {savePresentation.label}
                 </strong>
             </div>
         {/if}

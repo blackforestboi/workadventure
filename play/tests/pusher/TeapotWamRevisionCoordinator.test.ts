@@ -160,7 +160,7 @@ describe("TeapotWamRevisionCoordinator", () => {
         ).resolves.toMatchObject({ mapId: "https://maps.test/world.tmj" });
     });
 
-    it("rejects a success acknowledgement after its revision lease has already timed out", async () => {
+    it("reports a late durable success after its revision lease has already timed out", async () => {
         vi.useFakeTimers();
         const { coordinator, identity } = await setup();
 
@@ -173,7 +173,7 @@ describe("TeapotWamRevisionCoordinator", () => {
         });
         await vi.advanceTimersToNextTimerAsync();
 
-        await expect(coordinator.acknowledgeSuccess("late-command")).rejects.toThrow("no active revision lease");
+        await expect(coordinator.acknowledgeSuccess("late-command")).rejects.toThrow("has no active revision lease");
     });
 
     it("queues rapid WAM commands instead of rejecting normal editor bursts", async () => {

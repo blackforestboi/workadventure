@@ -9,12 +9,6 @@ import { MapListService } from "./Services/MapListService";
 import { WebHookService } from "./Services/WebHookService";
 import { WEB_HOOK_URL } from "./Enum/EnvironmentVariable";
 
-/**
- * Time after which a map edition lock operation is considered stuck and rejected, so a wedged
- * operation cannot block map edition forever.
- */
-const EDITION_LOCK_TIMEOUT_MS = 10_000;
-
 export class MapsManager {
     private loadedMaps: Map<string, WamFile>;
     private loadedMapsCommandsQueue: Map<string, EditMapCommandMessage[]>;
@@ -48,7 +42,9 @@ export class MapsManager {
     }
 
     public waitForLock(mapKey: string, callback: () => Promise<void>): Promise<void> {
-        return this.editionLocks.waitForLock(mapKey, callback, EDITION_LOCK_TIMEOUT_MS);
+        // A map edit writes a complete WAM snapshot. Timing out this lock would only reject the caller;
+        // it would not cancel the running write, and the next edit could then race it with another snapshot.
+        return this.editionLocks.waitForLock(mapKey, callback);
     }
 
     public async executeCommand(mapKey: string, domain: string, command: Command): Promise<void> {
@@ -56,20 +52,26 @@ export class MapsManager {
         if (!wamFile) {
             throw new Error('Could not find WAM file with key "' + mapKey + '"');
         }
-        const updatedWamFile = await command.execute();
-        wamFile.updateLastCommandIdProperty(command.commandId);
+        try {
+            const updatedWamFile = await command.execute();
+            wamFile.updateLastCommandIdProperty(command.commandId);
 
-        // Security check: Check that the map is valid after the change (it should be, but better safe than sorry)
-        WAMFileFormat.parse(wamFile.getWam());
+            // Security check: Check that the map is valid after the change (it should be, but better safe than sorry)
+            WAMFileFormat.parse(wamFile.getWam());
 
-        // An acknowledged editor command must already be durable. Do not schedule a later whole-map rewrite here:
-        // another map-storage instance may have persisted newer state by the time that delayed write runs.
-        await fileSystem.writeStringAsFile(mapKey, JSON.stringify(wamFile.getWam()));
+            // An acknowledged editor command must already be durable. Do not schedule a later whole-map rewrite here:
+            // another map-storage instance may have persisted newer state by the time that delayed write runs.
+            await this.persistAndConfirmWam(mapKey, wamFile, command.commandId);
 
-        if (updatedWamFile != undefined) {
-            this.mapListService
-                .updateWAMFileInCache(domain, mapKey.replace(domain, ""), updatedWamFile)
-                .catch((e) => console.error(e));
+            if (updatedWamFile != undefined) {
+                this.mapListService
+                    .updateWAMFileInCache(domain, mapKey.replace(domain, ""), updatedWamFile)
+                    .catch((e) => console.error(e));
+            }
+        } catch (error) {
+            // Commands mutate the cached WAM in place. Never let a failed or unconfirmed mutation seed a later save.
+            this.loadedMaps.delete(mapKey);
+            throw error;
         }
     }
 
@@ -85,14 +87,32 @@ export class MapsManager {
         const updatedWamFile = await command.execute();
         candidate.updateLastCommandIdProperty(command.commandId);
         WAMFileFormat.parse(candidate.getWam());
-        await fileSystem.writeStringAsFile(mapKey, JSON.stringify(candidate.getWam()));
-        this.loadedMaps.set(mapKey, candidate);
+        await this.persistAndConfirmWam(mapKey, candidate, command.commandId);
         if (updatedWamFile !== undefined) {
             this.mapListService
                 .updateWAMFileInCache(domain, mapKey.replace(domain, ""), updatedWamFile)
                 .catch((error) => console.error(error));
         }
         return command;
+    }
+
+    private async persistAndConfirmWam(mapKey: string, wamFile: WamFile, commandId: string): Promise<void> {
+        try {
+            await fileSystem.writeStringAsFile(mapKey, JSON.stringify(wamFile.getWam()));
+
+            const storedWam = await this.loadWAMToMemory(mapKey);
+            const storedCommandId = storedWam.getLastCommandId();
+            if (storedCommandId !== commandId) {
+                throw new Error(
+                    `Map command ${commandId} could not be confirmed in remote storage (found ${
+                        storedCommandId ?? "none"
+                    })`,
+                );
+            }
+        } catch (error) {
+            this.loadedMaps.delete(mapKey);
+            throw error;
+        }
     }
 
     public getCommandsNewerThan(mapKey: string, commandId: string | undefined): EditMapCommandMessage[] {
@@ -172,20 +192,16 @@ export class MapsManager {
                 // after executeCommand inside the same lock).
                 if (queue.length === 0) {
                     this.editionLocks
-                        .waitForLock(
-                            mapKey,
-                            () => {
-                                // Re-check after acquiring the lock: a new command may have been
-                                // added while we were waiting.
-                                const currentQueue = this.loadedMapsCommandsQueue.get(mapKey);
-                                if (!currentQueue || currentQueue.length === 0) {
-                                    this.loadedMapsCommandsQueue.delete(mapKey);
-                                    this.loadedMaps.delete(mapKey);
-                                }
-                                return Promise.resolve();
-                            },
-                            EDITION_LOCK_TIMEOUT_MS,
-                        )
+                        .waitForLock(mapKey, () => {
+                            // Re-check after acquiring the lock: a new command may have been
+                            // added while we were waiting.
+                            const currentQueue = this.loadedMapsCommandsQueue.get(mapKey);
+                            if (!currentQueue || currentQueue.length === 0) {
+                                this.loadedMapsCommandsQueue.delete(mapKey);
+                                this.loadedMaps.delete(mapKey);
+                            }
+                            return Promise.resolve();
+                        })
                         .catch((e) => {
                             console.error("Error while acquiring or processing lock for cleaning map key ", mapKey, e);
                             Sentry.captureException(e);
