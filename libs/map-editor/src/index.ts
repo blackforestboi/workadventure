@@ -17,6 +17,7 @@ export * from "./Commands/WAM/UpdateWAMSettingCommand";
 export * from "./Commands/WAM/UpdateWAMMetadataCommand";
 export * from "./GameMap/GameMap";
 export * from "./GameMap/CenteredMapCoordinates";
+export * from "./GameMap/ChunkDomain";
 export * from "./GameMap/GameMapAreas";
 export * from "./GameMap/WamFile";
 export * from "./GameMap/LayersFlattener";

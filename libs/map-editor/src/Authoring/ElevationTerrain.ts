@@ -1,5 +1,6 @@
 import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { getMapTileBounds, getTileGridOffset } from "../GameMap/CenteredMapCoordinates";
+import type { ChunkTileBounds } from "../GameMap/ChunkDomain";
 
 export const ELEVATION_PROPERTY_NAME = "teapot:elevation/v1";
 /** Canonical transport key for the map-wide height field. The layer field remains for wire compatibility. */
@@ -158,11 +159,12 @@ export function getElevationSurfaceBounds(map: ITiledMap, layer: string): Elevat
     };
 }
 
-/** Splits a complete map surface into texture- and WebGL-index-safe elevation meshes. */
+/** Splits a map surface into texture- and WebGL-index-safe meshes, optionally limited to a resident tile window. */
 export function getElevationRenderChunks(
     map: ITiledMap,
     maximumTextureSize: number,
     subdivisions = ELEVATION_MESH_SUBDIVISIONS,
+    residentTileBounds?: ChunkTileBounds,
 ): ElevationSurfaceBounds[] {
     if (!Number.isFinite(maximumTextureSize) || maximumTextureSize <= 0) {
         throw new Error("Elevation capture texture size must be positive.");
@@ -183,12 +185,15 @@ export function getElevationRenderChunks(
     const chunks: ElevationSurfaceBounds[] = [];
     for (let minY = mapBounds.minY; minY < mapBounds.maxY; minY += rowsPerChunk) {
         for (let minX = mapBounds.minX; minX < mapBounds.maxX; minX += columnsPerChunk) {
-            chunks.push({
+            const bounds = {
                 minX,
                 minY,
                 maxX: Math.min(mapBounds.maxX, minX + columnsPerChunk),
                 maxY: Math.min(mapBounds.maxY, minY + rowsPerChunk),
-            });
+            };
+            if (residentTileBounds === undefined || elevationBoundsIntersectTileBounds(bounds, residentTileBounds)) {
+                chunks.push(bounds);
+            }
         }
     }
     return chunks;
@@ -200,9 +205,10 @@ export function getElevationRenderChunksForUpdates(
     maximumTextureSize: number,
     updates: readonly TeapotElevationUpdate[],
     subdivisions = ELEVATION_MESH_SUBDIVISIONS,
+    residentTileBounds?: ChunkTileBounds,
 ): ElevationSurfaceBounds[] {
     if (updates.length === 0) return [];
-    return getElevationRenderChunks(map, maximumTextureSize, subdivisions).filter((bounds) =>
+    return getElevationRenderChunks(map, maximumTextureSize, subdivisions, residentTileBounds).filter((bounds) =>
         updates.some(
             (update) =>
                 update.x - 0.5 < bounds.maxX &&
@@ -210,6 +216,18 @@ export function getElevationRenderChunksForUpdates(
                 update.y - 0.5 < bounds.maxY &&
                 update.y + 1.5 > bounds.minY,
         ),
+    );
+}
+
+function elevationBoundsIntersectTileBounds(
+    elevationBounds: ElevationSurfaceBounds,
+    tileBounds: ChunkTileBounds,
+): boolean {
+    return (
+        elevationBounds.minX < tileBounds.x + tileBounds.width &&
+        elevationBounds.maxX > tileBounds.x &&
+        elevationBounds.minY < tileBounds.y + tileBounds.height &&
+        elevationBounds.maxY > tileBounds.y
     );
 }
 

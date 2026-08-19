@@ -23,10 +23,13 @@ import type { ITiledMap, ITiledMapLayer, ITiledMapObject, ITiledMapTileset } fro
 import {
     BUILT_IN_ENTITY_COLLECTIONS,
     type AreaData,
+    type ChunkTileBounds,
     EntityPermissions,
     type EntityPrefabType,
     GameMap,
     GameMapProperties,
+    getMapTileBounds,
+    projectTiledMapToTileBounds,
     type WAMFileFormat,
     WAMSettingsUtils,
 } from "@workadventure/map-editor";
@@ -206,6 +209,9 @@ import { requestedScreenSharingState } from "../../Stores/ScreenSharingStore";
 import { EnterLeaveScriptingService } from "../Helpers/EnterLeaveScriptingService";
 import { GameMapFrontWrapper } from "./GameMap/GameMapFrontWrapper";
 import { ElevationRenderer } from "./GameMap/ElevationRenderer";
+import { getResidentTileWindow, shouldUseResidentTileWindow } from "./GameMap/ResidentTileWindow";
+import type { ViewportStreamingPlan } from "./GameMap/ViewportStreamingBudget";
+import { getFullDetailResidentPixelViewport } from "./GameMap/ViewportStreamingCameraPolicy";
 import { GameRenderLayers } from "./GameRenderLayers";
 import { LocalPlayerAssetOcclusion } from "./LocalPlayerAssetOcclusion";
 import { resolveTilesetImageUrl } from "./GameMap/TilesetImageUrl";
@@ -259,6 +265,7 @@ import Clamp = Phaser.Math.Clamp;
 
 const MOUSE_WHEEL_ZOOM_RATE = 0.5;
 const CONVERSATION_BUBBLE_SPATIAL_GRID_SIZE = 64;
+let residentTilemapCacheSequence = 0;
 // Set to true to restore automatic player recentering when the map editor closes.
 const FOLLOW_PLAYER_WHEN_CLOSING_MAP_EDITOR = false;
 
@@ -681,8 +688,27 @@ export class GameScene extends DirtyScene {
             throw new Error("playerName is not set");
         }
         this.playerName = playerName;
+        let residentTileBounds: ChunkTileBounds | undefined;
         try {
-            this.Map = this.add.tilemap(this.mapUrlFile);
+            if (shouldUseResidentTileWindow(this.mapFile)) {
+                const worldBounds = getMapTileBounds(this.mapFile);
+                residentTileBounds = getResidentTileWindow(this.mapFile, {
+                    x: worldBounds.minX + Math.floor(worldBounds.width / 2),
+                    y: worldBounds.minY + Math.floor(worldBounds.height / 2),
+                });
+                const cacheKey = `__resident-tile-window:${this.sys.settings.key}:${residentTilemapCacheSequence++}`;
+                this.cache.tilemap.add(cacheKey, {
+                    format: Phaser.Tilemaps.Formats.TILED_JSON,
+                    data: projectTiledMapToTileBounds(this.mapFile, residentTileBounds),
+                });
+                try {
+                    this.Map = this.add.tilemap(cacheKey, undefined, undefined, undefined, undefined, undefined, true);
+                } finally {
+                    this.cache.tilemap.remove(cacheKey);
+                }
+            } else {
+                this.Map = this.add.tilemap(this.mapUrlFile);
+            }
         } catch (e) {
             // Error when loading the map, probably because the map file is not a valid TMJ file.
             this.handleErrorAndCleanup(
@@ -733,7 +759,7 @@ export class GameScene extends DirtyScene {
         //add layer on map
         this.gameMapFrontWrapper = new GameMapFrontWrapper(
             this,
-            new GameMap(this.mapFile, this.wamFile),
+            new GameMap(this.mapFile, this.wamFile, { residentTileBounds }),
             this.Map,
             this.Terrains,
             this.gameRenderLayers,
@@ -743,7 +769,7 @@ export class GameScene extends DirtyScene {
         this.gameMapFrontWrapper.initialize().catch((e) => console.error(e));
         this.elevationRenderer = new ElevationRenderer(this);
         this.gameMapFrontWrapper.initializedPromise.promise
-            .then(() => this.elevationRenderer.render(this.mapFile))
+            .then(() => this.elevationRenderer.render(this.mapFile, this.gameMapFrontWrapper.getResidentTileBounds()))
             .catch((e) => console.error(e));
         for (const layer of this.gameMapFrontWrapper.getFlatLayers()) {
             if (layer.type === "tilelayer") {
@@ -818,7 +844,7 @@ export class GameScene extends DirtyScene {
         this.pathfindingManager = new PathfindingManager(
             this.gameMapFrontWrapper.getCollisionGrid(),
             this.gameMapFrontWrapper.getTileDimensions(),
-            { x: mapBounds.x, y: mapBounds.y },
+            this.gameMapFrontWrapper.getCollisionGridBounds(),
         );
 
         this.subscribeToGameMapChanged();
@@ -828,7 +854,12 @@ export class GameScene extends DirtyScene {
 
         this.tryMovePlayerWithMoveToParameter();
 
-        this.cameraManager = new CameraManager(this, mapBounds, waScaleManager);
+        this.cameraManager = new CameraManager(
+            this,
+            mapBounds,
+            this.gameMapFrontWrapper.getTileDimensions(),
+            waScaleManager,
+        );
 
         biggestAvailableAreaStore.recompute();
         if (ENABLE_MAP_EDITOR) {
@@ -1123,6 +1154,7 @@ export class GameScene extends DirtyScene {
                 undefined,
                 urlManager.getStartPositionNameFromUrl(),
             );
+            this.recenterResidentTileWindow(startPosition, true);
             this.CurrentPlayer.setPosition(startPosition.x, startPosition.y);
             this.CurrentPlayer.finishFollowingPath(true);
             // clear properties in case we are moved on the same layer / area in order to trigger them
@@ -1329,6 +1361,12 @@ export class GameScene extends DirtyScene {
         }
     }
 
+    private recenterResidentTileWindow(position: { x: number; y: number }, force = false): void {
+        if (!this.gameMapFrontWrapper.recenterResidentTileWindowAtWorldPosition(position.x, position.y, force)) return;
+        this.elevationRenderer.render(this.mapFile, this.gameMapFrontWrapper.getResidentTileBounds());
+        this.markDirty();
+    }
+
     /**
      * @param time
      * @param delta The delta time in ms since the last frame. This is a smoothed and capped value based on the FPS rate.
@@ -1356,6 +1394,13 @@ export class GameScene extends DirtyScene {
         }
         if (this.mapEditorModeManager?.isActive()) {
             this.mapEditorModeManager.update(time, delta);
+        }
+
+        if (this.hasJoinedRoom) {
+            const focus = this.mapEditorModeManager?.isActive()
+                ? { x: this.cameras.main.worldView.centerX, y: this.cameras.main.worldView.centerY }
+                : { x: this.CurrentPlayer.x, y: this.CurrentPlayer.y };
+            this.recenterResidentTileWindow(focus);
         }
 
         for (const addedPlayer of this.remotePlayersRepository.getAddedPlayers()) {
@@ -1648,6 +1693,7 @@ export class GameScene extends DirtyScene {
 
     public onResize(): void {
         super.onResize();
+        this.cameraManager?.onViewportResize();
         this.reposition(true);
 
         this.throttledSendViewportToServer_();
@@ -1680,7 +1726,21 @@ export class GameScene extends DirtyScene {
             mapBounds,
         );
 
-        return viewport;
+        if (viewport === null) return null;
+
+        const residentViewport = getFullDetailResidentPixelViewport(
+            this.cameraManager.getViewportStreamingPlan(),
+            this.gameMapFrontWrapper.getTileDimensions(),
+            mapBounds,
+        );
+        if (residentViewport === null) return viewport;
+
+        return this.intersectViewportWithMapBounds(viewport, {
+            x: residentViewport.left,
+            y: residentViewport.top,
+            width: residentViewport.right - residentViewport.left,
+            height: residentViewport.bottom - residentViewport.top,
+        });
     }
 
     /**
@@ -1792,6 +1852,11 @@ export class GameScene extends DirtyScene {
 
     public getCameraManager(): CameraManager {
         return this.cameraManager;
+    }
+
+    /** Current chunk/LOD policy for render and future tile-loading consumers. */
+    public getViewportStreamingPlan(): ViewportStreamingPlan {
+        return this.cameraManager.getViewportStreamingPlan();
     }
 
     public getRemotePlayersRepository(): RemotePlayersRepository {
@@ -2078,6 +2143,7 @@ export class GameScene extends DirtyScene {
                     urlManager.getStartPositionNameFromUrl(),
                 );
 
+                this.recenterResidentTileWindow(startPosition, true);
                 this.createCurrentPlayer(startPosition);
 
                 this.activatablesManager = new ActivatablesManager(this.CurrentPlayer);
@@ -3511,11 +3577,12 @@ ${escapedMessage}
                             for (const layer of this.Map.layers) {
                                 layer.tilemapLayer.destroy(false);
                             }
+                            const residentTileBounds = this.gameMapFrontWrapper?.getResidentTileBounds();
                             this.gameMapFrontWrapper?.close();
                             //Create a new GameMap with the changed file
                             this.gameMapFrontWrapper = new GameMapFrontWrapper(
                                 this,
-                                new GameMap(this.mapFile, this.wamFile),
+                                new GameMap(this.mapFile, this.wamFile, { residentTileBounds }),
                                 this.Map,
                                 this.Terrains,
                                 this.gameRenderLayers,
@@ -3955,7 +4022,7 @@ ${escapedMessage}
         const pathfindingManager = this.getPathfindingManager();
         pathfindingManager.setMapData(
             this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false }),
-            this.gameMapFrontWrapper.getMapBounds(),
+            this.gameMapFrontWrapper.getCollisionGridBounds(),
         );
 
         const path = await pathfindingManager.findPathFromGameCoordinates(
@@ -4199,15 +4266,18 @@ ${escapedMessage}
             // When calling this before the first render, camera.preRender() must be called before accessing worldView to ensure it's up to date.
             // See: https://docs.phaser.io/phaser/concepts/cameras#world-view
             camera.preRender();
+            this.cameraManager.refreshViewportStreamingPlan();
         }
 
         const worldView = camera.worldView;
-        return {
-            left: worldView.x,
-            top: worldView.y,
-            right: worldView.right,
-            bottom: worldView.bottom,
-        };
+        return (
+            this.calculateViewport(0) ?? {
+                left: worldView.x,
+                top: worldView.y,
+                right: worldView.right,
+                bottom: worldView.bottom,
+            }
+        );
     }
 
     private doAddPlayer(addPlayerData: AddPlayerInterface): void {
@@ -4298,7 +4368,7 @@ ${escapedMessage}
         this.gameMapChangedSubscription = this.gameMapFrontWrapper
             .getMapChangedObservable()
             .subscribe((collisionGrid) => {
-                this.pathfindingManager.setMapData(collisionGrid, this.gameMapFrontWrapper.getMapBounds());
+                this.pathfindingManager.setMapData(collisionGrid, this.gameMapFrontWrapper.getCollisionGridBounds());
                 this.markDirty();
             });
     }

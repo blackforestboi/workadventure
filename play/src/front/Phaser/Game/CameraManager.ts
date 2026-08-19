@@ -20,6 +20,13 @@ import {
     getRetargetedButtonZoomModifier,
     getSmoothButtonZoomModifier,
 } from "./CameraZoomUtils";
+import { planViewportStreaming, type ViewportStreamingPlan } from "./GameMap/ViewportStreamingBudget";
+import {
+    getExactDetailZoomModifierFloor,
+    getZoomOutViewportPixelLimit,
+    worldBoundsToTileViewport,
+    worldViewToTileViewport,
+} from "./GameMap/ViewportStreamingCameraPolicy";
 import type { GameScene } from "./GameScene";
 
 import Clamp = Phaser.Math.Clamp;
@@ -82,6 +89,9 @@ export class CameraManager extends EventEmitter {
 
     private playerToFollow?: Player | RemotePlayer;
     private zoomLocked: boolean;
+    private minimumZoomModifier = 0;
+    private viewportStreamingPlan: ViewportStreamingPlan | undefined;
+    private viewportStreamingPlanKey: string | undefined;
 
     private readonly EDITOR_MODE_SCROLL_SPEED: number = 5;
 
@@ -106,6 +116,7 @@ export class CameraManager extends EventEmitter {
     constructor(
         private scene: GameScene,
         private mapSize: { width: number; height: number; x?: number; y?: number },
+        private readonly tileDimensions: { width: number; height: number },
         waScaleManager: WaScaleManager,
     ) {
         super();
@@ -127,6 +138,7 @@ export class CameraManager extends EventEmitter {
         this.unsubscribeMapEditorModeStore = mapEditorModeStore.subscribe((isOpened) => {
             this.mapEditorModeActive = isOpened;
             this.updateZoomOutLimit();
+            this.enforceZoomOutLimit();
             if (isOpened) {
                 this.camera.removeBounds();
             } else {
@@ -136,16 +148,21 @@ export class CameraManager extends EventEmitter {
 
         // Set zoom out to the maximum possible value
         this.updateZoomOutLimit();
+        this.refreshViewportStreamingPlan();
 
         this.scene.game.events.on(WaScaleManagerEvent.ZoomChanged, this.onZoomChanged);
     }
 
     private readonly onZoomChanged = (): void => {
-        if (this.mapEditorModeActive) {
+        if (this.waScaleManager.zoomModifier < this.minimumZoomModifier) {
+            this.waScaleManager.setZoomModifier(this.minimumZoomModifier, this.camera, false);
             return;
         }
-        this.updateNormalCameraBounds();
-        this.doUpdateCameraOffset(true);
+        if (!this.mapEditorModeActive) {
+            this.updateNormalCameraBounds();
+            this.doUpdateCameraOffset(true);
+        }
+        this.refreshViewportStreamingPlan();
     };
 
     public destroy(): void {
@@ -172,14 +189,76 @@ export class CameraManager extends EventEmitter {
         this.mapSize.y = Math.min(this.mapSize.y ?? 0, y);
         this.updateZoomOutLimit();
         if (!this.mapEditorModeActive) this.updateNormalCameraBounds();
+        this.refreshViewportStreamingPlan();
     }
 
     private updateZoomOutLimit(): void {
         const workspaceScale = this.mapEditorModeActive ? 2 : 1;
-        this.waScaleManager.maxZoomOut = this.waScaleManager.getTargetZoomModifierFor(
-            this.mapSize.width * workspaceScale,
-            this.mapSize.height * workspaceScale,
+        const viewportLimit = getZoomOutViewportPixelLimit(this.mapSize, this.tileDimensions, workspaceScale);
+        const mapFitZoomModifier = this.waScaleManager.getTargetZoomModifierFor(
+            viewportLimit.width,
+            viewportLimit.height,
         );
+        const exactDetailZoomModifier = getExactDetailZoomModifierFloor(
+            this.mapSize,
+            this.tileDimensions,
+            { width: this.camera.width, height: this.camera.height },
+            this.waScaleManager.zoomModifier,
+            this.camera.zoom,
+            workspaceScale,
+        );
+        this.minimumZoomModifier = Math.max(mapFitZoomModifier, exactDetailZoomModifier);
+        this.waScaleManager.maxZoomOut = this.minimumZoomModifier;
+    }
+
+    private enforceZoomOutLimit(): void {
+        if (this.waScaleManager.zoomModifier < this.minimumZoomModifier) {
+            this.waScaleManager.setZoomModifier(this.minimumZoomModifier, this.camera, false);
+        }
+    }
+
+    /** Recomputes the chunk/LOD policy only when the camera enters new tile bounds or changes zoom. */
+    public refreshViewportStreamingPlan(forceCameraPreRender = false): ViewportStreamingPlan {
+        if (forceCameraPreRender) this.camera.preRender();
+
+        const tileViewport = worldViewToTileViewport(this.camera.worldView, this.tileDimensions);
+        const worldBounds = worldBoundsToTileViewport(
+            {
+                x: this.mapSize.x ?? 0,
+                y: this.mapSize.y ?? 0,
+                width: this.mapSize.width,
+                height: this.mapSize.height,
+            },
+            this.tileDimensions,
+        );
+        const key = [
+            tileViewport.x,
+            tileViewport.y,
+            tileViewport.width,
+            tileViewport.height,
+            this.camera.zoom,
+            worldBounds.x,
+            worldBounds.y,
+            worldBounds.width,
+            worldBounds.height,
+        ].join(":");
+
+        if (key !== this.viewportStreamingPlanKey || this.viewportStreamingPlan === undefined) {
+            this.viewportStreamingPlan = planViewportStreaming(tileViewport, this.camera.zoom, { worldBounds });
+            this.viewportStreamingPlanKey = key;
+        }
+        return this.viewportStreamingPlan;
+    }
+
+    public getViewportStreamingPlan(): ViewportStreamingPlan {
+        return this.viewportStreamingPlan ?? this.refreshViewportStreamingPlan();
+    }
+
+    public onViewportResize(): void {
+        this.updateZoomOutLimit();
+        this.enforceZoomOutLimit();
+        if (!this.mapEditorModeActive) this.updateNormalCameraBounds();
+        this.refreshViewportStreamingPlan(true);
     }
 
     private clampExplorationFocus(): void {
@@ -538,6 +617,7 @@ export class CameraManager extends EventEmitter {
     }
 
     private onCameraUpdate = () => {
+        this.refreshViewportStreamingPlan();
         this.scene.sendViewportToServer();
     };
 
@@ -763,7 +843,7 @@ export class CameraManager extends EventEmitter {
     }
 
     private applyZoomModifier(zoomModifier: number, animating: boolean, cursorZoomAnchor?: CursorZoomAnchor): void {
-        this.waScaleManager.setZoomModifier(zoomModifier, this.camera, animating);
+        this.waScaleManager.setZoomModifier(Math.max(zoomModifier, this.minimumZoomModifier), this.camera, animating);
         if (!cursorZoomAnchor) {
             return;
         }
@@ -801,7 +881,7 @@ export class CameraManager extends EventEmitter {
     }
 
     private updateButtonZoomModifier(targetZoomModifier: number, animating: boolean): void {
-        this.waScaleManager.setZoomModifier(targetZoomModifier, this.camera, animating);
+        this.applyZoomModifier(targetZoomModifier, animating);
         this.emit(CameraManagerEvent.CameraUpdate, this.getCameraUpdateEventData());
     }
 
@@ -813,6 +893,13 @@ export class CameraManager extends EventEmitter {
         }
 
         if (requestedZoomModifier < previousZoomModifier && this.waScaleManager.isMaximumZoomOutReached) {
+            return true;
+        }
+
+        if (
+            requestedZoomModifier < previousZoomModifier &&
+            this.waScaleManager.zoomModifier <= this.minimumZoomModifier
+        ) {
             return true;
         }
 

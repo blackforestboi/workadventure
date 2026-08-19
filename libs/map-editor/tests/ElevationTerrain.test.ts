@@ -33,6 +33,30 @@ function createMap(): ITiledMap {
     } as unknown as ITiledMap;
 }
 
+function createMapWithSignedBounds(minX: number, minY: number, width: number, height: number): ITiledMap {
+    return {
+        ...createMap(),
+        width,
+        height,
+        layers: [
+            {
+                id: 1,
+                name: "floor",
+                type: "tilelayer",
+                opacity: 1,
+                visible: true,
+                x: minX,
+                y: minY,
+                startx: minX,
+                starty: minY,
+                width,
+                height,
+                data: [],
+            },
+        ],
+    } as unknown as ITiledMap;
+}
+
 describe("elevation terrain", () => {
     it("collapses legacy layer-bound heights into one canonical world surface on the next sculpt", () => {
         const legacy = applyElevationUpdates(createMap(), [
@@ -249,6 +273,33 @@ describe("elevation terrain", () => {
             { minX: 0, minY: 0, maxX: 63, maxY: 63 },
             { minX: 63, minY: 0, maxX: 126, maxY: 63 },
         ]);
+    });
+
+    it("selects only render chunks intersecting a signed resident tile window", () => {
+        const map = createMapWithSignedBounds(-126, -63, 252, 126);
+        const residentTileBounds = { x: -63, y: -63, width: 63, height: 63 };
+
+        expect(getElevationRenderChunks(map, 4096, 4, residentTileBounds)).toEqual([
+            { minX: -63, minY: -63, maxX: 0, maxY: 0 },
+        ]);
+        expect(
+            getElevationRenderChunksForUpdates(
+                map,
+                4096,
+                [{ layer: ELEVATION_WORLD_LAYER, x: 64, y: -10, elevation: 1 }],
+                4,
+                residentTileBounds,
+            ),
+        ).toEqual([]);
+        expect(
+            getElevationRenderChunksForUpdates(
+                map,
+                4096,
+                [{ layer: ELEVATION_WORLD_LAYER, x: -1, y: -10, elevation: 1 }],
+                4,
+                residentTileBounds,
+            ),
+        ).toEqual([{ minX: -63, minY: -63, maxX: 0, maxY: 0 }]);
     });
 
     it("samples one smooth world surface after collapsing overlapping legacy layers", () => {

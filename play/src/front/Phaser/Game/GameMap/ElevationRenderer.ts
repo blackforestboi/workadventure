@@ -8,6 +8,7 @@ import {
     getElevationSurfaceMesh,
     getTileGridOffset,
     tileToWorldTopLeft,
+    type ChunkTileBounds,
     type ElevationSampler,
     type ElevationSurfaceBounds,
     type ElevationSurfaceVertex,
@@ -41,6 +42,7 @@ export class ElevationRenderer {
     private readonly surfaces: RenderedElevationSurface[] = [];
     private readonly hiddenSources = new Set<ElevationCompositeSource>();
     private map: ITiledMap | undefined;
+    private residentTileBounds: ChunkTileBounds | undefined;
     private sampleElevation: ElevationSampler = () => 0;
 
     public constructor(private readonly scene: GameScene) {}
@@ -50,9 +52,10 @@ export class ElevationRenderer {
         return worldToElevatedTileCoordinates(this.map, worldX, worldY, this.sampleElevation);
     }
 
-    public render(map: ITiledMap | undefined): void {
+    public render(map: ITiledMap | undefined, residentTileBounds?: ChunkTileBounds): void {
         this.clearSurfaces();
         this.map = map;
+        this.residentTileBounds = cloneTileBounds(residentTileBounds);
         this.sampleElevation = map === undefined ? () => 0 : createElevationSampler(map);
         const renderer = this.scene.game.renderer;
         if (map === undefined || !(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)) {
@@ -73,6 +76,8 @@ export class ElevationRenderer {
             for (const bounds of getElevationRenderChunks(
                 map,
                 Math.min(renderer.getMaxTextureSize(), MAXIMUM_CAPTURE_TEXTURE_SIZE),
+                ELEVATION_MESH_SUBDIVISIONS,
+                this.residentTileBounds,
             )) {
                 const surface = getElevationSurfaceMesh(
                     map,
@@ -130,14 +135,23 @@ export class ElevationRenderer {
     }
 
     /** Updates only meshes touched by a sculpt while preserving their captures and unchanged map chunks. */
-    public renderElevationUpdates(map: ITiledMap, updates: readonly TeapotElevationUpdate[]): void {
+    public renderElevationUpdates(
+        map: ITiledMap,
+        updates: readonly TeapotElevationUpdate[],
+        residentTileBounds = this.residentTileBounds,
+    ): void {
         const renderer = this.scene.game.renderer;
+        const nextResidentTileBounds = cloneTileBounds(residentTileBounds);
+        if (!tileBoundsEqual(this.residentTileBounds, nextResidentTileBounds)) {
+            this.render(map, nextResidentTileBounds);
+            return;
+        }
         if (
             this.surfaces.length === 0 ||
             !(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer) ||
             getElevationCells(map).length === 0
         ) {
-            this.render(map);
+            this.render(map, nextResidentTileBounds);
             return;
         }
 
@@ -148,6 +162,8 @@ export class ElevationRenderer {
                 map,
                 Math.min(renderer.getMaxTextureSize(), MAXIMUM_CAPTURE_TEXTURE_SIZE),
                 updates,
+                ELEVATION_MESH_SUBDIVISIONS,
+                nextResidentTileBounds,
             ).map(boundsKey),
         );
         const stepHeight = (map.tileheight ?? 32) / 2;
@@ -190,6 +206,7 @@ export class ElevationRenderer {
             entity.setElevationOffset(0);
         }
         this.map = undefined;
+        this.residentTileBounds = undefined;
         this.sampleElevation = () => 0;
     }
 
@@ -232,6 +249,15 @@ export class ElevationRenderer {
 
 function boundsKey(bounds: ElevationSurfaceBounds): string {
     return `${bounds.minX},${bounds.minY},${bounds.maxX},${bounds.maxY}`;
+}
+
+function cloneTileBounds(bounds: ChunkTileBounds | undefined): ChunkTileBounds | undefined {
+    return bounds === undefined ? undefined : { ...bounds };
+}
+
+function tileBoundsEqual(left: ChunkTileBounds | undefined, right: ChunkTileBounds | undefined): boolean {
+    if (left === undefined || right === undefined) return left === right;
+    return left.x === right.x && left.y === right.y && left.width === right.width && left.height === right.height;
 }
 
 function getMeshVertices(map: ITiledMap, vertices: readonly ElevationSurfaceVertex[], stepHeight: number): number[] {
