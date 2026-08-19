@@ -55,7 +55,7 @@ import {
     isCollisionStorageLayer,
     type CollisionGridLayer,
 } from "./AuthoringCollision";
-import { canExpandMap, canUseGpuTilemapRenderer } from "./TilemapRendererSelection";
+import { getTileLayerRenderPlacement, resolveTileLayerWorldOrigin } from "./TilemapRendererSelection";
 
 import TilemapLayer = Phaser.Tilemaps.TilemapLayer;
 import TilemapGPULayer = Phaser.Tilemaps.TilemapGPULayer;
@@ -64,8 +64,11 @@ import Tile = Phaser.Tilemaps.Tile;
 import Tileset = Phaser.Tilemaps.Tileset;
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer;
 import ArcadeBody = Phaser.Physics.Arcade.Body;
+import Container = Phaser.GameObjects.Container;
 
 type RenderableTilemapLayer = TilemapLayer | TilemapGPULayer;
+type MapLayerRenderObject = RenderableTilemapLayer | Container;
+type RenderableLayerEntry = { layer: RenderableTilemapLayer; renderObject: MapLayerRenderObject };
 type TileAnimationData = {
     animation?: Array<{ duration?: number }>;
 };
@@ -126,10 +129,9 @@ export class GameMapFrontWrapper {
      */
     private entitiesManager: EntitiesManager;
 
-    private readonly mapCanExpand: boolean;
-
     public readonly phaserMap: Tilemap;
     public readonly phaserLayers: RenderableTilemapLayer[] = [];
+    private readonly gpuLayerContainers = new Map<TilemapGPULayer, Container>();
     /**
      * Areas that we can do CRUD operations on via scripting API
      */
@@ -224,41 +226,40 @@ export class GameMapFrontWrapper {
         this.scene = scene;
         this.gameMap = gameMap;
         this.phaserMap = phaserMap;
-        this.mapCanExpand = canExpandMap(this.gameMap.getMap());
-
         this.existingTileIndex = terrains.length > 0 ? terrains[0].firstgid : -1;
 
         this.entitiesManager = new EntitiesManager(this.scene, this);
 
         const layerRenderBands = this.getTileLayerRenderBands();
         const localDepth: Record<MapRenderBand, number> = { background: 0, foreground: 0 };
-        const renderedTileLayers = new Map<string, RenderableTilemapLayer>();
+        const renderedTileLayers = new Map<string, RenderableLayerEntry>();
         for (const layer of this.gameMap.flatLayers) {
             if (layer.type === "tilelayer") {
                 const layerRenderBand = layerRenderBands.get(layer.name) ?? "background";
-                const phaserLayer = this.createRenderableLayer(layer, terrains);
-                if (phaserLayer) {
+                const renderableLayer = this.createRenderableLayer(layer, terrains);
+                if (renderableLayer) {
+                    const { layer: phaserLayer, renderObject } = renderableLayer;
                     phaserLayer
                         .setScrollFactor(layer.parallaxx ?? 1, layer.parallaxy ?? 1)
                         .setAlpha(layer.opacity)
                         .setVisible(isCollisionStorageLayer(layer.name) ? false : layer.visible);
                     const compositeBaseLayerName = getCompositeTileLayerBaseName(layer.name);
-                    const basePhaserLayer =
+                    const baseRenderableLayer =
                         compositeBaseLayerName === layer.name
                             ? undefined
                             : renderedTileLayers.get(compositeBaseLayerName);
-                    if (basePhaserLayer === undefined) {
-                        this.gameRenderLayers.addMapLayer(phaserLayer, layerRenderBand, localDepth[layerRenderBand]++);
+                    if (baseRenderableLayer === undefined) {
+                        this.gameRenderLayers.addMapLayer(renderObject, layerRenderBand, localDepth[layerRenderBand]++);
                     } else {
                         this.gameRenderLayers.addToSameMapBand(
-                            basePhaserLayer,
-                            phaserLayer,
-                            basePhaserLayer.depth +
+                            baseRenderableLayer.renderObject,
+                            renderObject,
+                            baseRenderableLayer.renderObject.depth +
                                 getCompositeTileLayerDepthOffset(this.gameMap.flatLayers, layer.name),
                         );
                     }
                     this.phaserLayers.push(phaserLayer);
-                    renderedTileLayers.set(layer.name, phaserLayer);
+                    renderedTileLayers.set(layer.name, renderableLayer);
                 }
             }
         }
@@ -319,25 +320,35 @@ export class GameMapFrontWrapper {
         this.rebuildVoidCollisionLayer();
     }
 
-    private createRenderableLayer(layer: ITiledMapTileLayer, terrains: Array<Tileset>): RenderableTilemapLayer | null {
+    private createRenderableLayer(layer: ITiledMapTileLayer, terrains: Array<Tileset>): RenderableLayerEntry | null {
         const gpuTileset = this.getGpuTilesetForLayer(layer, terrains);
         const origin = getTileLayerWorldOrigin(this.gameMap.getMap(), layer);
+        const placement = getTileLayerRenderPlacement(origin, gpuTileset !== undefined);
 
-        return this.phaserMap.createLayer(
+        const phaserLayer = this.phaserMap.createLayer(
             layer.name,
             gpuTileset ?? terrains,
-            origin.x,
-            origin.y,
+            placement.layer.x,
+            placement.layer.y,
             gpuTileset !== undefined,
         );
+        if (phaserLayer === null || placement.parent === undefined) {
+            return phaserLayer === null ? null : { layer: phaserLayer, renderObject: phaserLayer };
+        }
+
+        const gpuLayer = phaserLayer as TilemapGPULayer;
+        const container = new Container(this.scene, placement.parent.x, placement.parent.y, [gpuLayer]).setName(
+            `${layer.name}:gpu-world-origin`,
+        );
+        this.gpuLayerContainers.set(gpuLayer, container);
+        return { layer: gpuLayer, renderObject: container };
     }
 
     private getGpuTilesetForLayer(layer: ITiledMapTileLayer, terrains: Array<Tileset>): Tileset | undefined {
         if (
             terrains.length === 0 ||
             !(this.scene.game.renderer instanceof WebGLRenderer) ||
-            this.getMap().orientation !== "orthogonal" ||
-            !canUseGpuTilemapRenderer(layer, this.phaserMap.tileWidth, this.phaserMap.tileHeight, this.mapCanExpand)
+            this.getMap().orientation !== "orthogonal"
         ) {
             return undefined;
         }
@@ -969,7 +980,29 @@ export class GameMapFrontWrapper {
         gameObject: T,
         localDepth = sourceLayer.depth,
     ): boolean {
-        return this.gameRenderLayers.addToSameMapBand(sourceLayer, gameObject, localDepth);
+        const renderObject = this.getLayerRenderObject(sourceLayer);
+        const renderDepth = renderObject.depth + localDepth - sourceLayer.depth;
+        return this.gameRenderLayers.addToSameMapBand(renderObject, gameObject, renderDepth);
+    }
+
+    private getLayerRenderObject(layer: RenderableTilemapLayer): MapLayerRenderObject {
+        return this.isGpuTilemapLayer(layer) ? (this.gpuLayerContainers.get(layer) ?? layer) : layer;
+    }
+
+    private getRenderableLayerWorldOrigin(layer: RenderableTilemapLayer): { x: number; y: number } {
+        const parent = this.isGpuTilemapLayer(layer) ? this.gpuLayerContainers.get(layer) : undefined;
+        return resolveTileLayerWorldOrigin({
+            layer: { x: layer.x, y: layer.y },
+            parent: parent === undefined ? undefined : { x: parent.x, y: parent.y },
+        });
+    }
+
+    private setRenderableLayerWorldOrigin(layer: RenderableTilemapLayer, origin: { x: number; y: number }): void {
+        const placement = getTileLayerRenderPlacement(origin, this.isGpuTilemapLayer(layer));
+        layer.setPosition(placement.layer.x, placement.layer.y);
+        if (placement.parent !== undefined && this.isGpuTilemapLayer(layer)) {
+            this.gpuLayerContainers.get(layer)?.setPosition(placement.parent.x, placement.parent.y);
+        }
     }
 
     public findPhaserLayers(groupName: string): RenderableTilemapLayer[] {
@@ -1000,8 +1033,9 @@ export class GameMapFrontWrapper {
         for (const phaserLayer of this.phaserLayers) {
             const layer = phaserLayer.layer;
             const previousData = layer.data;
-            const previousStartX = Math.round((phaserLayer.x - previousOffset.x) / this.phaserMap.tileWidth);
-            const previousStartY = Math.round((phaserLayer.y - previousOffset.y) / this.phaserMap.tileHeight);
+            const previousOrigin = this.getRenderableLayerWorldOrigin(phaserLayer);
+            const previousStartX = Math.round((previousOrigin.x - previousOffset.x) / this.phaserMap.tileWidth);
+            const previousStartY = Math.round((previousOrigin.y - previousOffset.y) / this.phaserMap.tileHeight);
             const sourceLayer = this.gameMap.findLayer(layer.name);
             const nextStartX =
                 sourceLayer?.type === "tilelayer" ? (sourceLayer.startx ?? nextBounds.minX) : nextBounds.minX;
@@ -1045,7 +1079,7 @@ export class GameMapFrontWrapper {
                 sourceLayer?.type === "tilelayer"
                     ? getTileLayerWorldOrigin(source, sourceLayer)
                     : { x: nextWorldBounds.x, y: nextWorldBounds.y };
-            phaserLayer.setPosition(layerOrigin.x, layerOrigin.y);
+            this.setRenderableLayerWorldOrigin(phaserLayer, layerOrigin);
             phaserLayer.setSize(layer.widthInPixels, layer.heightInPixels);
             if (this.isGpuTilemapLayer(phaserLayer)) phaserLayer.generateLayerDataTexture();
         }

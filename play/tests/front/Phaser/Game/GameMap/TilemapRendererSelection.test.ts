@@ -1,51 +1,24 @@
 import { describe, expect, it } from "vitest";
-import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
-import { createCenteredMap } from "@workadventure/map-editor";
 import {
-    canExpandMap,
-    canUseGpuTilemapRenderer,
+    getTileLayerRenderPlacement,
+    resolveTileLayerWorldOrigin,
 } from "../../../../../src/front/Phaser/Game/GameMap/TilemapRendererSelection";
 
-function createMap(): ITiledMap {
-    return createCenteredMap({
-        orientation: "orthogonal",
-        infinite: false,
-        width: 1,
-        height: 1,
-        tilewidth: 32,
-        tileheight: 32,
-        layers: [
-            { id: 1, name: "floor", type: "tilelayer", width: 1, height: 1, data: [1], opacity: 1, visible: true },
-        ],
-        tilesets: [],
-    } as unknown as ITiledMap);
-}
+describe("tilemap renderer coordinates", () => {
+    it("keeps a CPU layer directly at its signed world origin", () => {
+        const placement = getTileLayerRenderPlacement({ x: -512, y: 416 }, false);
 
-describe("tilemap renderer selection", () => {
-    it("keeps a centered infinite map expandable after a scene rebuild", () => {
-        expect(canExpandMap(createMap())).toBe(true);
+        expect(placement).toEqual({ layer: { x: -512, y: 416 } });
+        expect(resolveTileLayerWorldOrigin(placement)).toEqual({ x: -512, y: 416 });
     });
 
-    it("does not infer expandability from the map editor UI for ordinary maps", () => {
-        const map = createMap();
-        map.infinite = false;
+    it("keeps a GPU layer local and applies its signed world origin through its parent", () => {
+        const placement = getTileLayerRenderPlacement({ x: -512, y: -416 }, true);
 
-        expect(canExpandMap(map)).toBe(false);
-    });
-
-    it("keeps expandable maps on the renderer that supports a changing origin", () => {
-        expect(canUseGpuTilemapRenderer({}, 32, 32, true)).toBe(false);
-    });
-
-    it("rejects GPU rendering for an existing pixel offset", () => {
-        expect(canUseGpuTilemapRenderer({ offsetx: -512, offsety: -416 }, 32, 32, false)).toBe(false);
-    });
-
-    it("rejects GPU rendering for an existing tile offset", () => {
-        expect(canUseGpuTilemapRenderer({ x: -2, y: 1 }, 32, 32, false)).toBe(false);
-    });
-
-    it("allows GPU rendering for a fixed layer at the world origin", () => {
-        expect(canUseGpuTilemapRenderer({}, 32, 32, false)).toBe(true);
+        expect(placement).toEqual({
+            layer: { x: 0, y: 0 },
+            parent: { x: -512, y: -416 },
+        });
+        expect(resolveTileLayerWorldOrigin(placement)).toEqual({ x: -512, y: -416 });
     });
 });

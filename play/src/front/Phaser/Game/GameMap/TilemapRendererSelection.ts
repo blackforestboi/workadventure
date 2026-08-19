@@ -1,37 +1,28 @@
-import { isCenteredMap } from "@workadventure/map-editor";
-import type { ITiledMap } from "@workadventure/tiled-map-type-guard";
+export interface TileLayerRenderPosition {
+    x: number;
+    y: number;
+}
 
-export interface TileLayerPosition {
-    x?: number;
-    y?: number;
-    offsetx?: number;
-    offsety?: number;
+export interface TileLayerRenderPlacement {
+    layer: TileLayerRenderPosition;
+    parent?: TileLayerRenderPosition;
 }
 
 /**
- * Centered, infinite maps are authored as an open-ended signed tile grid.
- * This is a map invariant, not a transient map-editor UI state: it must
- * survive a scene rebuild after a browser reload.
+ * Phaser's GPU tilemap submitter applies a layer's own x/y position twice.
+ * Keep the GPU layer in its zero-based local coordinate space and put its
+ * signed world origin on a parent container, whose transform is applied once.
  */
-export function canExpandMap(map: ITiledMap): boolean {
-    return map.infinite === true && isCenteredMap(map);
+export function getTileLayerRenderPlacement(
+    worldOrigin: TileLayerRenderPosition,
+    gpu: boolean,
+): TileLayerRenderPlacement {
+    return gpu ? { layer: { x: 0, y: 0 }, parent: worldOrigin } : { layer: worldOrigin };
 }
 
-/**
- * Phaser's GPU tilemap renderer currently applies a layer's world position
- * twice. Keep expandable signed maps on the CPU renderer because their dense
- * rendering bounds can change at runtime, and reject GPU rendering for maps
- * that already have a non-zero layer position.
- */
-export function canUseGpuTilemapRenderer(
-    layer: TileLayerPosition,
-    tileWidth: number,
-    tileHeight: number,
-    mapCanExpand: boolean,
-): boolean {
-    if (mapCanExpand) return false;
-
-    const worldX = (layer.x ?? 0) * tileWidth + (layer.offsetx ?? 0);
-    const worldY = (layer.y ?? 0) * tileHeight + (layer.offsety ?? 0);
-    return worldX === 0 && worldY === 0;
+export function resolveTileLayerWorldOrigin(placement: TileLayerRenderPlacement): TileLayerRenderPosition {
+    return {
+        x: placement.layer.x + (placement.parent?.x ?? 0),
+        y: placement.layer.y + (placement.parent?.y ?? 0),
+    };
 }
