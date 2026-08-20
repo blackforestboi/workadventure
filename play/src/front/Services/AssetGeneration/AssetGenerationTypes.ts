@@ -63,16 +63,22 @@ export interface AssetGenerationModel {
     supportsStreaming: boolean;
 }
 
+export type AssetGenerationReferenceRole = "object-reference" | "style-mood-guide";
+
+export type AssetGenerationDescriptionRole = "object" | "style-mood";
+
 export interface AssetGenerationReference {
     id: string;
     blob: Blob;
     mimeType: "image/png" | "image/jpeg" | "image/webp";
+    role: AssetGenerationReferenceRole;
 }
 
 export interface AssetGenerationRequest {
     modelId: string;
     target: AssetGenerationTarget;
     prompt: string;
+    descriptionRole: AssetGenerationDescriptionRole;
     outputCount: number;
     references: readonly AssetGenerationReference[];
     outputFormat?: "png" | "jpeg" | "webp";

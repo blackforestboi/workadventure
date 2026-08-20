@@ -50,6 +50,54 @@ export interface TeapotActiveWokaSelectionRecord {
     updatedAt: string;
 }
 
+export interface TeapotMapStyleRecord {
+    id: string;
+    ownerId: string;
+    name: string;
+    normalizedName: string;
+    isDefault: boolean;
+    isBuiltIn: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export type TeapotMapStyleSourceLocator =
+    | {
+          type: "teapot-asset";
+          assetId: string;
+          sourceVersion: 1;
+      }
+    | {
+          type: "built-in";
+          namespace: string;
+          key: string;
+          sourceVersion: number;
+      };
+
+export interface TeapotMapStyleEntryRecord {
+    id: string;
+    ownerId: string;
+    styleId: string;
+    assetKind: TeapotAssetKind;
+    source: TeapotMapStyleSourceLocator;
+    canonicalSourceKey: string;
+    metadataVersion: number;
+    metadataSnapshot: TeapotJsonValue;
+    derivedFromAssetId: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface TeapotMapStyleIdempotencyRecord {
+    ownerId: string;
+    operation: "create-style" | "copy-entry";
+    idempotencyKey: string;
+    requestFingerprint: string;
+    resultStyleId: string | null;
+    resultEntryId: string | null;
+    createdAt: string;
+}
+
 export interface TeapotAcceptedWokaRecord {
     catalog: TeapotAssetCatalog;
     asset: TeapotAssetRecord;
@@ -251,7 +299,7 @@ export interface TeapotCapabilityGrant {
 }
 
 export interface TeapotDataExport {
-    schemaVersion: 2 | 3 | 4;
+    schemaVersion: 2 | 3 | 4 | 5;
     exportedAt: string;
     users: TeapotIdentity[];
     providerLinks: TeapotProviderLink[];
@@ -261,6 +309,9 @@ export interface TeapotDataExport {
     assets: TeapotAssetRecord[];
     catalogAssets: TeapotCatalogAssetRecord[];
     activeWokaSelections: TeapotActiveWokaSelectionRecord[];
+    mapStyles?: TeapotMapStyleRecord[];
+    mapStyleEntries?: TeapotMapStyleEntryRecord[];
+    mapStyleIdempotency?: TeapotMapStyleIdempotencyRecord[];
     mapRevisions: TeapotMapRevisionRecord[];
     writerLeases: TeapotMapWriterLease[];
     roomEditorPolicies?: TeapotRoomEditorPolicyRecord[];

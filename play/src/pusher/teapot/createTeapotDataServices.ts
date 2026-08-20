@@ -2,6 +2,7 @@ import type { TeapotDataRepository } from "./TeapotDataRepository";
 import { LocalDevelopmentIdentityAdapter, TeapotIdentityService } from "./TeapotIdentityService";
 import { TeapotAuthorizationService } from "./TeapotAuthorizationService";
 import { TeapotMapRevisionService } from "./TeapotMapRevisionService";
+import { TeapotMapStyleService } from "./TeapotMapStyleService";
 import { TeapotRoomAccessService } from "./TeapotRoomAccessService";
 
 export interface CreateTeapotDataServicesOptions {
@@ -26,6 +27,7 @@ export function createTeapotDataServices(
         roomAccess,
         localIdentity: new LocalDevelopmentIdentityAdapter(identity, repository),
         mapRevisions: new TeapotMapRevisionService(repository, roomAccess),
+        mapStyles: new TeapotMapStyleService(repository, identity, authorization),
     };
 }
 

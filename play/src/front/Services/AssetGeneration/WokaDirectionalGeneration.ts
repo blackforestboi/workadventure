@@ -152,6 +152,7 @@ export function createDirectionalFrameRequest(
         ]
             .filter(Boolean)
             .join("\n\n"),
+        descriptionRole: "object",
         outputCount: 1,
         references: [avatarDesign, poseReference],
         outputFormat: "webp",
@@ -184,6 +185,7 @@ async function createPoseReferences(): Promise<readonly AssetGenerationReference
                 id: `woka-pose-${frame.direction}-${frame.column}`,
                 blob: await cropFrame(bitmap, frame.column * 32, frame.row * 32),
                 mimeType: "image/png" as const,
+                role: "object-reference" as const,
             })),
         );
     } finally {

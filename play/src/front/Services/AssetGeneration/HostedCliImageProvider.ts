@@ -1,5 +1,11 @@
 import { AssetGenerationError, createProviderHttpError, toRedactedGenerationError } from "./AssetGenerationError";
 import { copyToArrayBuffer, decodeBase64, encodeBase64 } from "./Base64";
+import {
+    buildGenerationGuidancePrompt,
+    buildReferenceRoleInstruction,
+    generationReferenceLabel,
+    validateAssetGenerationGuidance,
+} from "./GenerationGuidance";
 import type {
     AssetGenerationCapabilities,
     AssetGenerationModel,
@@ -80,11 +86,14 @@ export class HostedCliImageProvider implements ImageGenerationProvider {
                 providerId: this.id,
             });
         }
+        validateAssetGenerationGuidance(request);
         try {
             const references = await Promise.all(
-                request.references.map(async (reference) => ({
-                    name: `${reference.id}.${extensionFor(reference.mimeType)}`,
+                request.references.map(async (reference, index) => ({
+                    name: `${generationReferenceLabel(index)}.${extensionFor(reference.mimeType)}`,
                     mimeType: reference.mimeType,
+                    role: reference.role,
+                    instruction: buildReferenceRoleInstruction(reference, index),
                     base64: encodeBase64(new Uint8Array(await reference.blob.arrayBuffer())),
                 })),
             );
@@ -96,7 +105,7 @@ export class HostedCliImageProvider implements ImageGenerationProvider {
                 signal,
                 body: JSON.stringify({
                     model: request.modelId,
-                    prompt: request.prompt,
+                    prompt: buildGenerationGuidancePrompt(request),
                     target: mapTarget(request.target),
                     references,
                 }),

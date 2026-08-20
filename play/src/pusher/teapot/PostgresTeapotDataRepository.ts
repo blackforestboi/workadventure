@@ -34,6 +34,9 @@ import type {
     CreateTeapotMcpSessionInput,
     CreateTeapotMcpProposalInput,
     CreateTeapotOAuthStateInput,
+    CreateTeapotMapStyleInput,
+    CopyTeapotMapStyleEntryInput,
+    EnsureDefaultTeapotMapStyleInput,
     ResolveTeapotIdentityInput,
     ReplaceTeapotRoomAccessPolicyInput,
     ReplaceTeapotRoomEditorPolicyInput,
@@ -61,6 +64,9 @@ import type {
     TeapotJsonValue,
     TeapotMapMutationSource,
     TeapotMapRevisionRecord,
+    TeapotMapStyleEntryRecord,
+    TeapotMapStyleIdempotencyRecord,
+    TeapotMapStyleRecord,
     TeapotMapWriterLease,
     TeapotMcpApprovalRecord,
     TeapotMcpProposalRecord,
@@ -78,6 +84,13 @@ import type {
     TeapotRoomVisitorRecord,
     TeapotRoleAssignment,
 } from "./TeapotRecords";
+import {
+    assertTeapotMapStyleIdempotencyKey,
+    canonicalTeapotMapStyleSource,
+    cloneTeapotMapStyleMetadata,
+    normalizeTeapotMapStyleName,
+    TEAPOT_MAP_STYLE_METADATA_VERSION,
+} from "./TeapotMapStyleContracts";
 
 interface IdentityRow {
     id: string;
@@ -138,6 +151,45 @@ interface ActiveWokaSelectionRow {
     owner_id: string;
     asset_id: string;
     updated_at: Date | string;
+}
+
+interface MapStyleRow {
+    id: string;
+    owner_id: string;
+    name: string;
+    normalized_name: string;
+    is_default: boolean;
+    is_builtin: boolean;
+    created_at: Date | string;
+    updated_at: Date | string;
+}
+
+interface MapStyleEntryRow {
+    id: string;
+    owner_id: string;
+    style_id: string;
+    asset_kind: TeapotAssetKind;
+    source_type: "teapot-asset" | "built-in";
+    source_asset_id: string | null;
+    source_namespace: string | null;
+    source_key: string;
+    source_version: number | string;
+    canonical_source_key: string;
+    metadata_version: number | string;
+    metadata_snapshot: TeapotJsonValue;
+    derived_from_asset_id: string | null;
+    created_at: Date | string;
+    updated_at: Date | string;
+}
+
+interface MapStyleIdempotencyRow {
+    owner_id: string;
+    operation: TeapotMapStyleIdempotencyRecord["operation"];
+    idempotency_key: string;
+    request_fingerprint: string;
+    result_style_id: string | null;
+    result_entry_id: string | null;
+    created_at: Date | string;
 }
 
 interface NextPositionRow {
@@ -763,6 +815,230 @@ export class PostgresTeapotDataRepository implements TeapotDataRepository {
                 assetId,
             ]);
             return mapAsset(row);
+        });
+    }
+
+    async ensureDefaultMapStyle(input: EnsureDefaultTeapotMapStyleInput): Promise<TeapotMapStyleRecord> {
+        return withPostgresTransaction(this.pool, async (client) => {
+            await this.requireIdentityWith(client, input.ownerId);
+            const timestamp = this.now().toISOString();
+            await client.query(
+                `INSERT INTO teapot_map_styles
+                    (id, owner_id, name, normalized_name, is_default, is_builtin, created_at, updated_at)
+                 VALUES ($1, $2, 'Default', 'default', true, true, $3, $3)
+                 ON CONFLICT DO NOTHING`,
+                [this.createId(), input.ownerId, timestamp],
+            );
+            const result = await client.query<MapStyleRow>(
+                `SELECT * FROM teapot_map_styles WHERE owner_id = $1 AND is_default FOR UPDATE`,
+                [input.ownerId],
+            );
+            const style = mapMapStyle(this.requireFirst(result.rows, "Default style was not returned"));
+            await client.query(
+                `INSERT INTO teapot_map_style_entries (
+                    id, owner_id, style_id, asset_kind, source_type, source_asset_id, source_namespace,
+                    source_key, source_version, canonical_source_key, metadata_version, metadata_snapshot,
+                    derived_from_asset_id, created_at, updated_at
+                 )
+                 SELECT gen_random_uuid(), asset.owner_id, $1, asset.kind, 'teapot-asset', asset.id, NULL,
+                    asset.id::text, 1, 'teapot-asset:' || asset.id::text || ':v1', $2,
+                    asset.metadata - ARRAY['ownerId', 'owner_id', 'styleId', 'style_id', 'sourceLocator',
+                        'objectReference', 'object_reference', 'derivedFromAssetId', 'derived_from_asset_id',
+                        'internalFlags', 'moderation'],
+                    asset.id, asset.created_at, asset.created_at
+                 FROM teapot_assets asset
+                 WHERE asset.owner_id = $3 AND asset.deleted_at IS NULL
+                 ON CONFLICT (style_id, canonical_source_key) DO NOTHING`,
+                [style.id, TEAPOT_MAP_STYLE_METADATA_VERSION, input.ownerId],
+            );
+            return style;
+        });
+    }
+
+    async createMapStyle(input: CreateTeapotMapStyleInput): Promise<TeapotMapStyleRecord> {
+        const idempotencyKey = assertTeapotMapStyleIdempotencyKey(input.idempotencyKey);
+        const { name, normalizedName } = normalizeTeapotMapStyleName(input.name);
+        return withPostgresTransaction(this.pool, async (client) => {
+            await this.requireIdentityWith(client, input.ownerId);
+            const replay = await client.query<MapStyleIdempotencyRow>(
+                `SELECT * FROM teapot_map_style_idempotency
+                 WHERE owner_id = $1 AND operation = 'create-style' AND idempotency_key = $2 FOR UPDATE`,
+                [input.ownerId, idempotencyKey],
+            );
+            const previous = replay.rows[0];
+            if (previous !== undefined) {
+                if (previous.request_fingerprint !== normalizedName || previous.result_style_id === null) {
+                    throw new TeapotDataConflictError("The idempotency key was already used for another request");
+                }
+                const result = await client.query<MapStyleRow>("SELECT * FROM teapot_map_styles WHERE id = $1", [
+                    previous.result_style_id,
+                ]);
+                return mapMapStyle(this.requireFirst(result.rows, "The idempotent style result no longer exists"));
+            }
+            const timestamp = this.now().toISOString();
+            const inserted = await client.query<MapStyleRow>(
+                `INSERT INTO teapot_map_styles
+                    (id, owner_id, name, normalized_name, is_default, is_builtin, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, false, false, $5, $5)
+                 ON CONFLICT (owner_id, normalized_name) DO NOTHING
+                 RETURNING *`,
+                [this.createId(), input.ownerId, name, normalizedName, timestamp],
+            );
+            if (inserted.rows[0] === undefined)
+                throw new TeapotDataConflictError("A style with that name already exists");
+            const style = mapMapStyle(inserted.rows[0]);
+            await client.query(
+                `INSERT INTO teapot_map_style_idempotency
+                    (owner_id, operation, idempotency_key, request_fingerprint, result_style_id, result_entry_id, created_at)
+                 VALUES ($1, 'create-style', $2, $3, $4, NULL, $5)`,
+                [input.ownerId, idempotencyKey, normalizedName, style.id, timestamp],
+            );
+            return style;
+        });
+    }
+
+    async getMapStyle(ownerId: string, styleId: string): Promise<TeapotMapStyleRecord | null> {
+        const result = await this.pool.query<MapStyleRow>(
+            "SELECT * FROM teapot_map_styles WHERE id = $1 AND owner_id = $2",
+            [styleId, ownerId],
+        );
+        return result.rows[0] === undefined ? null : mapMapStyle(result.rows[0]);
+    }
+
+    async listMapStyles(ownerId: string): Promise<TeapotMapStyleRecord[]> {
+        await this.ensureDefaultMapStyle({ ownerId });
+        const result = await this.pool.query<MapStyleRow>(
+            `SELECT * FROM teapot_map_styles
+             WHERE owner_id = $1 ORDER BY is_default DESC, normalized_name, id`,
+            [ownerId],
+        );
+        return result.rows.map(mapMapStyle);
+    }
+
+    async listMapStyleEntries(
+        ownerId: string,
+        styleId: string,
+        assetKind?: TeapotAssetKind,
+    ): Promise<TeapotMapStyleEntryRecord[]> {
+        const result = await this.pool.query<MapStyleEntryRow>(
+            `SELECT entry.* FROM teapot_map_style_entries entry
+             JOIN teapot_map_styles style ON style.id = entry.style_id AND style.owner_id = entry.owner_id
+             WHERE entry.owner_id = $1 AND entry.style_id = $2
+               AND ($3::text IS NULL OR entry.asset_kind = $3)
+             ORDER BY entry.created_at, entry.id`,
+            [ownerId, styleId, assetKind ?? null],
+        );
+        return result.rows.map(mapMapStyleEntry);
+    }
+
+    async copyMapStyleEntry(input: CopyTeapotMapStyleEntryInput): Promise<TeapotMapStyleEntryRecord> {
+        const idempotencyKey = assertTeapotMapStyleIdempotencyKey(input.idempotencyKey);
+        const canonicalSourceKey = canonicalTeapotMapStyleSource(input.source);
+        const fingerprint = `${input.styleId}:${canonicalSourceKey}`;
+        return withPostgresTransaction(this.pool, async (client) => {
+            await this.requireIdentityWith(client, input.ownerId);
+            const replay = await client.query<MapStyleIdempotencyRow>(
+                `SELECT * FROM teapot_map_style_idempotency
+                 WHERE owner_id = $1 AND operation = 'copy-entry' AND idempotency_key = $2 FOR UPDATE`,
+                [input.ownerId, idempotencyKey],
+            );
+            const previous = replay.rows[0];
+            if (previous !== undefined) {
+                if (previous.request_fingerprint !== fingerprint || previous.result_entry_id === null) {
+                    throw new TeapotDataConflictError("The idempotency key was already used for another request");
+                }
+                const result = await client.query<MapStyleEntryRow>(
+                    "SELECT * FROM teapot_map_style_entries WHERE id = $1",
+                    [previous.result_entry_id],
+                );
+                return mapMapStyleEntry(this.requireFirst(result.rows, "The idempotent copy result no longer exists"));
+            }
+            const styleResult = await client.query<MapStyleRow>(
+                "SELECT * FROM teapot_map_styles WHERE id = $1 AND owner_id = $2 FOR UPDATE",
+                [input.styleId, input.ownerId],
+            );
+            if (styleResult.rows[0] === undefined)
+                throw new TeapotDataNotFoundError("The requested style or source is unavailable");
+
+            let assetKind: TeapotAssetKind;
+            let metadataVersion: number;
+            let metadataSnapshot: TeapotJsonValue;
+            let sourceAssetId: string | null;
+            let sourceNamespace: string | null;
+            let sourceKey: string;
+            if (input.source.type === "teapot-asset") {
+                const assetResult = await client.query<AssetRow>(
+                    `SELECT * FROM teapot_assets
+                     WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL FOR UPDATE`,
+                    [input.source.assetId, input.ownerId],
+                );
+                const row = assetResult.rows[0];
+                if (row === undefined)
+                    throw new TeapotDataNotFoundError("The requested style or source is unavailable");
+                const asset = mapAsset(row);
+                assetKind = asset.kind;
+                metadataVersion = TEAPOT_MAP_STYLE_METADATA_VERSION;
+                metadataSnapshot = cloneTeapotMapStyleMetadata(asset.metadata);
+                sourceAssetId = asset.id;
+                sourceNamespace = null;
+                sourceKey = asset.id;
+            } else {
+                if (
+                    input.builtIn === undefined ||
+                    input.builtIn.metadataVersion !== TEAPOT_MAP_STYLE_METADATA_VERSION
+                ) {
+                    throw new TeapotDataNotFoundError("The requested style or source is unavailable");
+                }
+                assetKind = input.builtIn.assetKind;
+                metadataVersion = input.builtIn.metadataVersion;
+                metadataSnapshot = cloneTeapotMapStyleMetadata(input.builtIn.metadataSnapshot);
+                sourceAssetId = null;
+                sourceNamespace = input.source.namespace;
+                sourceKey = input.source.key;
+            }
+            const timestamp = this.now().toISOString();
+            const inserted = await client.query<MapStyleEntryRow>(
+                `INSERT INTO teapot_map_style_entries (
+                    id, owner_id, style_id, asset_kind, source_type, source_asset_id, source_namespace,
+                    source_key, source_version, canonical_source_key, metadata_version, metadata_snapshot,
+                    derived_from_asset_id, created_at, updated_at
+                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $6, $13, $13)
+                 ON CONFLICT (style_id, canonical_source_key) DO NOTHING RETURNING *`,
+                [
+                    this.createId(),
+                    input.ownerId,
+                    input.styleId,
+                    assetKind,
+                    input.source.type,
+                    sourceAssetId,
+                    sourceNamespace,
+                    sourceKey,
+                    input.source.sourceVersion,
+                    canonicalSourceKey,
+                    metadataVersion,
+                    JSON.stringify(metadataSnapshot),
+                    timestamp,
+                ],
+            );
+            const entry =
+                inserted.rows[0] ??
+                this.requireFirst(
+                    (
+                        await client.query<MapStyleEntryRow>(
+                            "SELECT * FROM teapot_map_style_entries WHERE style_id = $1 AND canonical_source_key = $2",
+                            [input.styleId, canonicalSourceKey],
+                        )
+                    ).rows,
+                    "The copied style entry was not returned",
+                );
+            const mapped = mapMapStyleEntry(entry);
+            await client.query(
+                `INSERT INTO teapot_map_style_idempotency
+                    (owner_id, operation, idempotency_key, request_fingerprint, result_style_id, result_entry_id, created_at)
+                 VALUES ($1, 'copy-entry', $2, $3, NULL, $4, $5)`,
+                [input.ownerId, idempotencyKey, fingerprint, mapped.id, timestamp],
+            );
+            return mapped;
         });
     }
 
@@ -2093,6 +2369,43 @@ function mapActiveWokaSelection(row: ActiveWokaSelectionRow): TeapotActiveWokaSe
     return {
         ownerId: row.owner_id,
         assetId: row.asset_id,
+        updatedAt: iso(row.updated_at),
+    };
+}
+
+function mapMapStyle(row: MapStyleRow): TeapotMapStyleRecord {
+    return {
+        id: row.id,
+        ownerId: row.owner_id,
+        name: row.name,
+        normalizedName: row.normalized_name,
+        isDefault: row.is_default,
+        isBuiltIn: row.is_builtin,
+        createdAt: iso(row.created_at),
+        updatedAt: iso(row.updated_at),
+    };
+}
+
+function mapMapStyleEntry(row: MapStyleEntryRow): TeapotMapStyleEntryRecord {
+    return {
+        id: row.id,
+        ownerId: row.owner_id,
+        styleId: row.style_id,
+        assetKind: row.asset_kind,
+        source:
+            row.source_type === "teapot-asset"
+                ? { type: "teapot-asset", assetId: row.source_asset_id ?? row.source_key, sourceVersion: 1 }
+                : {
+                      type: "built-in",
+                      namespace: row.source_namespace ?? "unknown",
+                      key: row.source_key,
+                      sourceVersion: toNumber(row.source_version),
+                  },
+        canonicalSourceKey: row.canonical_source_key,
+        metadataVersion: toNumber(row.metadata_version),
+        metadataSnapshot: row.metadata_snapshot,
+        derivedFromAssetId: row.derived_from_asset_id,
+        createdAt: iso(row.created_at),
         updatedAt: iso(row.updated_at),
     };
 }

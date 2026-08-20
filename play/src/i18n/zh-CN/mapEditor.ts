@@ -3,8 +3,12 @@ import type { Translation } from "../i18n-types";
 
 import enMapEditor from "../en-US/mapEditor";
 
+const enMapEditorTranslation = enMapEditor as Translation["mapEditor"];
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+    ...enMapEditorTranslation,
     map: {
+        ...enMapEditorTranslation.map,
         refreshPrompt: "检测到新版本的地图。需要刷新",
         deletePrompt: "此地图已被删除",
         deletePromptSubtitle: "你已与此房间断开连接。",
@@ -352,6 +356,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         description: "在地图上绘制一个区域以创建新区域。",
     },
     entityEditor: {
+        ...enMapEditorTranslation.entityEditor,
         header: {
             title: "向地图添加对象",
             description: "搜索、上传或选择现有对象并将其添加到地图中。",

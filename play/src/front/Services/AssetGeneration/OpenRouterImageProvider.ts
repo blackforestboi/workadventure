@@ -1,6 +1,12 @@
 import { AssetGenerationError, createProviderHttpError, toRedactedGenerationError } from "./AssetGenerationError";
 import { copyToArrayBuffer, decodeBase64, encodeBase64 } from "./Base64";
 import { removeEdgeConnectedBackground } from "./ChromaKeyBackgroundRemover";
+import {
+    buildGenerationGuidancePrompt,
+    buildReferenceRoleInstruction,
+    generationReferenceLabel,
+    validateAssetGenerationGuidance,
+} from "./GenerationGuidance";
 import type {
     AssetGenerationCapabilities,
     AssetGenerationModel,
@@ -110,15 +116,19 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
         if (signal.aborted) {
             throw toRedactedGenerationError(new DOMException("Aborted", "AbortError"), this.id);
         }
+        validateAssetGenerationGuidance(request);
 
-        const inputReferences = await Promise.all(
-            request.references.map(async (reference) => ({
-                type: "image_url",
+        const inputReferences: OpenRouterInputReference[] = await Promise.all(
+            request.references.map(async (reference, index) => ({
+                type: "image_url" as const,
                 image_url: {
                     url: `data:${reference.mimeType};base64,${encodeBase64(
                         new Uint8Array(await reference.blob.arrayBuffer()),
                     )}`,
                 },
+                reference_id: generationReferenceLabel(index),
+                guidance_role: reference.role,
+                instruction: buildReferenceRoleInstruction(reference, index),
             })),
         );
 
@@ -176,7 +186,7 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
     private async generateSingleAsset(
         request: AssetGenerationRequest,
         credential: string,
-        inputReferences: readonly { type: string; image_url: { url: string } }[],
+        inputReferences: readonly OpenRouterInputReference[],
         index: number,
         signal: AbortSignal,
     ): Promise<{ asset: GeneratedAsset; payload: unknown; providerRequestId: string | undefined }> {
@@ -188,7 +198,7 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
     private async generateSingleChatAsset(
         request: AssetGenerationRequest,
         credential: string,
-        inputReferences: readonly { type: string; image_url: { url: string } }[],
+        inputReferences: readonly OpenRouterInputReference[],
         index: number,
         signal: AbortSignal,
     ): Promise<{ asset: GeneratedAsset; payload: unknown; providerRequestId: string | undefined }> {
@@ -214,7 +224,10 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
                             role: "user",
                             content: [
                                 { type: "text", text: this.createImagePrompt(request) },
-                                ...inputReferences.slice(0, 14),
+                                ...inputReferences.slice(0, 14).flatMap(({ instruction, type, image_url }) => [
+                                    { type: "text", text: instruction },
+                                    { type, image_url },
+                                ]),
                             ],
                         },
                     ],
@@ -239,7 +252,7 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
     private async generateSingleImageApiAsset(
         request: AssetGenerationRequest,
         credential: string,
-        inputReferences: readonly { type: string; image_url: { url: string } }[],
+        inputReferences: readonly OpenRouterInputReference[],
         index: number,
         signal: AbortSignal,
     ): Promise<{ asset: GeneratedAsset; payload: unknown; providerRequestId: string | undefined }> {
@@ -255,7 +268,13 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
                     aspect_ratio: "1:1",
                     // The selected OpenRouter image model accepts up to fourteen references. Omit the
                     // field entirely when none are supplied.
-                    ...(inputReferences.length === 0 ? {} : { input_references: inputReferences.slice(0, 14) }),
+                    ...(inputReferences.length === 0
+                        ? {}
+                        : {
+                              input_references: inputReferences
+                                  .slice(0, 14)
+                                  .map(({ instruction: _instruction, ...reference }) => reference),
+                          }),
                     n: 1,
                 }),
                 signal,
@@ -277,7 +296,10 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
             request.target === "complete-woka" || request.target.startsWith("woka-")
                 ? "Avatar composition rule: show only one free-standing character. Never add a floor, ground plane, terrain, grass, path, pedestal, platform, horizon, baseline, contact line, contact shadow, scene, or frame around the character. There must be no visible mark beneath its feet."
                 : "";
-        return `${request.prompt}\n\n${avatarIsolationRule}\n\nUse one flat, solid electric magenta #FF00FF background as a machine-readable matte. This exact colour must not appear anywhere on the subject, including its outline, highlights, shadows, texture, reflections, or semi-transparent edges. Generate exactly one isolated subject with clear padding between it and every canvas edge. Never draw a checkerboard, transparency raster, grid, tiles, UI frame, border, rounded rectangle, gradient, texture, shadow, reflection, scenery, props, or a second background colour.`;
+        return buildGenerationGuidancePrompt(request, [
+            avatarIsolationRule,
+            "Use one flat, solid electric magenta #FF00FF background as a machine-readable matte. This exact colour must not appear anywhere on the subject, including its outline, highlights, shadows, texture, reflections, or semi-transparent edges. Generate exactly one isolated subject with clear padding between it and every canvas edge. Never draw a checkerboard, transparency raster, grid, tiles, UI frame, border, rounded rectangle, gradient, texture, shadow, reflection, scenery, props, or a second background colour.",
+        ]);
     }
 
     private async decodeGeneratedAsset(payload: unknown, id: string): Promise<GeneratedAsset> {
@@ -369,6 +391,14 @@ export class OpenRouterImageProvider implements ImageGenerationProvider {
             cause,
         });
     }
+}
+
+interface OpenRouterInputReference {
+    type: "image_url";
+    image_url: { url: string };
+    reference_id: string;
+    guidance_role: "object-reference" | "style-mood-guide";
+    instruction: string;
 }
 
 function resolutionForModel(modelId: string): string {

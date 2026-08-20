@@ -83,15 +83,27 @@ describe("asset generation panel", () => {
         expect(assetGenerationPanelSource).toContain(": acceptLabel");
     });
 
+    it("classifies Description and every uploaded or dropped image before generation", () => {
+        expect(assetGenerationPanelSource).toContain(
+            'let descriptionRole: AssetGenerationDescriptionRole = $state("object")',
+        );
+        expect(assetGenerationPanelSource).toContain(
+            'let batchReferenceRole: AssetGenerationReferenceRole = $state("object-reference")',
+        );
+        expect(assetGenerationPanelSource).toContain('value="style-mood"');
+        expect(assetGenerationPanelSource).toContain('value="style-mood-guide"');
+        expect(assetGenerationPanelSource).toContain("ondrop={dropReferences}");
+        expect(assetGenerationPanelSource).toContain("references.setRole(id, role)");
+        expect(assetGenerationPanelSource).toContain("unclassifiedReferenceCount > 0");
+        expect(assetGenerationPanelSource).toContain("candidateGuidanceSummary");
+        expect(assetGenerationPanelSource).not.toContain("&& !compact}\n            <fieldset");
+    });
+
     it("returns image editing to the up-to-date Custom asset list", () => {
         expect(entityUploadSource).toContain('selectCategoryStore.set({ kind: "special", tag: "custom" });');
-        expect(entityUploadSource).toContain("closeForm={closeToCustomAssets}");
         expect(entityUploadSource).toContain("onClose?.();");
         expect(entityEditorPickerSource).toContain("function showCustomAssets()");
-        expect(entityEditorPickerSource).toContain("<EntityUpload onClose={showCustomAssets} />");
-        expect(entityEditorPickerSource).toContain(
-            'closeForm={pickedEntity.type === "Custom" ? showCustomAssets : clearEntitySelection}',
-        );
+        expect(entityEditorPickerSource).toContain("onClose={showCustomAssets}");
     });
 
     it("keeps editing available while hiding variant controls with nothing to choose", () => {

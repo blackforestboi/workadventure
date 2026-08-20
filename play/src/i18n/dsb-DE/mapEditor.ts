@@ -3,8 +3,12 @@ import type { Translation } from "../i18n-types";
 
 import enMapEditor from "../en-US/mapEditor";
 
+const enMapEditorTranslation = enMapEditor as Translation["mapEditor"];
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+    ...enMapEditorTranslation,
     map: {
+        ...enMapEditorTranslation.map,
         refreshPrompt: "Nowa wersija kórty jo se namakała. Aktualizacija jo trěbna",
         deletePrompt: "Toś ta kórta jo se wulašowała",
         deletePromptSubtitle: "Sy se wót togo rumoja źělił.",
@@ -359,6 +363,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         description: "Cyrkajśo wobcerk na kórśe, aby nowy napórał.",
     },
     entityEditor: {
+        ...enMapEditorTranslation.entityEditor,
         header: {
             title: "Objekt k swójomu kórśeju pśidaś",
             description: "Pytajśo, nagrajśo abo wubjeŕśo eksistěrujucy objekt a pśidajśo jen k kórśeju.",

@@ -1,6 +1,11 @@
 import { BRANDING } from "../../Branding";
 import { AssetGenerationError } from "./AssetGenerationError";
-import type { AssetGenerationReference, AssetGenerationRequest, AssetGenerationTarget } from "./AssetGenerationTypes";
+import type {
+    AssetGenerationDescriptionRole,
+    AssetGenerationReference,
+    AssetGenerationRequest,
+    AssetGenerationTarget,
+} from "./AssetGenerationTypes";
 import type { RasterOutputSize } from "./RasterOutputNormalizer";
 import { createDefaultWokaStyleReference } from "./DefaultWokaStyleReference";
 
@@ -24,6 +29,7 @@ export interface WokaIdleFrameStageInput {
     modelId: string;
     target: WokaGenerationTarget;
     description: string;
+    descriptionRole: AssetGenerationDescriptionRole;
     references?: readonly AssetGenerationReference[];
 }
 
@@ -31,6 +37,7 @@ export interface WokaSpriteSheetStageInput {
     modelId: string;
     target: WokaGenerationTarget;
     description: string;
+    descriptionRole: AssetGenerationDescriptionRole;
     acceptedSeed: AssetGenerationReference;
 }
 
@@ -63,6 +70,7 @@ export function createWokaIdleFrameStage(input: WokaIdleFrameStageInput): WokaId
             // identity brief with adult proportions before they reach the
             // animation contract.
             prompt: joinPrompt(idleFrameRules(input.target, useCompositionReference), input.description),
+            descriptionRole: input.descriptionRole,
             outputCount: 1,
             references: useCompositionReference
                 ? [createDefaultWokaStyleReference(), ...userReferences.slice(0, 13)]
@@ -87,6 +95,7 @@ export function createWokaSpriteSheetStage(input: WokaSpriteSheetStageInput): Wo
             modelId: input.modelId,
             target: input.target,
             prompt: joinPrompt(input.description, spriteSheetRules(input.target)),
+            descriptionRole: input.descriptionRole,
             outputCount: 1,
             references: [input.acceptedSeed],
             outputFormat: "webp",

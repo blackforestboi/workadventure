@@ -3,8 +3,12 @@ import type { Translation } from "../i18n-types";
 
 import enMapEditor from "../en-US/mapEditor";
 
+const enMapEditorTranslation = enMapEditor as Translation["mapEditor"];
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+    ...enMapEditorTranslation,
     map: {
+        ...enMapEditorTranslation.map,
         refreshPrompt: "새 버전의 지도가 감지되었습니다. 새로고침이 필요합니다",
         deletePrompt: "이 지도는 삭제되었습니다",
         deletePromptSubtitle: "이 방에서 연결이 끊어졌습니다.",
@@ -357,6 +361,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         description: "지도에서 영역을 그려 새로운 영역을 만드세요.",
     },
     entityEditor: {
+        ...enMapEditorTranslation.entityEditor,
         header: {
             title: "지도에 오브젝트 추가",
             description: "오브젝트를 검색하거나 업로드 또는 선택해서 지도에 배치하세요.",

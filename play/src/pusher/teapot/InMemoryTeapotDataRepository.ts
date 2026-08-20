@@ -33,6 +33,9 @@ import type {
     CreateTeapotMcpSessionInput,
     CreateTeapotMcpProposalInput,
     CreateTeapotOAuthStateInput,
+    CreateTeapotMapStyleInput,
+    CopyTeapotMapStyleEntryInput,
+    EnsureDefaultTeapotMapStyleInput,
     ResolveTeapotIdentityInput,
     ReplaceTeapotRoomAccessPolicyInput,
     ReplaceTeapotRoomEditorPolicyInput,
@@ -53,7 +56,11 @@ import type {
     TeapotDataExport,
     TeapotEndorsementRecord,
     TeapotEndorsementIntentRecord,
+    TeapotJsonValue,
     TeapotMapRevisionRecord,
+    TeapotMapStyleEntryRecord,
+    TeapotMapStyleIdempotencyRecord,
+    TeapotMapStyleRecord,
     TeapotMapWriterLease,
     TeapotMcpApprovalRecord,
     TeapotMcpProposalRecord,
@@ -69,6 +76,13 @@ import type {
     TeapotRoomVisitorRecord,
     TeapotRoleAssignment,
 } from "./TeapotRecords";
+import {
+    assertTeapotMapStyleIdempotencyKey,
+    canonicalTeapotMapStyleSource,
+    cloneTeapotMapStyleMetadata,
+    normalizeTeapotMapStyleName,
+    TEAPOT_MAP_STYLE_METADATA_VERSION,
+} from "./TeapotMapStyleContracts";
 
 export interface InMemoryTeapotDataRepositoryOptions {
     createId?: () => string;
@@ -85,6 +99,9 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
     private readonly assetIdsByObjectReference = new Map<string, string>();
     private readonly catalogAssets = new Map<string, TeapotCatalogAssetRecord>();
     private readonly activeWokaSelections = new Map<string, TeapotActiveWokaSelectionRecord>();
+    private readonly mapStyles = new Map<string, TeapotMapStyleRecord>();
+    private readonly mapStyleEntries = new Map<string, TeapotMapStyleEntryRecord>();
+    private readonly mapStyleIdempotency = new Map<string, TeapotMapStyleIdempotencyRecord>();
     private readonly mapRevisions = new Map<string, TeapotMapRevisionRecord>();
     private readonly writerLeases = new Map<string, TeapotMapWriterLease>();
     private readonly roomAccessPolicies = new Map<string, TeapotRoomAccessPolicyRecord>();
@@ -461,6 +478,155 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             this.activeWokaSelections.delete(ownerId);
         }
         return structuredClone(deletedAsset);
+    }
+
+    async ensureDefaultMapStyle(input: EnsureDefaultTeapotMapStyleInput): Promise<TeapotMapStyleRecord> {
+        this.requireIdentity(input.ownerId);
+        const existing = [...this.mapStyles.values()].find(
+            (style) => style.ownerId === input.ownerId && style.isDefault,
+        );
+        const timestamp = this.nowIso();
+        const style =
+            existing ??
+            ({
+                id: this.createId(),
+                ownerId: input.ownerId,
+                name: "Default",
+                normalizedName: "default",
+                isDefault: true,
+                isBuiltIn: true,
+                createdAt: timestamp,
+                updatedAt: timestamp,
+            } satisfies TeapotMapStyleRecord);
+        if (existing === undefined) this.mapStyles.set(style.id, style);
+        for (const asset of this.assets.values()) {
+            if (asset.ownerId !== input.ownerId || asset.deletedAt !== null) continue;
+            this.insertMapStyleEntry(style, {
+                type: "teapot-asset",
+                assetId: asset.id,
+                sourceVersion: 1,
+            });
+        }
+        return structuredClone(style);
+    }
+
+    async createMapStyle(input: CreateTeapotMapStyleInput): Promise<TeapotMapStyleRecord> {
+        this.requireIdentity(input.ownerId);
+        const idempotencyKey = assertTeapotMapStyleIdempotencyKey(input.idempotencyKey);
+        const { name, normalizedName } = normalizeTeapotMapStyleName(input.name);
+        const fingerprint = normalizedName;
+        const operationKey = this.mapStyleOperationKey(input.ownerId, "create-style", idempotencyKey);
+        const replay = this.mapStyleIdempotency.get(operationKey);
+        if (replay !== undefined) {
+            if (replay.requestFingerprint !== fingerprint || replay.resultStyleId === null) {
+                throw new TeapotDataConflictError("The idempotency key was already used for another request");
+            }
+            const result = this.mapStyles.get(replay.resultStyleId);
+            if (result === undefined) throw new TeapotDataNotFoundError("The idempotent style result no longer exists");
+            return structuredClone(result);
+        }
+        if (
+            [...this.mapStyles.values()].some(
+                (style) => style.ownerId === input.ownerId && style.normalizedName === normalizedName,
+            )
+        ) {
+            throw new TeapotDataConflictError("A style with that name already exists");
+        }
+        const timestamp = this.nowIso();
+        const style: TeapotMapStyleRecord = {
+            id: this.createId(),
+            ownerId: input.ownerId,
+            name,
+            normalizedName,
+            isDefault: false,
+            isBuiltIn: false,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+        };
+        this.mapStyles.set(style.id, style);
+        this.mapStyleIdempotency.set(operationKey, {
+            ownerId: input.ownerId,
+            operation: "create-style",
+            idempotencyKey,
+            requestFingerprint: fingerprint,
+            resultStyleId: style.id,
+            resultEntryId: null,
+            createdAt: timestamp,
+        });
+        return structuredClone(style);
+    }
+
+    async getMapStyle(ownerId: string, styleId: string): Promise<TeapotMapStyleRecord | null> {
+        const style = this.mapStyles.get(styleId);
+        return style?.ownerId === ownerId ? structuredClone(style) : null;
+    }
+
+    async listMapStyles(ownerId: string): Promise<TeapotMapStyleRecord[]> {
+        this.requireIdentity(ownerId);
+        await this.ensureDefaultMapStyle({ ownerId });
+        return [...this.mapStyles.values()]
+            .filter((style) => style.ownerId === ownerId)
+            .sort(
+                (left, right) =>
+                    Number(right.isDefault) - Number(left.isDefault) ||
+                    left.normalizedName.localeCompare(right.normalizedName) ||
+                    left.id.localeCompare(right.id),
+            )
+            .map((style) => structuredClone(style));
+    }
+
+    async listMapStyleEntries(
+        ownerId: string,
+        styleId: string,
+        assetKind?: TeapotAssetRecord["kind"],
+    ): Promise<TeapotMapStyleEntryRecord[]> {
+        const style = this.mapStyles.get(styleId);
+        if (style === undefined || style.ownerId !== ownerId) return [];
+        return [...this.mapStyleEntries.values()]
+            .filter(
+                (entry) =>
+                    entry.ownerId === ownerId &&
+                    entry.styleId === styleId &&
+                    (assetKind === undefined || entry.assetKind === assetKind),
+            )
+            .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id))
+            .map((entry) => structuredClone(entry));
+    }
+
+    async copyMapStyleEntry(input: CopyTeapotMapStyleEntryInput): Promise<TeapotMapStyleEntryRecord> {
+        this.requireIdentity(input.ownerId);
+        const style = this.mapStyles.get(input.styleId);
+        if (style === undefined || style.ownerId !== input.ownerId) {
+            throw new TeapotDataNotFoundError("The requested style or source is unavailable");
+        }
+        const idempotencyKey = assertTeapotMapStyleIdempotencyKey(input.idempotencyKey);
+        const canonicalSourceKey = canonicalTeapotMapStyleSource(input.source);
+        const fingerprint = `${input.styleId}:${canonicalSourceKey}`;
+        const operationKey = this.mapStyleOperationKey(input.ownerId, "copy-entry", idempotencyKey);
+        const replay = this.mapStyleIdempotency.get(operationKey);
+        if (replay !== undefined) {
+            if (replay.requestFingerprint !== fingerprint || replay.resultEntryId === null) {
+                throw new TeapotDataConflictError("The idempotency key was already used for another request");
+            }
+            const result = this.mapStyleEntries.get(replay.resultEntryId);
+            if (result === undefined) throw new TeapotDataNotFoundError("The idempotent copy result no longer exists");
+            return structuredClone(result);
+        }
+        const existing = [...this.mapStyleEntries.values()].find(
+            (entry) => entry.styleId === style.id && entry.canonicalSourceKey === canonicalSourceKey,
+        );
+        if (existing !== undefined) return structuredClone(existing);
+        const entry = this.insertMapStyleEntry(style, input.source, input.builtIn);
+        this.mapStyleIdempotency.set(operationKey, {
+            ownerId: input.ownerId,
+            operation: "copy-entry",
+            idempotencyKey,
+            requestFingerprint: fingerprint,
+            resultStyleId: null,
+            resultEntryId: entry.id,
+            createdAt: entry.createdAt,
+        });
+        return structuredClone(entry);
     }
 
     async getMapRevision(mapId: string): Promise<TeapotMapRevisionRecord> {
@@ -1037,7 +1203,7 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
 
     async exportData(): Promise<TeapotDataExport> {
         return structuredClone({
-            schemaVersion: 4,
+            schemaVersion: 5,
             exportedAt: this.nowIso(),
             users: this.sorted(this.users.values(), (record) => record.id),
             providerLinks: this.sorted(this.providerLinks.values(), (record) =>
@@ -1055,6 +1221,12 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
                 (record) => `${record.catalogId}:${record.assetId}`,
             ),
             activeWokaSelections: this.sorted(this.activeWokaSelections.values(), (record) => record.ownerId),
+            mapStyles: this.sorted(this.mapStyles.values(), (record) => record.id),
+            mapStyleEntries: this.sorted(this.mapStyleEntries.values(), (record) => record.id),
+            mapStyleIdempotency: this.sorted(
+                this.mapStyleIdempotency.values(),
+                (record) => `${record.ownerId}:${record.operation}:${record.idempotencyKey}`,
+            ),
             mapRevisions: this.sorted(this.mapRevisions.values(), (record) => record.mapId),
             writerLeases: this.sorted(this.writerLeases.values(), (record) => record.mapId),
             roomAccessPolicies: this.sorted(
@@ -1078,7 +1250,12 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
     }
 
     async restoreData(data: TeapotDataExport): Promise<void> {
-        if (data.schemaVersion !== 2 && data.schemaVersion !== 3 && data.schemaVersion !== 4) {
+        if (
+            data.schemaVersion !== 2 &&
+            data.schemaVersion !== 3 &&
+            data.schemaVersion !== 4 &&
+            data.schemaVersion !== 5
+        ) {
             throw new TeapotRestoreConflictError(`Unsupported Teapot export schema ${String(data.schemaVersion)}`);
         }
         if (!this.isEmpty()) {
@@ -1113,6 +1290,14 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             this.catalogAssets.set(`${record.catalogId}\u0000${record.assetId}`, structuredClone(record));
         for (const selection of data.activeWokaSelections) {
             this.activeWokaSelections.set(selection.ownerId, structuredClone(selection));
+        }
+        for (const style of data.mapStyles ?? []) this.mapStyles.set(style.id, structuredClone(style));
+        for (const entry of data.mapStyleEntries ?? []) this.mapStyleEntries.set(entry.id, structuredClone(entry));
+        for (const record of data.mapStyleIdempotency ?? []) {
+            this.mapStyleIdempotency.set(
+                this.mapStyleOperationKey(record.ownerId, record.operation, record.idempotencyKey),
+                structuredClone(record),
+            );
         }
         for (const revision of data.mapRevisions) this.mapRevisions.set(revision.mapId, structuredClone(revision));
         for (const lease of data.writerLeases) this.writerLeases.set(lease.mapId, structuredClone(lease));
@@ -1183,6 +1368,64 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
         return identity;
     }
 
+    private insertMapStyleEntry(
+        style: TeapotMapStyleRecord,
+        source: CopyTeapotMapStyleEntryInput["source"],
+        builtIn?: CopyTeapotMapStyleEntryInput["builtIn"],
+    ): TeapotMapStyleEntryRecord {
+        const canonicalSourceKey = canonicalTeapotMapStyleSource(source);
+        const existing = [...this.mapStyleEntries.values()].find(
+            (entry) => entry.styleId === style.id && entry.canonicalSourceKey === canonicalSourceKey,
+        );
+        if (existing !== undefined) return existing;
+        let assetKind: TeapotAssetRecord["kind"];
+        let metadataVersion: number;
+        let metadataSnapshot: TeapotJsonValue;
+        let derivedFromAssetId: string | null;
+        if (source.type === "teapot-asset") {
+            const asset = this.assets.get(source.assetId);
+            if (asset === undefined || asset.ownerId !== style.ownerId || asset.deletedAt !== null) {
+                throw new TeapotDataNotFoundError("The requested style or source is unavailable");
+            }
+            assetKind = asset.kind;
+            metadataVersion = TEAPOT_MAP_STYLE_METADATA_VERSION;
+            metadataSnapshot = cloneTeapotMapStyleMetadata(asset.metadata);
+            derivedFromAssetId = asset.id;
+        } else {
+            if (builtIn === undefined || builtIn.metadataVersion !== TEAPOT_MAP_STYLE_METADATA_VERSION) {
+                throw new TeapotDataNotFoundError("The requested style or source is unavailable");
+            }
+            assetKind = builtIn.assetKind;
+            metadataVersion = builtIn.metadataVersion;
+            metadataSnapshot = cloneTeapotMapStyleMetadata(builtIn.metadataSnapshot);
+            derivedFromAssetId = null;
+        }
+        const timestamp = this.nowIso();
+        const entry: TeapotMapStyleEntryRecord = {
+            id: this.createId(),
+            ownerId: style.ownerId,
+            styleId: style.id,
+            assetKind,
+            source: structuredClone(source),
+            canonicalSourceKey,
+            metadataVersion,
+            metadataSnapshot,
+            derivedFromAssetId,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+        };
+        this.mapStyleEntries.set(entry.id, entry);
+        return entry;
+    }
+
+    private mapStyleOperationKey(
+        ownerId: string,
+        operation: TeapotMapStyleIdempotencyRecord["operation"],
+        idempotencyKey: string,
+    ): string {
+        return `${ownerId}\u0000${operation}\u0000${idempotencyKey}`;
+    }
+
     private providerKey(provider: string, providerSubject: string): string {
         return `${provider}\u0000${providerSubject}`;
     }
@@ -1205,6 +1448,9 @@ export class InMemoryTeapotDataRepository implements TeapotDataRepository {
             this.assets.size === 0 &&
             this.catalogAssets.size === 0 &&
             this.activeWokaSelections.size === 0 &&
+            this.mapStyles.size === 0 &&
+            this.mapStyleEntries.size === 0 &&
+            this.mapStyleIdempotency.size === 0 &&
             this.mapRevisions.size === 0 &&
             this.writerLeases.size === 0 &&
             this.roomAccessPolicies.size === 0 &&

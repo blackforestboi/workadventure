@@ -3,7 +3,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { TeapotAuthorizationError, TeapotMapWriterLeaseConflictError } from "../../src/pusher/teapot/TeapotDataErrors";
+import {
+    TeapotAuthorizationError,
+    TeapotDataConflictError,
+    TeapotMapWriterLeaseConflictError,
+} from "../../src/pusher/teapot/TeapotDataErrors";
 import { InMemoryTeapotDataRepository } from "../../src/pusher/teapot/InMemoryTeapotDataRepository";
 import { createTeapotDataServices } from "../../src/pusher/teapot/createTeapotDataServices";
 
@@ -22,6 +26,55 @@ function createRepository() {
 }
 
 describe("Teapot data foundation", () => {
+    it("keeps owner-scoped styles idempotent and clones authoritative asset metadata", async () => {
+        const { repository } = createRepository();
+        const services = createTeapotDataServices(repository);
+        const owner = await services.localIdentity.resolve({ localSubject: "style-owner" });
+        const stranger = await services.localIdentity.resolve({ localSubject: "style-stranger" });
+        const asset = await repository.createAsset({
+            ownerId: owner.id,
+            objectReference: "map-storage://assets/tree",
+            kind: "map-entity",
+            mediaType: "image/png",
+            metadata: { name: "Oak", tags: ["tree", "forest"], width: 64, ownerId: "forged" },
+        });
+
+        const defaults = await repository.listMapStyles(owner.id);
+        expect(defaults).toMatchObject([{ name: "Default", isDefault: true }]);
+        expect(await repository.listMapStyleEntries(owner.id, defaults[0].id, "map-entity")).toHaveLength(1);
+
+        const style = await repository.createMapStyle({
+            ownerId: owner.id,
+            name: " Watercolor  Village ",
+            idempotencyKey: "create-1",
+        });
+        await expect(
+            repository.createMapStyle({ ownerId: owner.id, name: "watercolor village", idempotencyKey: "create-2" }),
+        ).rejects.toBeInstanceOf(TeapotDataConflictError);
+        const first = await repository.copyMapStyleEntry({
+            ownerId: owner.id,
+            styleId: style.id,
+            source: { type: "teapot-asset", assetId: asset.id, sourceVersion: 1 },
+            idempotencyKey: "copy-1",
+        });
+        const replay = await repository.copyMapStyleEntry({
+            ownerId: owner.id,
+            styleId: style.id,
+            source: { type: "teapot-asset", assetId: asset.id, sourceVersion: 1 },
+            idempotencyKey: "copy-1",
+        });
+        expect(replay.id).toBe(first.id);
+        expect(first.metadataSnapshot).toEqual({ name: "Oak", tags: ["tree", "forest"], width: 64 });
+        await expect(
+            repository.copyMapStyleEntry({
+                ownerId: stranger.id,
+                styleId: style.id,
+                source: { type: "teapot-asset", assetId: asset.id, sourceVersion: 1 },
+                idempotencyKey: "copy-foreign",
+            }),
+        ).rejects.toThrow("unavailable");
+    });
+
     it("resolves one stable internal identity for a reloaded local subject", async () => {
         const { repository } = createRepository();
         const services = createTeapotDataServices(repository);

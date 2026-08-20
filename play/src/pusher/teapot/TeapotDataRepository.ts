@@ -21,6 +21,9 @@ import type {
     TeapotEndorsementState,
     TeapotJsonValue,
     TeapotMapMutationSource,
+    TeapotMapStyleEntryRecord,
+    TeapotMapStyleRecord,
+    TeapotMapStyleSourceLocator,
     TeapotMapRevisionRecord,
     TeapotMapWriterLease,
     TeapotMcpApprovalRecord,
@@ -69,6 +72,29 @@ export interface AcceptTeapotWokaInput {
 
 export interface AcceptTeapotCatalogAssetInput extends CreateTeapotAssetInput {
     catalogName: string;
+}
+
+export interface CreateTeapotMapStyleInput {
+    ownerId: string;
+    name: string;
+    idempotencyKey: string;
+}
+
+export interface EnsureDefaultTeapotMapStyleInput {
+    ownerId: string;
+}
+
+export interface CopyTeapotMapStyleEntryInput {
+    ownerId: string;
+    styleId: string;
+    source: TeapotMapStyleSourceLocator;
+    idempotencyKey: string;
+    /** Trusted metadata from the server-owned built-in resolver. Ignored for Teapot asset locators. */
+    builtIn?: {
+        assetKind: TeapotAssetKind;
+        metadataVersion: number;
+        metadataSnapshot: TeapotJsonValue;
+    };
 }
 
 export interface AcquireTeapotMapWriterLeaseInput {
@@ -225,6 +251,17 @@ export interface TeapotDataRepository {
     getActiveWokaSelection(ownerId: string): Promise<TeapotActiveWokaSelectionRecord | null>;
     selectWoka(ownerId: string, assetId: string): Promise<TeapotActiveWokaSelectionRecord>;
     deleteWoka(ownerId: string, assetId: string): Promise<TeapotAssetRecord>;
+
+    ensureDefaultMapStyle(input: EnsureDefaultTeapotMapStyleInput): Promise<TeapotMapStyleRecord>;
+    createMapStyle(input: CreateTeapotMapStyleInput): Promise<TeapotMapStyleRecord>;
+    getMapStyle(ownerId: string, styleId: string): Promise<TeapotMapStyleRecord | null>;
+    listMapStyles(ownerId: string): Promise<TeapotMapStyleRecord[]>;
+    listMapStyleEntries(
+        ownerId: string,
+        styleId: string,
+        assetKind?: TeapotAssetKind,
+    ): Promise<TeapotMapStyleEntryRecord[]>;
+    copyMapStyleEntry(input: CopyTeapotMapStyleEntryInput): Promise<TeapotMapStyleEntryRecord>;
 
     getMapRevision(mapId: string): Promise<TeapotMapRevisionRecord>;
     acquireMapWriterLease(input: AcquireTeapotMapWriterLeaseInput): Promise<TeapotMapWriterLease>;

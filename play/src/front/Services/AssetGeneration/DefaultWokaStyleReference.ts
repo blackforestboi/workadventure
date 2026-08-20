@@ -14,5 +14,6 @@ export function createDefaultWokaStyleReference(): AssetGenerationReference {
         id: "default-woka-neutral-body-front-idle",
         blob: new Blob([copyToArrayBuffer(bytes)], { type: "image/png" }),
         mimeType: "image/png",
+        role: "object-reference",
     };
 }

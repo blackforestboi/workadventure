@@ -63,6 +63,7 @@ import { TeapotTilesetService } from "./teapot/TeapotTilesetService";
 import { TeapotTilesetController } from "./controllers/TeapotTilesetController";
 import { TeapotGeneratedAssetService } from "./teapot/TeapotGeneratedAssetService";
 import { TeapotGeneratedAssetController } from "./controllers/TeapotGeneratedAssetController";
+import { TeapotMapStyleController } from "./controllers/TeapotMapStyleController";
 import { TeapotAiProviderController } from "./controllers/TeapotAiProviderController";
 import { TeapotAgentBridgeClient } from "./teapot/TeapotAgentBridgeClient";
 
@@ -247,6 +248,7 @@ class App {
                 TEAPOT_WOKA_PUBLIC_BASE_URL,
             ),
         );
+        new TeapotMapStyleController(this.app, teapotDataServices.mapStyles);
         new TeapotAiProviderController(
             this.app,
             new TeapotAgentBridgeClient(TEAPOT_AGENT_BRIDGE_URL, TEAPOT_AGENT_BRIDGE_SECRET),

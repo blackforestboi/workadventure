@@ -109,7 +109,7 @@ export async function createTerrainSurfaceGuideReference(): Promise<AssetGenerat
     context.fill();
 
     const blob = await canvasToPng(canvas);
-    return { id: "terrain-surface-four-point-guide", blob, mimeType: "image/png" };
+    return { id: "terrain-surface-four-point-guide", blob, mimeType: "image/png", role: "object-reference" };
 }
 
 export const TERRAIN_SURFACE_GENERATION_RULES = [

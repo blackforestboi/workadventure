@@ -3,8 +3,12 @@ import type { DeepPartial } from "../DeepPartial";
 
 import enMapEditor from "../en-US/mapEditor";
 
+const enMapEditorTranslation = enMapEditor as Translation["mapEditor"];
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+    ...enMapEditorTranslation,
     map: {
+        ...enMapEditorTranslation.map,
         refreshPrompt: "Nieuwe versie van de kaart gedetecteerd. Vernieuwing nodig",
         deletePrompt: "Deze kaart is verwijderd",
         deletePromptSubtitle: "Je bent losgekoppeld van deze ruimte.",
@@ -361,6 +365,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         description: "Teken een zone op de kaart om een nieuwe te maken.",
     },
     entityEditor: {
+        ...enMapEditorTranslation.entityEditor,
         header: {
             title: "Voeg object toe aan je kaart",
             description: "Zoek, upload of selecteer een bestaand object en voeg het toe aan de kaart.",

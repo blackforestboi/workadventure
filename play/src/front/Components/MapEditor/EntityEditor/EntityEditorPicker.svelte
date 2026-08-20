@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { EntityPrefab } from "@workadventure/map-editor";
     import { CustomEntityDirection } from "@workadventure/messages";
-    import { onDestroy } from "svelte";
+    import { onDestroy, tick } from "svelte";
     import { get } from "svelte/store";
     import { v4 as uuidv4 } from "uuid";
     import { LL } from "../../../../i18n/i18n-svelte";
     import { gameManager } from "../../../Phaser/Game/GameManager";
     import { TexturesHelper } from "../../../Phaser/Helpers/TexturesHelper";
-    import type { EntityVariant } from "../../../Phaser/Game/MapEditor/Entities/EntityVariant";
+    import { EntityVariant } from "../../../Phaser/Game/MapEditor/Entities/EntityVariant";
     import type { CategoryTag, SelectableTag } from "../../../Stores/MapEditorStore";
     import {
         mapEditorDeleteCustomEntityEventStore,
@@ -21,11 +21,19 @@
     import Input from "../../Input/Input.svelte";
     import ButtonClose from "../../Input/ButtonClose.svelte";
     import Button from "../../UI/Button.svelte";
+    import StylePackSwitcher from "../StylePacks/StylePackSwitcher.svelte";
+    import {
+        BUILT_IN_MAP_STYLE_ID,
+        DEFAULT_MAP_STYLE_ID,
+        mapEditorStyleStore,
+        type MapEditorStyleEntry,
+    } from "../../../Stores/MapEditorStyleStore";
     import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
     import EntitiesGrid from "./EntitiesGrid.svelte";
     import EntityVariantColorPicker from "./EntityItem/EntityVariantColorPicker.svelte";
     import EntityVariantPositionPicker from "./EntityItem/EntityVariantPositionPicker.svelte";
     import EntityUpload from "./EntityUpload/EntityUpload.svelte";
+    import { getObjectStyleMetadata, getObjectStyleSource, type ObjectStyleSnapshot } from "./ObjectStylePackMetadata";
     import TagListItem from "./TagListItem.svelte";
     import { IconChevronLeft, IconCloudUpload } from "@wa-icons";
 
@@ -69,6 +77,10 @@
             saveAsCustomPending = false;
             saveAsCustomError = draft.error;
         } else if (draft.status === "acknowledged") {
+            assignAcknowledgedObjectToActiveStyle(draft.uploadEntityMessage.id).catch((cause: unknown) => {
+                saveAsCustomError =
+                    cause instanceof Error ? cause.message : "The object could not be added to this style.";
+            });
             mapEditorEntityUploadDraftStore.clear(saveAsCustomCommandId);
             saveAsCustomCommandId = undefined;
             saveAsCustomPending = false;
@@ -158,6 +170,26 @@
             TexturesHelper.cacheEntityTextureFromImage(gameManager.getCurrentGameScene(), entityPrefab, image);
         }
         mapEditorSelectedEntityPrefabStore.set($state.snapshot(entityPrefab));
+    }
+
+    async function assignAcknowledgedObjectToActiveStyle(entityId: string): Promise<void> {
+        const activeStyleId = get(mapEditorStyleStore).activeStyleId;
+        if (activeStyleId === DEFAULT_MAP_STYLE_ID || activeStyleId === BUILT_IN_MAP_STYLE_ID) return;
+        await tick();
+        const variant = get(entitiesPrefabsVariants).find((candidate) => candidate.prefabIds.includes(entityId));
+        if (variant === undefined) return;
+        try {
+            await mapEditorStyleStore.copyAsset({
+                destinationStyleId: activeStyleId,
+                assetKind: "object",
+                source: getObjectStyleSource(variant),
+                metadata: getObjectStyleMetadata(variant),
+                derivedFromAssetId: entityId,
+            });
+        } catch (cause) {
+            saveAsCustomError =
+                cause instanceof Error ? cause.message : "The object was saved but could not be added to this style.";
+        }
     }
 
     function onPickItem(entityPrefab: EntityPrefab, image?: HTMLImageElement) {
@@ -350,11 +382,38 @@
         );
     }
 
+    function snapshotEntryToVariant(entry: MapEditorStyleEntry): EntityVariant | undefined {
+        const snapshot = entry.metadata.snapshot as Partial<ObjectStyleSnapshot>;
+        if (!Array.isArray(snapshot.prefabs) || snapshot.prefabs.length === 0) return undefined;
+        const [firstPrefab, ...otherPrefabs] = snapshot.prefabs;
+        const variant = new EntityVariant($state.snapshot(firstPrefab));
+        for (const prefab of otherPrefabs) variant.addPrefab($state.snapshot(prefab));
+        return variant;
+    }
+
+    function resolveVariantsForActiveStyle(allVariants: EntityVariant[]): EntityVariant[] {
+        const activeStyleId = $mapEditorStyleStore.activeStyleId;
+        if (activeStyleId === BUILT_IN_MAP_STYLE_ID) {
+            return allVariants.filter((variant) => variant.defaultPrefab.type !== "Custom");
+        }
+        const copiedVariants = $mapEditorStyleStore.entries
+            .filter((entry) => entry.styleId === activeStyleId && entry.assetKind === "object")
+            .map(snapshotEntryToVariant)
+            .filter((variant): variant is EntityVariant => variant !== undefined);
+        if (activeStyleId !== DEFAULT_MAP_STYLE_ID) return copiedVariants;
+
+        const existingCustomVariants = allVariants.filter((variant) => variant.defaultPrefab.type === "Custom");
+        const existingIds = new Set(existingCustomVariants.map((variant) => variant.defaultPrefab.id));
+        return [...existingCustomVariants, ...copiedVariants.filter((variant) => !existingIds.has(variant.id))];
+    }
+
+    let styleFilteredEntityPrefabVariants = $derived(resolveVariantsForActiveStyle($entitiesPrefabsVariants));
+
     let entitiesPrefabsVariantsWithCategories = $derived(
-        getForEntitiesPrefabsVariantsWithCategories($entitiesPrefabsVariants),
+        getForEntitiesPrefabsVariantsWithCategories(styleFilteredEntityPrefabVariants),
     );
     let filteredEntityPrefabVariants = $derived(
-        getEntitiesPrefabsVariantsFilteredByTag($entitiesPrefabsVariants, $selectCategoryStore, searchTerm),
+        getEntitiesPrefabsVariantsFilteredByTag(styleFilteredEntityPrefabVariants, $selectCategoryStore, searchTerm),
     );
     let isWallCategory = $derived($selectCategoryStore?.kind === "special" && $selectCategoryStore.tag === "walls");
     let hasColorOptions = $derived.by(() => {
@@ -410,6 +469,7 @@
             {/if}
         </div>
         {#if !showUpload}
+            <StylePackSwitcher id="object-style" compact />
             <div class="flex *:w-full">
                 <Input
                     rounded
@@ -425,6 +485,14 @@
             <div class="px-3 pb-3">
                 <EntityUpload initialWall={createWallAsset} onClose={showCustomAssets} />
             </div>
+        {:else if styleFilteredEntityPrefabVariants.length === 0}
+            <section class="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                <p class="m-0 font-semibold">{$LL.mapEditor.stylePacks.noObjects()}</p>
+                <p class="mb-3 mt-1 text-sm opacity-65">
+                    Create an object here or copy one from Built-in using its actions menu.
+                </p>
+                <Button size="sm" variant="light" onclick={() => openEntityUpload(false)}>Create new</Button>
+            </section>
         {:else if $selectCategoryStore === undefined && searchTerm === ""}
             <ul class="list-none !p-0 min-w-full">
                 {#each entitiesPrefabsVariantsWithCategories as { category, entitiesPrefabsVariants } (`${category.kind}-${category.tag}`)}

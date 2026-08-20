@@ -1,5 +1,5 @@
 import { AssetGenerationError, createCancelledGenerationError } from "./AssetGenerationError";
-import type { AssetGenerationReference } from "./AssetGenerationTypes";
+import type { AssetGenerationReference, AssetGenerationReferenceRole } from "./AssetGenerationTypes";
 
 const DEFAULT_MAX_REFERENCE_BYTES = 10 * 1024 * 1024;
 const DEFAULT_MAX_REFERENCE_DIMENSION = 4096;
@@ -35,7 +35,12 @@ export class ReferenceImageNormalizer {
         this.reencoder = options.reencoder ?? new BrowserRasterReferenceReencoder(this.maximumDimension);
     }
 
-    public async normalize(id: string, source: Blob, signal: AbortSignal): Promise<AssetGenerationReference> {
+    public async normalize(
+        id: string,
+        source: Blob,
+        signal: AbortSignal,
+        role: AssetGenerationReferenceRole = "object-reference",
+    ): Promise<AssetGenerationReference> {
         if (signal.aborted) throw createCancelledGenerationError();
         if (id.trim() === "") throw new AssetGenerationError("invalid_request", "A reference image ID is required.");
         if (source.size === 0 || source.size > this.maximumInputBytes) {
@@ -71,6 +76,7 @@ export class ReferenceImageNormalizer {
             id,
             blob: normalized.blob,
             mimeType: normalized.blob.type,
+            role,
         };
     }
 }
@@ -104,6 +110,7 @@ export interface EphemeralReference {
     blob: Blob;
     mimeType: ReferenceMimeType;
     objectUrl: string;
+    role: AssetGenerationReferenceRole;
 }
 
 interface ObjectUrlAdapter {
@@ -136,13 +143,17 @@ export class EphemeralReferenceCollection {
         };
     }
 
-    public async add(source: Blob, signal: AbortSignal): Promise<EphemeralReference> {
+    public async add(
+        source: Blob,
+        signal: AbortSignal,
+        role: AssetGenerationReferenceRole = "object-reference",
+    ): Promise<EphemeralReference> {
         this.assertActive();
         if (this.references.size >= this.maximumCount) {
             throw new AssetGenerationError("invalid_request", "Too many reference images are attached.");
         }
 
-        const normalized = await this.normalizer.normalize(this.createId(), source, signal);
+        const normalized = await this.normalizer.normalize(this.createId(), source, signal, role);
         this.assertActive();
         const reference: EphemeralReference = {
             ...normalized,
@@ -159,7 +170,13 @@ export class EphemeralReferenceCollection {
 
     public forGeneration(): readonly AssetGenerationReference[] {
         this.assertActive();
-        return [...this.references.values()].map(({ id, blob, mimeType }) => ({ id, blob, mimeType }));
+        return [...this.references.values()].map(({ id, blob, mimeType, role }) => ({ id, blob, mimeType, role }));
+    }
+
+    public setRole(id: string, role: AssetGenerationReferenceRole): void {
+        this.assertActive();
+        const reference = this.references.get(id);
+        if (reference !== undefined) reference.role = role;
     }
 
     public remove(id: string): void {

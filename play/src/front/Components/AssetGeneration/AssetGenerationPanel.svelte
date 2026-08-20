@@ -6,11 +6,17 @@
     } from "@workadventure/map-editor";
     import type {
         AssetGenerationLifecycleState,
+        AssetGenerationDescriptionRole,
         AssetGenerationProviderId,
         AssetGenerationRequest,
         AssetGenerationReference,
+        AssetGenerationReferenceRole,
         AssetGenerationTarget,
     } from "../../Services/AssetGeneration/AssetGenerationTypes";
+    import {
+        isAssetGenerationDescriptionRole,
+        isAssetGenerationReferenceRole,
+    } from "../../Services/AssetGeneration/GenerationGuidance";
     import { EphemeralReferenceCollection } from "../../Services/AssetGeneration/ReferenceImageNormalizer";
     import { assetGenerationSession } from "../../Services/AssetGeneration/AssetGenerationSession";
     import { assetGenerationSettings } from "../../Services/AssetGeneration/AssetGenerationSettings";
@@ -25,6 +31,7 @@
     } from "../../Services/AssetGeneration/RasterOutputNormalizer";
     import { aiGenerationSettingsVisibilityStore } from "../../Stores/AiGenerationSettingsVisibilityStore";
     import { BRANDING } from "../../Branding";
+    import LL from "../../../i18n/i18n-svelte";
     import Button from "../UI/Button.svelte";
     import AnimatedAssetPreview from "./AnimatedAssetPreview.svelte";
 
@@ -88,12 +95,21 @@
     const references = new EphemeralReferenceCollection();
     // svelte-ignore state_referenced_locally -- prompts are intentionally seeded once when an editor mounts
     let prompt = $state(initialPrompt);
+    let descriptionRole: AssetGenerationDescriptionRole = $state("object");
+    let batchReferenceRole: AssetGenerationReferenceRole = $state("object-reference");
     let lifecycle = $state<AssetGenerationLifecycleState>("idle");
     let error = $state("");
-    let referencePreviews: readonly { id: string; objectUrl: string }[] = $state([]);
+    let referencePreviews: readonly { id: string; objectUrl: string; role?: AssetGenerationReferenceRole }[] = $state(
+        [],
+    );
     let candidate: Blob | null = $state(null);
     let candidateUrl = $state("");
     let candidateProvenance: Omit<AcceptedGeneratedAsset, "blob"> | null = $state(null);
+    let candidateGuidanceSummary: {
+        objectReferences: number;
+        styleMoodGuides: number;
+        descriptionRole: AssetGenerationDescriptionRole;
+    } | null = $state(null);
     let wokaStage: "idle-frame" | "sprite-sheet" = $state("idle-frame");
     let acceptedIdleFrame: Blob | null = $state(null);
     let acceptedIdleFrameUrl = $state("");
@@ -107,6 +123,15 @@
     );
     const stagedWoka = $derived(frontIdleFirst && isWokaTarget(target));
     const busy = $derived(lifecycle === "connecting" || lifecycle === "generating" || lifecycle === "cancelling");
+    const allReferenceRoles = $derived([
+        ...presetReferences.map(({ role }) => role),
+        ...referencePreviews.map(({ role }) => role),
+    ]);
+    const unclassifiedReferenceCount = $derived(
+        allReferenceRoles.filter((role) => !isAssetGenerationReferenceRole(role)).length,
+    );
+    const objectReferenceCount = $derived(allReferenceRoles.filter((role) => role === "object-reference").length);
+    const styleMoodGuideCount = $derived(allReferenceRoles.filter((role) => role === "style-mood-guide").length);
     const displayedLifecycle = $derived(
         lifecycle === "idle" || lifecycle === "ready" ? (readySelection === undefined ? "idle" : "ready") : lifecycle,
     );
@@ -118,23 +143,43 @@
             .catch(() => undefined);
     });
 
-    async function addReferences(event: Event) {
+    async function addReferenceFiles(files: readonly File[]) {
         error = "";
-        const input = event.currentTarget as HTMLInputElement;
-        const files = [...(input.files ?? [])];
         try {
-            await Promise.all(files.map((file) => references.add(file, new AbortController().signal)));
-            referencePreviews = references.list().map(({ id, objectUrl }) => ({ id, objectUrl }));
+            await Promise.all(
+                files.map((file) => references.add(file, new AbortController().signal, batchReferenceRole)),
+            );
+            refreshReferencePreviews();
         } catch (reason) {
             error = reason instanceof Error ? reason.message : "The reference image could not be added.";
-        } finally {
-            input.value = "";
         }
+    }
+
+    async function addReferences(event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        await addReferenceFiles([...(input.files ?? [])]);
+        input.value = "";
+    }
+
+    function dropReferences(event: DragEvent) {
+        event.preventDefault();
+        addReferenceFiles([...(event.dataTransfer?.files ?? [])]).catch(() => undefined);
+    }
+
+    function refreshReferencePreviews() {
+        referencePreviews = references.list().map(({ id, objectUrl, role }) => ({ id, objectUrl, role }));
     }
 
     function removeReference(id: string) {
         references.remove(id);
-        referencePreviews = references.list().map(({ id: referenceId, objectUrl }) => ({ id: referenceId, objectUrl }));
+        refreshReferencePreviews();
+    }
+
+    function setReferenceRole(id: string, event: Event) {
+        const role = (event.currentTarget as HTMLSelectElement).value;
+        if (!isAssetGenerationReferenceRole(role)) return;
+        references.setRole(id, role);
+        refreshReferencePreviews();
     }
 
     function requestGeneration() {
@@ -151,6 +196,10 @@
         }
         if (prompt.trim() === "") {
             error = "Describe the asset before generating.";
+            return;
+        }
+        if (!isAssetGenerationDescriptionRole(descriptionRole) || unclassifiedReferenceCount > 0) {
+            error = $LL.mapEditor.entityEditor.assetGeneration.unclassifiedReference();
             return;
         }
         if (
@@ -179,6 +228,12 @@
         let generationAuthorized = false;
         try {
             const generation = createCurrentGeneration(selection.modelId);
+            candidateGuidanceSummary = {
+                objectReferences: generation.request.references.filter(({ role }) => role === "object-reference")
+                    .length,
+                styleMoodGuides: generation.request.references.filter(({ role }) => role === "style-mood-guide").length,
+                descriptionRole: generation.request.descriptionRole,
+            };
             const approvalId = authorizeGeneration === undefined ? crypto.randomUUID() : await authorizeGeneration();
             generationAuthorized = true;
             const result = await assetGenerationSession.worker.generate(
@@ -336,6 +391,7 @@
                     modelId,
                     target,
                     prompt: buildGuidedPrompt(prompt, target, generationOutputSize, animation, generationRules),
+                    descriptionRole,
                     outputCount: 1,
                     references: [...presetReferences, ...references.forGeneration()],
                     outputFormat: "webp",
@@ -351,6 +407,7 @@
                 modelId,
                 target,
                 description: prompt,
+                descriptionRole,
                 references: references.forGeneration(),
             });
             return stage;
@@ -360,8 +417,9 @@
             id: "accepted-front-idle-frame",
             blob: acceptedIdleFrame,
             mimeType: "image/png",
+            role: "object-reference",
         };
-        return createWokaSpriteSheetStage({ modelId, target, description: prompt, acceptedSeed });
+        return createWokaSpriteSheetStage({ modelId, target, description: prompt, descriptionRole, acceptedSeed });
     }
 
     function createAnimationMetadata(
@@ -472,7 +530,24 @@
                 <Button appearance="border" size="sm" onclick={restartIdleFrame} disabled={busy}>Start over</Button>
             </div>
         {/if}
-        <label class="mt-2 block text-xs">
+        <fieldset class="mt-2 text-xs">
+            <legend class="mb-1">{$LL.mapEditor.entityEditor.assetGeneration.descriptionRoleLabel()}</legend>
+            <div class="mb-2 inline-flex rounded border border-white/15 bg-black/30 p-0.5">
+                <label
+                    class="cursor-pointer rounded px-2 py-1 has-[:checked]:bg-secondary has-[:focus-visible]:outline has-[:focus-visible]:outline-2"
+                >
+                    <input class="sr-only" type="radio" bind:group={descriptionRole} value="object" />
+                    {$LL.mapEditor.entityEditor.assetGeneration.object()}
+                </label>
+                <label
+                    class="cursor-pointer rounded px-2 py-1 has-[:checked]:bg-secondary has-[:focus-visible]:outline has-[:focus-visible]:outline-2"
+                >
+                    <input class="sr-only" type="radio" bind:group={descriptionRole} value="style-mood" />
+                    {$LL.mapEditor.entityEditor.assetGeneration.styleMood()}
+                </label>
+            </div>
+        </fieldset>
+        <label class="block text-xs">
             {#if !compact}Description{/if}
             <textarea
                 bind:value={prompt}
@@ -523,30 +598,84 @@
         {:else}
             <p class="mt-2 text-xs text-white/60">Woka sheets include directional idle and walking animation.</p>
         {/if}
-        {#if (!stagedWoka || wokaStage === "idle-frame") && !compact}
-            <label class="mt-2 block text-xs">
-                Reference images (kept only for this generation)
-                <input
-                    class="mt-1 block w-full text-xs"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    multiple
-                    onchange={addReferences}
-                />
-            </label>
-            {#if referencePreviews.length > 0}
-                <div class="mt-2 flex flex-wrap gap-2">
-                    {#each referencePreviews as reference (reference.id)}
-                        <button
-                            class="relative rounded border border-white/20 p-1"
-                            onclick={() => removeReference(reference.id)}
-                            aria-label="Remove reference image"
+        {#if !stagedWoka || wokaStage === "idle-frame"}
+            <fieldset class="mt-3 rounded-lg border border-white/10 bg-black/20 p-2 text-xs">
+                <legend class="px-1">{$LL.mapEditor.entityEditor.assetGeneration.referenceImages()}</legend>
+                <label class="mt-1 block">
+                    {$LL.mapEditor.entityEditor.assetGeneration.newImageRoleLabel()}
+                    <select
+                        class="mt-1 w-full rounded border border-white/15 bg-black/40 p-2"
+                        bind:value={batchReferenceRole}
+                        aria-label={$LL.mapEditor.entityEditor.assetGeneration.newImageRoleLabel()}
+                    >
+                        <option value="object-reference"
+                            >{$LL.mapEditor.entityEditor.assetGeneration.objectReference()}</option
                         >
-                            <img src={reference.objectUrl} alt="Reference" class="h-12 w-12 object-cover" />
-                            <span class="absolute -right-1 -top-1 rounded-full bg-black px-1">×</span>
-                        </button>
+                        <option value="style-mood-guide"
+                            >{$LL.mapEditor.entityEditor.assetGeneration.styleMoodGuide()}</option
+                        >
+                    </select>
+                </label>
+                <label
+                    class="mt-2 block cursor-pointer rounded border border-dashed border-white/25 p-3 text-center focus-within:border-secondary"
+                    ondrop={dropReferences}
+                    ondragover={(event) => event.preventDefault()}
+                >
+                    {$LL.mapEditor.entityEditor.assetGeneration.dropImages()}
+                    <input
+                        class="sr-only"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        multiple
+                        onchange={addReferences}
+                    />
+                </label>
+            </fieldset>
+            {#if referencePreviews.length > 0}
+                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                    {#each referencePreviews as reference, index (reference.id)}
+                        <div class="flex items-center gap-2 rounded border border-white/20 p-2">
+                            <img src={reference.objectUrl} alt="Reference" class="h-12 w-12 flex-none object-cover" />
+                            <label class="min-w-0 flex-1 text-xs">
+                                <span class="sr-only"
+                                    >{$LL.mapEditor.entityEditor.assetGeneration.referenceRoleLabel({
+                                        index: index + 1,
+                                    })}</span
+                                >
+                                <select
+                                    class="w-full rounded border border-white/15 bg-black/40 p-2"
+                                    value={reference.role ?? ""}
+                                    onchange={(event) => setReferenceRole(reference.id, event)}
+                                    aria-invalid={reference.role === undefined}
+                                >
+                                    {#if reference.role === undefined}
+                                        <option value=""
+                                            >{$LL.mapEditor.entityEditor.assetGeneration.chooseRole()}</option
+                                        >
+                                    {/if}
+                                    <option value="object-reference"
+                                        >{$LL.mapEditor.entityEditor.assetGeneration.objectReference()}</option
+                                    >
+                                    <option value="style-mood-guide"
+                                        >{$LL.mapEditor.entityEditor.assetGeneration.styleMoodGuide()}</option
+                                    >
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                class="rounded px-2 py-1 text-lg hover:bg-white/10 focus-visible:outline focus-visible:outline-2"
+                                onclick={() => removeReference(reference.id)}
+                                aria-label={$LL.mapEditor.entityEditor.assetGeneration.removeReference()}>×</button
+                            >
+                        </div>
                     {/each}
                 </div>
+                <p class="mt-2 text-xs text-white/65" aria-live="polite">
+                    {$LL.mapEditor.entityEditor.assetGeneration.roleSummary({
+                        objects: objectReferenceCount,
+                        styles: styleMoodGuideCount,
+                    })}
+                </p>
             {/if}
             {#if requiredReferenceCount !== undefined}
                 <p class="mt-1 text-xs text-white/65">
@@ -572,6 +701,7 @@
                     onclick={requestGeneration}
                     disabled={busy ||
                         (prompt.trim() === "" && onUseImage === undefined) ||
+                        unclassifiedReferenceCount > 0 ||
                         ((!stagedWoka || wokaStage === "idle-frame") &&
                             requiredReferenceCount !== undefined &&
                             referencePreviews.length !== requiredReferenceCount)}
@@ -606,6 +736,20 @@
                 animation={candidateProvenance?.animation}
                 classNames={`mx-auto h-[240px] w-[240px] max-w-full object-contain ${outputSize?.pixelated === true ? "[image-rendering:pixelated]" : ""}`}
             />
+            {#if candidateGuidanceSummary !== null}
+                <p class="mt-2 text-center text-xs text-white/70">
+                    {$LL.mapEditor.entityEditor.assetGeneration.reviewSummary({
+                        summary: $LL.mapEditor.entityEditor.assetGeneration.roleSummary({
+                            objects: candidateGuidanceSummary.objectReferences,
+                            styles: candidateGuidanceSummary.styleMoodGuides,
+                        }),
+                        descriptionRole:
+                            candidateGuidanceSummary.descriptionRole === "object"
+                                ? $LL.mapEditor.entityEditor.assetGeneration.object()
+                                : $LL.mapEditor.entityEditor.assetGeneration.styleMood(),
+                    })}
+                </p>
+            {/if}
             {#if stagedWoka && wokaStage === "idle-frame"}
                 <p class="mt-2 text-center text-xs text-white/70">
                     Review this detailed design at 240px. After approval, AI converts it into the smaller directional

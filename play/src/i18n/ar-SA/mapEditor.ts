@@ -3,8 +3,12 @@ import type { Translation } from "../i18n-types";
 
 import enMapEditor from "../en-US/mapEditor";
 
+const enMapEditorTranslation = enMapEditor as Translation["mapEditor"];
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+    ...enMapEditorTranslation,
     map: {
+        ...enMapEditorTranslation.map,
         refreshPrompt: "تم اكتشاف إصدار جديد من الخريطة. يتطلب التحديث", // Neue Version der Karte erkannt. Aktualisierung erforderlich
         deletePrompt: "تم حذف هذه الخريطة",
         deletePromptSubtitle: "تم قطع اتصالك بهذه الغرفة.",
@@ -354,6 +358,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         description: "ارسم منطقة على الخريطة لإنشاء منطقة جديدة.", // Draw an area on the map to create a new one.
     },
     entityEditor: {
+        ...enMapEditorTranslation.entityEditor,
         header: {
             title: "أضف كائن إلى خريطتك", // Add an object to your map
             description: "ابحث، حمِّل أو اختر كائنًا موجودًا وأضفه إلى الخريطة.", // Search, upload, or select an existing object and add it to the map.

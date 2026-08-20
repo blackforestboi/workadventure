@@ -53,6 +53,7 @@ import {
     teapotAuthoringGate,
 } from "../../src/pusher/middlewares/TeapotAuthoringMiddleware";
 import { TeapotGeneratedAssetController } from "../../src/pusher/controllers/TeapotGeneratedAssetController";
+import { TeapotMapStyleController } from "../../src/pusher/controllers/TeapotMapStyleController";
 import { TeapotHealthController } from "../../src/pusher/controllers/TeapotHealthController";
 import { TeapotMapController } from "../../src/pusher/controllers/TeapotMapController";
 import { TeapotRoomEditorAccessController } from "../../src/pusher/controllers/TeapotRoomEditorAccessController";
@@ -62,6 +63,7 @@ import { TeapotWokaController } from "../../src/pusher/controllers/TeapotWokaCon
 import { TeapotAiProviderController } from "../../src/pusher/controllers/TeapotAiProviderController";
 import type { TeapotAgentBridgeClient } from "../../src/pusher/teapot/TeapotAgentBridgeClient";
 import type { TeapotGeneratedAssetService } from "../../src/pusher/teapot/TeapotGeneratedAssetService";
+import type { TeapotMapStyleService } from "../../src/pusher/teapot/TeapotMapStyleService";
 import type { TeapotTilesetService } from "../../src/pusher/teapot/TeapotTilesetService";
 import type { TeapotWokaService } from "../../src/pusher/teapot/TeapotWokaService";
 import { createTeapotDataServices } from "../../src/pusher/teapot/createTeapotDataServices";
@@ -137,6 +139,7 @@ describe("Teapot authoring route coverage", () => {
         new TeapotWokaController(application, {} as TeapotWokaService);
         new TeapotTilesetController(application, {} as TeapotTilesetService);
         new TeapotGeneratedAssetController(application, {} as TeapotGeneratedAssetService);
+        new TeapotMapStyleController(application, {} as TeapotMapStyleService);
         new TeapotAiProviderController(application, {} as TeapotAgentBridgeClient);
         new TeapotMcpController(application);
         new TeapotHealthController(application);
@@ -154,6 +157,9 @@ describe("Teapot authoring route coverage", () => {
             ["GET", "/teapot/generated-assets/private/:assetId.png"],
             ["GET", "/teapot/generated-assets"],
             ["POST", "/teapot/generated-assets"],
+            ["GET", "/teapot/map-styles"],
+            ["POST", "/teapot/map-styles"],
+            ["POST", "/teapot/map-styles/:styleId/entries"],
             ["POST", "/teapot/ai/providers/:provider/oauth/start"],
             ["GET", "/teapot/ai/providers/:provider/oauth/status"],
             ["POST", "/teapot/ai/providers/:provider/oauth/complete"],

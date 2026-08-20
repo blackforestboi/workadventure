@@ -101,12 +101,13 @@
         file: File | undefined,
         collection: EphemeralReferenceCollection,
         setPreview: (objectUrl: string) => void,
+        role: "object-reference" | "style-mood-guide" = "object-reference",
     ) {
         if (file === undefined) return;
         error = "";
         try {
             collection.clear();
-            const reference = await collection.add(file, new AbortController().signal);
+            const reference = await collection.add(file, new AbortController().signal, role);
             setPreview(reference.objectUrl);
         } catch (reason) {
             error = errorMessage(reason, "The reference image could not be added.");
@@ -117,9 +118,10 @@
         event: DragEvent,
         collection: EphemeralReferenceCollection,
         setPreview: (objectUrl: string) => void,
+        role: "object-reference" | "style-mood-guide" = "object-reference",
     ) {
         event.preventDefault();
-        addReference(event.dataTransfer?.files[0], collection, setPreview).catch(() => undefined);
+        addReference(event.dataTransfer?.files[0], collection, setPreview, role).catch(() => undefined);
     }
 
     async function generateDesign() {
@@ -138,6 +140,7 @@
                 modelId: selection.modelId,
                 target: "complete-woka",
                 description: `${description.trim()}\n\n${styleInstruction()}`,
+                descriptionRole: "object",
                 references: [
                     ...characterReferences.forGeneration(),
                     ...(style === "custom" ? customStyleReferences.forGeneration() : []),
@@ -396,6 +399,7 @@
                     : `approved-${frame.direction}-neutral-anchor`,
                 blob: anchor,
                 mimeType: "image/png",
+                role: "object-reference",
             },
             pose,
             sourceFrameSize,
@@ -813,9 +817,14 @@
                                     class="mt-2 flex min-h-32 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-white/20 bg-black/20 p-4 text-center hover:border-white/40"
                                     ondragover={(event) => event.preventDefault()}
                                     ondrop={(event) =>
-                                        dropReference(event, customStyleReferences, (objectUrl) => {
-                                            customStyleReferencePreview = objectUrl;
-                                        })}
+                                        dropReference(
+                                            event,
+                                            customStyleReferences,
+                                            (objectUrl) => {
+                                                customStyleReferencePreview = objectUrl;
+                                            },
+                                            "style-mood-guide",
+                                        )}
                                 >
                                     {#if customStyleReferencePreview !== ""}
                                         <img
@@ -839,6 +848,7 @@
                                                 (objectUrl) => {
                                                     customStyleReferencePreview = objectUrl;
                                                 },
+                                                "style-mood-guide",
                                             )}
                                     />
                                 </label>

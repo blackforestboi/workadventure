@@ -13,6 +13,7 @@
     import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
     import {
         BUILT_IN_LEGACY_MAP_TILESETS,
+        BUILT_IN_TERRAIN_CATALOG_VERSION,
         BUILT_IN_TERRAIN_TILESETS,
         getBuiltInTerrainAssetsForTileset,
         type BuiltInMapTileset,
@@ -39,8 +40,18 @@
     import AssetGenerationPanel from "../../AssetGeneration/AssetGenerationPanel.svelte";
     import AnimatedAssetPreview from "../../AssetGeneration/AnimatedAssetPreview.svelte";
     import VegetationEditor from "../VegetationEditor/VegetationEditor.svelte";
-    import TerrainSurfaceAssetEditor from "./TerrainSurfaceAssetEditor.svelte";
+    import StylePackSwitcher from "../StylePacks/StylePackSwitcher.svelte";
+    import StylePackCardMenu from "../StylePacks/StylePackCardMenu.svelte";
+    import {
+        BUILT_IN_MAP_STYLE_ID,
+        DEFAULT_MAP_STYLE_ID,
+        entryMatchesSearch,
+        mapEditorStyleStore,
+        type MapEditorStyleAssetMetadata,
+        type MapEditorStyleEntry,
+    } from "../../../Stores/MapEditorStyleStore";
     import type { ApprovedTerrainSurfaceAsset } from "./TerrainSurfaceAssetTypes";
+    import TerrainSurfaceAssetEditor from "./TerrainSurfaceAssetEditor.svelte";
     import {
         getActiveAuthoringPathTool,
         getActiveTerrainModeId,
@@ -81,6 +92,130 @@
         resolveMapEditorFloorSaveStatus($mapEditorFloorStateStore?.status ?? "idle", $pendingMapChangesStore),
     );
     let savePresentation = $derived(saveStatusPresentation[saveStatus]);
+    let activeTerrainStyleEntries = $derived(
+        $mapEditorStyleStore.entries.filter(
+            (entry) =>
+                entry.styleId === $mapEditorStyleStore.activeStyleId &&
+                entry.assetKind === "terrain" &&
+                entryMatchesSearch(entry, searchTerm),
+        ),
+    );
+
+    type TerrainStyleSnapshot =
+        | { kind: "family"; tilesetId: string; groupId: string }
+        | { kind: "legacy"; tilesetId: string }
+        | { kind: "tile"; tilesetId: string; tileId: number }
+        | { kind: "embedded"; tileset: MapEditorFloorTileset; gid: number }
+        | { kind: "saved"; tileset: TeapotTilesetView };
+
+    function familyStyleMetadata(
+        tileset: BuiltInTerrainTileset,
+        group: BuiltInTerrainGroup,
+    ): MapEditorStyleAssetMetadata<TerrainStyleSnapshot> {
+        return {
+            name: group.name,
+            description: group.description,
+            tags: [group.terrainType],
+            keywords: group.searchTerms.split(/\s+/).filter(Boolean),
+            category: group.terrainType,
+            previewUrl: tileset.image,
+            snapshot: { kind: "family", tilesetId: tileset.id, groupId: group.id },
+        };
+    }
+
+    function legacyStyleMetadata(
+        tileset: (typeof BUILT_IN_LEGACY_MAP_TILESETS)[number],
+    ): MapEditorStyleAssetMetadata<TerrainStyleSnapshot> {
+        return {
+            name: tileset.name,
+            description: `${tileset.source} · ${tileset.tileCount} tiles`,
+            tags: [tileset.category],
+            keywords: tileset.searchTerms.split(/\s+/).filter(Boolean),
+            category: tileset.category,
+            previewUrl: tileset.image,
+            snapshot: { kind: "legacy", tilesetId: tileset.id },
+        };
+    }
+
+    function tileStyleMetadata(
+        tileset: BuiltInTerrainTileset,
+        asset: BuiltInTerrainAsset,
+    ): MapEditorStyleAssetMetadata<TerrainStyleSnapshot> {
+        return {
+            name: asset.name,
+            description: asset.description,
+            tags: asset.tags,
+            keywords: asset.searchText.split(/\s+/).filter(Boolean),
+            category: asset.terrainType,
+            previewUrl: tileset.image,
+            snapshot: { kind: "tile", tilesetId: tileset.id, tileId: asset.tileId },
+        };
+    }
+
+    function embeddedStyleMetadata(
+        tileset: MapEditorFloorTileset,
+        gid: number,
+    ): MapEditorStyleAssetMetadata<TerrainStyleSnapshot> {
+        const index = gid - tileset.firstGid;
+        return {
+            name: `${tileset.name} tile ${index + 1}`,
+            tags: [tileset.name],
+            keywords: [tileset.name, "terrain", "tile"],
+            category: "tileset",
+            previewUrl: tileset.image,
+            snapshot: { kind: "embedded", tileset: $state.snapshot(tileset), gid },
+        };
+    }
+
+    function entryPreviewStyle(entry: MapEditorStyleEntry): string {
+        const snapshot = entry.metadata.snapshot as TerrainStyleSnapshot;
+        if (snapshot.kind === "saved") {
+            return `background-image:url('${CSS.escape(snapshot.tileset.url)}');background-size:cover;background-repeat:no-repeat;image-rendering:pixelated;`;
+        }
+        if (snapshot.kind === "embedded") return tileStyle(snapshot.gid, [snapshot.tileset]);
+        const tileset = BUILT_IN_TERRAIN_TILESETS.find((candidate) => candidate.id === snapshot.tilesetId);
+        if (tileset !== undefined) {
+            const tileId =
+                snapshot.kind === "tile"
+                    ? snapshot.tileId
+                    : snapshot.kind === "family"
+                      ? (tileset.groups.find((group) => group.id === snapshot.groupId)?.previewTileId ?? 0)
+                      : 0;
+            return atlasTileStyle(tileset.image, tileId, tileset.columns, tileset.rows);
+        }
+        const legacy = BUILT_IN_LEGACY_MAP_TILESETS.find((candidate) => candidate.id === snapshot.tilesetId);
+        return legacy === undefined ? "" : atlasTileStyle(legacy.image, 0, legacy.columns, legacy.rows);
+    }
+
+    function selectStyleEntry(
+        entry: MapEditorStyleEntry,
+        state: { selectedLayer: string; layers: readonly { name: string }[] },
+    ): void {
+        const snapshot = entry.metadata.snapshot as TerrainStyleSnapshot;
+        if (snapshot.kind === "saved") {
+            embedTileset(snapshot.tileset);
+            return;
+        }
+        if (snapshot.kind === "embedded") {
+            selectPaletteBrush(state.selectedLayer, snapshot.gid, state.layers);
+            return;
+        }
+        if (snapshot.kind === "legacy") {
+            const tileset = BUILT_IN_LEGACY_MAP_TILESETS.find((candidate) => candidate.id === snapshot.tilesetId);
+            if (tileset !== undefined) selectLibraryBrush(state.selectedLayer, 0, tileset, state.layers);
+            return;
+        }
+        const tileset = BUILT_IN_TERRAIN_TILESETS.find((candidate) => candidate.id === snapshot.tilesetId);
+        if (tileset === undefined) return;
+        if (snapshot.kind === "tile") {
+            selectLibraryBrush(state.selectedLayer, snapshot.tileId, tileset, state.layers);
+            return;
+        }
+        const group = tileset.groups.find((candidate) => candidate.id === snapshot.groupId);
+        if (group === undefined) return;
+        if (group.autotile !== undefined) selectLibraryShape(state.selectedLayer, group, tileset, state.layers);
+        else selectLibraryBrush(state.selectedLayer, group.previewTileId, tileset, state.layers);
+    }
 
     onMount(() => {
         let active = true;
@@ -232,6 +367,30 @@
             const saved = await teapotTilesetApi.upload(normalized, assetName, provenance);
             savedTilesets = [...savedTilesets.filter((candidate) => candidate.id !== saved.id), saved];
             embedTileset(saved);
+            const activeStyleId = $mapEditorStyleStore.activeStyleId;
+            if (activeStyleId !== DEFAULT_MAP_STYLE_ID && activeStyleId !== BUILT_IN_MAP_STYLE_ID) {
+                try {
+                    await mapEditorStyleStore.copyAsset({
+                        destinationStyleId: activeStyleId,
+                        assetKind: "terrain",
+                        source: { type: "teapot-tileset", key: saved.id, version: "teapot-tileset-v1" },
+                        metadata: {
+                            name: saved.name,
+                            tags: ["terrain", "tileset"],
+                            keywords: [saved.name, "terrain", "tile"],
+                            category: "tileset",
+                            previewUrl: saved.url,
+                            snapshot: { kind: "saved", tileset: saved } satisfies TerrainStyleSnapshot,
+                        },
+                        derivedFromAssetId: saved.id,
+                    });
+                } catch (styleError) {
+                    assetError =
+                        styleError instanceof Error
+                            ? `The terrain was saved, but could not be added to this style: ${styleError.message}`
+                            : "The terrain was saved, but could not be added to this style.";
+                }
+            }
         } catch (error) {
             assetError = error instanceof Error ? error.message : "The terrain tile could not be saved.";
             throw error;
@@ -456,6 +615,7 @@
             </div>
 
             {#if isTerrainAssetBrowserMode(activeTerrainModeId)}
+                <StylePackSwitcher id="terrain-style" compact />
                 <div class="flex items-stretch gap-2">
                     <label class="sr-only" for="terrain-search">Search terrain tiles</label>
                     <input
@@ -680,267 +840,370 @@
                 </div>
             {:else}
                 <div class="min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-2">
-                    <section class="mb-4" aria-label="Built-in terrain library">
-                        {#if selectedFamily === undefined}
-                            <div class="mb-2 flex items-baseline justify-between gap-2">
-                                <h3 class="m-0 truncate text-xs font-semibold">Terrain families</h3>
-                                <span class="shrink-0 text-[10px] text-white/40">
-                                    {terrainFamilies.length} styles
-                                </span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                {#each terrainFamilies as terrainFamily (`${terrainFamily.tileset.id}:${terrainFamily.group.id}`)}
-                                    {#if matchesFamily(terrainFamily.group, searchTerm)}
-                                        <button
-                                            type="button"
-                                            class="group overflow-hidden rounded-xl border border-white/10 bg-black/25 text-left hover:border-white/35 hover:bg-white/10"
-                                            onclick={() => {
-                                                selectedFamilyId = terrainFamily.group.id;
-                                                searchTerm = "";
-                                            }}
-                                            aria-label={`Open ${terrainFamily.group.name}. ${terrainFamily.group.description}`}
-                                        >
-                                            <span class="grid aspect-[3/2] grid-cols-3 overflow-hidden bg-black/30">
-                                                {#each terrainFamily.group.autotile === undefined || terrainFamily.group.id === "water" ? [terrainFamily.group.previewTileId] : Object.values(terrainFamily.group.autotile).slice(0, 6) as tileId (tileId)}
-                                                    <span
-                                                        class={terrainFamily.group.autotile === undefined ||
-                                                        terrainFamily.group.id === "water"
-                                                            ? "col-span-3 h-full"
-                                                            : "h-full"}
-                                                        style={atlasTileStyle(
-                                                            terrainFamily.tileset.image,
-                                                            tileId,
-                                                            terrainFamily.tileset.columns,
-                                                            terrainFamily.tileset.rows,
-                                                        )}
-                                                    ></span>
-                                                {/each}
-                                            </span>
-                                            <span class="block p-2">
-                                                <strong class="block truncate text-xs"
-                                                    >{terrainFamily.group.name}</strong
-                                                >
-                                                <span class="mt-0.5 block text-[10px] capitalize text-white/45"
-                                                    >{terrainFamily.group.terrainType}{terrainFamily.group.id ===
-                                                    "water"
-                                                        ? " · underlay"
-                                                        : terrainFamily.group.autotile === undefined
-                                                          ? " · tiles"
-                                                          : " · shape ready"}</span
-                                                >
-                                            </span>
-                                        </button>
-                                    {/if}
-                                {/each}
-                            </div>
-
-                            <section class="mt-4" aria-label="Legacy WorkAdventure map assets">
+                    {#if $mapEditorStyleStore.activeStyleId === BUILT_IN_MAP_STYLE_ID}
+                        <section class="mb-4" aria-label="Built-in terrain library">
+                            {#if selectedFamily === undefined}
                                 <div class="mb-2 flex items-baseline justify-between gap-2">
-                                    <h3 class="m-0 truncate text-xs font-semibold">Legacy map assets</h3>
+                                    <h3 class="m-0 truncate text-xs font-semibold">Terrain families</h3>
                                     <span class="shrink-0 text-[10px] text-white/40">
-                                        {BUILT_IN_LEGACY_MAP_TILESETS.length} sheets
+                                        {terrainFamilies.length} styles
                                     </span>
                                 </div>
-                                {#each legacyCategories as category (category)}
-                                    {@const categoryTilesets = BUILT_IN_LEGACY_MAP_TILESETS.filter(
-                                        (tileset) =>
-                                            tileset.category === category && matchesLegacyTileset(tileset, searchTerm),
-                                    )}
-                                    {#if categoryTilesets.length > 0}
-                                        <h4
-                                            class="mb-1.5 mt-3 text-[10px] font-semibold uppercase tracking-wide text-white/45"
-                                        >
-                                            {category}
-                                        </h4>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            {#each categoryTilesets as tileset (tileset.id)}
-                                                {@const gid = libraryTileGid(state.tilesets, tileset, 0)}
+                                <div class="grid grid-cols-2 gap-2">
+                                    {#each terrainFamilies as terrainFamily (`${terrainFamily.tileset.id}:${terrainFamily.group.id}`)}
+                                        {#if matchesFamily(terrainFamily.group, searchTerm)}
+                                            <div class="relative">
                                                 <button
                                                     type="button"
-                                                    class="group overflow-hidden rounded-xl border border-white/10 bg-black/25 text-left hover:border-white/35 hover:bg-white/10 {gid !==
-                                                        undefined && state.selectedGid === gid
-                                                        ? 'ring-1 ring-secondary'
-                                                        : ''}"
-                                                    onclick={() =>
-                                                        selectLibraryBrush(
-                                                            state.selectedLayer,
-                                                            0,
-                                                            tileset,
-                                                            state.layers,
-                                                        )}
-                                                    aria-label={`Add ${tileset.name} from ${tileset.source}. ${tileset.tileCount} tiles. ${tileset.attribution}`}
-                                                    aria-pressed={gid !== undefined && state.selectedGid === gid}
-                                                    title={`Add ${tileset.name} · ${tileset.source}`}
+                                                    class="group overflow-hidden rounded-xl border border-white/10 bg-black/25 text-left hover:border-white/35 hover:bg-white/10"
+                                                    onclick={() => {
+                                                        selectedFamilyId = terrainFamily.group.id;
+                                                        searchTerm = "";
+                                                    }}
+                                                    aria-label={`Open ${terrainFamily.group.name}. ${terrainFamily.group.description}`}
                                                 >
                                                     <span
-                                                        class="block aspect-[3/2] bg-black/30"
-                                                        style={atlasTileStyle(
-                                                            tileset.image,
-                                                            0,
-                                                            tileset.columns,
-                                                            tileset.rows,
-                                                        )}
-                                                    ></span>
+                                                        class="grid aspect-[3/2] grid-cols-3 overflow-hidden bg-black/30"
+                                                    >
+                                                        {#each terrainFamily.group.autotile === undefined || terrainFamily.group.id === "water" ? [terrainFamily.group.previewTileId] : Object.values(terrainFamily.group.autotile).slice(0, 6) as tileId (tileId)}
+                                                            <span
+                                                                class={terrainFamily.group.autotile === undefined ||
+                                                                terrainFamily.group.id === "water"
+                                                                    ? "col-span-3 h-full"
+                                                                    : "h-full"}
+                                                                style={atlasTileStyle(
+                                                                    terrainFamily.tileset.image,
+                                                                    tileId,
+                                                                    terrainFamily.tileset.columns,
+                                                                    terrainFamily.tileset.rows,
+                                                                )}
+                                                            ></span>
+                                                        {/each}
+                                                    </span>
                                                     <span class="block p-2">
-                                                        <strong class="block truncate text-xs">{tileset.name}</strong>
-                                                        <span class="mt-0.5 block text-[10px] text-white/45"
-                                                            >{tileset.source} · {tileset.tileCount} tiles</span
+                                                        <strong class="block truncate text-xs"
+                                                            >{terrainFamily.group.name}</strong
+                                                        >
+                                                        <span class="mt-0.5 block text-[10px] capitalize text-white/45"
+                                                            >{terrainFamily.group.terrainType}{terrainFamily.group
+                                                                .id === "water"
+                                                                ? " · underlay"
+                                                                : terrainFamily.group.autotile === undefined
+                                                                  ? " · tiles"
+                                                                  : " · shape ready"}</span
                                                         >
                                                     </span>
                                                 </button>
-                                            {/each}
-                                        </div>
-                                    {/if}
-                                {/each}
-                            </section>
-                        {:else}
-                            {@const terrainAssets = groupTerrainAssets(
-                                selectedFamily.tileset,
-                                selectedFamily.group,
-                                searchTerm,
-                            )}
-                            <button
-                                type="button"
-                                class="mb-2 rounded-lg border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10"
-                                onclick={() => {
-                                    selectedFamilyId = undefined;
-                                    searchTerm = "";
-                                }}>← All terrain</button
-                            >
-                            <div class="mb-2 flex items-baseline justify-between gap-2">
-                                <h3 class="m-0 truncate text-xs font-semibold">{selectedFamily.group.name}</h3>
-                                <span class="shrink-0 text-[10px] text-white/40">
-                                    {selectedFamily.group.displayTileIds.length} tiles
-                                </span>
-                            </div>
-                            <p class="mb-3 mt-0 text-[11px] leading-4 text-white/55">
-                                {selectedFamily.group.description}
-                            </p>
-
-                            {#if selectedFamily.group.autotile !== undefined}
-                                <div class="mb-3 grid grid-cols-2 gap-2" role="group" aria-label="Terrain paint style">
-                                    <button
-                                        type="button"
-                                        class="flex min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left {state.toolMode ===
-                                            'shape' && state.selectedTerrainFamilyId === selectedFamily.group.id
-                                            ? 'border-secondary bg-secondary/15 ring-1 ring-secondary'
-                                            : 'border-white/15 bg-white/5 hover:bg-white/10'}"
-                                        onclick={() => {
-                                            if (
-                                                state.toolMode !== "shape" ||
-                                                state.selectedTerrainFamilyId !== selectedFamily.group.id
-                                            )
-                                                selectLibraryShape(
-                                                    state.selectedLayer,
-                                                    selectedFamily.group,
-                                                    selectedFamily.tileset,
-                                                    state.layers,
-                                                );
-                                        }}
-                                        aria-pressed={state.toolMode === "shape" &&
-                                            state.selectedTerrainFamilyId === selectedFamily.group.id}
-                                    >
-                                        <strong class="text-xs">Draw shape</strong>
-                                        <span aria-hidden="true" class="shrink-0 text-lg">▱</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="flex min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left {state.toolMode ===
-                                        'tile'
-                                            ? 'border-secondary bg-secondary/15 ring-1 ring-secondary'
-                                            : 'border-white/15 bg-white/5 hover:bg-white/10'}"
-                                        onclick={() => {
-                                            if (state.toolMode !== "tile")
-                                                selectBrush(state.selectedLayer, state.selectedGid);
-                                        }}
-                                        aria-pressed={state.toolMode === "tile"}
-                                    >
-                                        <strong class="text-xs">Paint tiles</strong>
-                                        <span aria-hidden="true" class="shrink-0 text-lg">▦</span>
-                                    </button>
-                                </div>
-                            {/if}
-
-                            {#if terrainAssets.length > 0}
-                                <p class="mb-1.5 mt-0 text-[10px] font-semibold uppercase tracking-wide text-white/45">
-                                    Choose one tile
-                                </p>
-                                <div class="grid grid-cols-3 gap-1.5">
-                                    {#each terrainAssets as asset (asset.id)}
-                                        {@const gid = libraryTileGid(
-                                            state.tilesets,
-                                            selectedFamily.tileset,
-                                            asset.tileId,
-                                        )}
-                                        <button
-                                            type="button"
-                                            class="aspect-square min-h-11 overflow-hidden rounded-md border bg-black/30 {gid !==
-                                                undefined &&
-                                            state.selectedLayer !== '' &&
-                                            state.selectedGid === gid &&
-                                            state.toolMode === 'tile'
-                                                ? 'border-secondary ring-2 ring-secondary/60'
-                                                : 'border-white/10 hover:border-white/50 hover:bg-white/10'}"
-                                            style={atlasTileStyle(
-                                                selectedFamily.tileset.image,
-                                                asset.tileId,
-                                                selectedFamily.tileset.columns,
-                                                selectedFamily.tileset.rows,
-                                            )}
-                                            onclick={() =>
-                                                selectLibraryBrush(
-                                                    state.selectedLayer,
-                                                    asset.tileId,
-                                                    selectedFamily.tileset,
-                                                    state.layers,
-                                                )}
-                                            aria-label={`Select ${asset.name}. ${asset.description}${asset.solid ? " Solid: players cannot cross it." : ""}`}
-                                            aria-pressed={gid !== undefined &&
-                                                state.selectedLayer !== "" &&
-                                                state.selectedGid === gid &&
-                                                state.toolMode === "tile"}
-                                            title={`${asset.name}\n${asset.description}\n${asset.solid ? "Solid: players cannot cross it." : "Walkable terrain."}`}
-                                        ></button>
+                                                <StylePackCardMenu
+                                                    assetKind="terrain"
+                                                    source={{
+                                                        type: "built-in-terrain-family",
+                                                        key: `${terrainFamily.tileset.id}:${terrainFamily.group.id}`,
+                                                        version: BUILT_IN_TERRAIN_CATALOG_VERSION,
+                                                    }}
+                                                    metadata={familyStyleMetadata(
+                                                        terrainFamily.tileset,
+                                                        terrainFamily.group,
+                                                    )}
+                                                    derivedFromAssetId={terrainFamily.group.id}
+                                                />
+                                            </div>
+                                        {/if}
                                     {/each}
                                 </div>
-                            {:else}
-                                <p class="text-xs text-white/50">No matching tiles in this terrain.</p>
-                            {/if}
-                        {/if}
-                    </section>
 
-                    {#each state.tilesets as tileset (`${tileset.firstGid}:${tileset.image}`)}
-                        {#if !BUILT_IN_TERRAIN_TILESETS.some( (builtIn) => builtIn.matchesImage(tileset.image), ) && (searchTerm.trim() === "" || tileset.name
-                                    .toLowerCase()
-                                    .includes(searchTerm.trim().toLowerCase()))}
-                            <section class="mb-4" aria-label={tileset.name}>
+                                <section class="mt-4" aria-label="Legacy WorkAdventure map assets">
+                                    <div class="mb-2 flex items-baseline justify-between gap-2">
+                                        <h3 class="m-0 truncate text-xs font-semibold">Legacy map assets</h3>
+                                        <span class="shrink-0 text-[10px] text-white/40">
+                                            {BUILT_IN_LEGACY_MAP_TILESETS.length} sheets
+                                        </span>
+                                    </div>
+                                    {#each legacyCategories as category (category)}
+                                        {@const categoryTilesets = BUILT_IN_LEGACY_MAP_TILESETS.filter(
+                                            (tileset) =>
+                                                tileset.category === category &&
+                                                matchesLegacyTileset(tileset, searchTerm),
+                                        )}
+                                        {#if categoryTilesets.length > 0}
+                                            <h4
+                                                class="mb-1.5 mt-3 text-[10px] font-semibold uppercase tracking-wide text-white/45"
+                                            >
+                                                {category}
+                                            </h4>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                {#each categoryTilesets as tileset (tileset.id)}
+                                                    {@const gid = libraryTileGid(state.tilesets, tileset, 0)}
+                                                    <div class="relative">
+                                                        <button
+                                                            type="button"
+                                                            class="group overflow-hidden rounded-xl border border-white/10 bg-black/25 text-left hover:border-white/35 hover:bg-white/10 {gid !==
+                                                                undefined && state.selectedGid === gid
+                                                                ? 'ring-1 ring-secondary'
+                                                                : ''}"
+                                                            onclick={() =>
+                                                                selectLibraryBrush(
+                                                                    state.selectedLayer,
+                                                                    0,
+                                                                    tileset,
+                                                                    state.layers,
+                                                                )}
+                                                            aria-label={`Add ${tileset.name} from ${tileset.source}. ${tileset.tileCount} tiles. ${tileset.attribution}`}
+                                                            aria-pressed={gid !== undefined &&
+                                                                state.selectedGid === gid}
+                                                            title={`Add ${tileset.name} · ${tileset.source}`}
+                                                        >
+                                                            <span
+                                                                class="block aspect-[3/2] bg-black/30"
+                                                                style={atlasTileStyle(
+                                                                    tileset.image,
+                                                                    0,
+                                                                    tileset.columns,
+                                                                    tileset.rows,
+                                                                )}
+                                                            ></span>
+                                                            <span class="block p-2">
+                                                                <strong class="block truncate text-xs"
+                                                                    >{tileset.name}</strong
+                                                                >
+                                                                <span class="mt-0.5 block text-[10px] text-white/45"
+                                                                    >{tileset.source} · {tileset.tileCount} tiles</span
+                                                                >
+                                                            </span>
+                                                        </button>
+                                                        <StylePackCardMenu
+                                                            assetKind="terrain"
+                                                            source={{
+                                                                type: "built-in-terrain-tileset",
+                                                                key: tileset.id,
+                                                                version: "legacy-terrain-v1",
+                                                            }}
+                                                            metadata={legacyStyleMetadata(tileset)}
+                                                            derivedFromAssetId={tileset.id}
+                                                        />
+                                                    </div>
+                                                {/each}
+                                            </div>
+                                        {/if}
+                                    {/each}
+                                </section>
+                            {:else}
+                                {@const terrainAssets = groupTerrainAssets(
+                                    selectedFamily.tileset,
+                                    selectedFamily.group,
+                                    searchTerm,
+                                )}
+                                <button
+                                    type="button"
+                                    class="mb-2 rounded-lg border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10"
+                                    onclick={() => {
+                                        selectedFamilyId = undefined;
+                                        searchTerm = "";
+                                    }}>← All terrain</button
+                                >
                                 <div class="mb-2 flex items-baseline justify-between gap-2">
-                                    <h3 class="m-0 truncate text-xs font-semibold">{tileset.name}</h3>
+                                    <h3 class="m-0 truncate text-xs font-semibold">{selectedFamily.group.name}</h3>
                                     <span class="shrink-0 text-[10px] text-white/40">
-                                        {tileset.tileGids.length}
-                                        {tileset.tileGids.length === 1 ? "tile" : "tiles"}
+                                        {selectedFamily.group.displayTileIds.length} tiles
                                     </span>
                                 </div>
-                                <div class="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5">
-                                    {#each tileset.tileGids as gid (gid)}
-                                        {@const index = gid - tileset.firstGid}
+                                <p class="mb-3 mt-0 text-[11px] leading-4 text-white/55">
+                                    {selectedFamily.group.description}
+                                </p>
+
+                                {#if selectedFamily.group.autotile !== undefined}
+                                    <div
+                                        class="mb-3 grid grid-cols-2 gap-2"
+                                        role="group"
+                                        aria-label="Terrain paint style"
+                                    >
                                         <button
                                             type="button"
-                                            class="aspect-square min-h-11 overflow-hidden rounded-md border bg-black/30 {state.selectedLayer !==
-                                                '' && state.selectedGid === gid
-                                                ? 'border-secondary ring-2 ring-secondary/60'
-                                                : 'border-white/10 hover:border-white/50 hover:bg-white/10'}"
-                                            style={tileStyle(gid, state.tilesets)}
-                                            onclick={() => selectPaletteBrush(state.selectedLayer, gid, state.layers)}
-                                            aria-label={`Select ${tileset.name} tile ${index + 1}`}
-                                            aria-pressed={state.selectedLayer !== "" && state.selectedGid === gid}
-                                            title={`${tileset.name} · tile ${index + 1}`}
-                                        ></button>
+                                            class="flex min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left {state.toolMode ===
+                                                'shape' && state.selectedTerrainFamilyId === selectedFamily.group.id
+                                                ? 'border-secondary bg-secondary/15 ring-1 ring-secondary'
+                                                : 'border-white/15 bg-white/5 hover:bg-white/10'}"
+                                            onclick={() => {
+                                                if (
+                                                    state.toolMode !== "shape" ||
+                                                    state.selectedTerrainFamilyId !== selectedFamily.group.id
+                                                )
+                                                    selectLibraryShape(
+                                                        state.selectedLayer,
+                                                        selectedFamily.group,
+                                                        selectedFamily.tileset,
+                                                        state.layers,
+                                                    );
+                                            }}
+                                            aria-pressed={state.toolMode === "shape" &&
+                                                state.selectedTerrainFamilyId === selectedFamily.group.id}
+                                        >
+                                            <strong class="text-xs">Draw shape</strong>
+                                            <span aria-hidden="true" class="shrink-0 text-lg">▱</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="flex min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left {state.toolMode ===
+                                            'tile'
+                                                ? 'border-secondary bg-secondary/15 ring-1 ring-secondary'
+                                                : 'border-white/15 bg-white/5 hover:bg-white/10'}"
+                                            onclick={() => {
+                                                if (state.toolMode !== "tile")
+                                                    selectBrush(state.selectedLayer, state.selectedGid);
+                                            }}
+                                            aria-pressed={state.toolMode === "tile"}
+                                        >
+                                            <strong class="text-xs">Paint tiles</strong>
+                                            <span aria-hidden="true" class="shrink-0 text-lg">▦</span>
+                                        </button>
+                                    </div>
+                                {/if}
+
+                                {#if terrainAssets.length > 0}
+                                    <p
+                                        class="mb-1.5 mt-0 text-[10px] font-semibold uppercase tracking-wide text-white/45"
+                                    >
+                                        Choose one tile
+                                    </p>
+                                    <div class="grid grid-cols-3 gap-1.5">
+                                        {#each terrainAssets as asset (asset.id)}
+                                            {@const gid = libraryTileGid(
+                                                state.tilesets,
+                                                selectedFamily.tileset,
+                                                asset.tileId,
+                                            )}
+                                            <div class="relative aspect-square min-h-11">
+                                                <button
+                                                    type="button"
+                                                    class="h-full w-full overflow-hidden rounded-md border bg-black/30 {gid !==
+                                                        undefined &&
+                                                    state.selectedLayer !== '' &&
+                                                    state.selectedGid === gid &&
+                                                    state.toolMode === 'tile'
+                                                        ? 'border-secondary ring-2 ring-secondary/60'
+                                                        : 'border-white/10 hover:border-white/50 hover:bg-white/10'}"
+                                                    style={atlasTileStyle(
+                                                        selectedFamily.tileset.image,
+                                                        asset.tileId,
+                                                        selectedFamily.tileset.columns,
+                                                        selectedFamily.tileset.rows,
+                                                    )}
+                                                    onclick={() =>
+                                                        selectLibraryBrush(
+                                                            state.selectedLayer,
+                                                            asset.tileId,
+                                                            selectedFamily.tileset,
+                                                            state.layers,
+                                                        )}
+                                                    aria-label={`Select ${asset.name}. ${asset.description}${asset.solid ? " Solid: players cannot cross it." : ""}`}
+                                                    aria-pressed={gid !== undefined &&
+                                                        state.selectedLayer !== "" &&
+                                                        state.selectedGid === gid &&
+                                                        state.toolMode === "tile"}
+                                                    title={`${asset.name}\n${asset.description}\n${asset.solid ? "Solid: players cannot cross it." : "Walkable terrain."}`}
+                                                ></button>
+                                                <StylePackCardMenu
+                                                    assetKind="terrain"
+                                                    source={{
+                                                        type: "built-in-terrain-tile",
+                                                        key: asset.id,
+                                                        version: BUILT_IN_TERRAIN_CATALOG_VERSION,
+                                                    }}
+                                                    metadata={tileStyleMetadata(selectedFamily.tileset, asset)}
+                                                    derivedFromAssetId={asset.id}
+                                                />
+                                            </div>
+                                        {/each}
+                                    </div>
+                                {:else}
+                                    <p class="text-xs text-white/50">No matching tiles in this terrain.</p>
+                                {/if}
+                            {/if}
+                        </section>
+                    {/if}
+
+                    {#if $mapEditorStyleStore.activeStyleId !== BUILT_IN_MAP_STYLE_ID}
+                        {#if activeTerrainStyleEntries.length > 0}
+                            <section class="mb-4" aria-label="Terrain assets in selected style">
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    {#each activeTerrainStyleEntries as entry (entry.id)}
+                                        <div class="relative aspect-square min-h-11">
+                                            <button
+                                                type="button"
+                                                class="h-full w-full overflow-hidden rounded-md border border-white/10 bg-black/30 hover:border-white/50"
+                                                style={entryPreviewStyle(entry)}
+                                                onclick={() => selectStyleEntry(entry, state)}
+                                                aria-label={`Select ${entry.metadata.name}`}
+                                                title={entry.metadata.name}
+                                            ></button>
+                                            <StylePackCardMenu
+                                                assetKind="terrain"
+                                                source={entry.source}
+                                                metadata={entry.metadata}
+                                                derivedFromAssetId={entry.derivedFromAssetId}
+                                            />
+                                        </div>
                                     {/each}
                                 </div>
                             </section>
+                        {:else if $mapEditorStyleStore.activeStyleId !== DEFAULT_MAP_STYLE_ID}
+                            <section class="mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                                <p class="m-0 font-semibold">No terrain assets in this style yet.</p>
+                                <p class="mb-0 mt-1 text-xs text-white/55">
+                                    Add an asset here or copy one from Built-in using its actions menu.
+                                </p>
+                            </section>
                         {/if}
-                    {/each}
+                    {/if}
+
+                    {#if $mapEditorStyleStore.activeStyleId === DEFAULT_MAP_STYLE_ID}
+                        {#each state.tilesets as tileset (`${tileset.firstGid}:${tileset.image}`)}
+                            {#if !BUILT_IN_TERRAIN_TILESETS.some( (builtIn) => builtIn.matchesImage(tileset.image), ) && (searchTerm.trim() === "" || tileset.name
+                                        .toLowerCase()
+                                        .includes(searchTerm.trim().toLowerCase()))}
+                                <section class="mb-4" aria-label={tileset.name}>
+                                    <div class="mb-2 flex items-baseline justify-between gap-2">
+                                        <h3 class="m-0 truncate text-xs font-semibold">{tileset.name}</h3>
+                                        <span class="shrink-0 text-[10px] text-white/40">
+                                            {tileset.tileGids.length}
+                                            {tileset.tileGids.length === 1 ? "tile" : "tiles"}
+                                        </span>
+                                    </div>
+                                    <div class="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5">
+                                        {#each tileset.tileGids as gid (gid)}
+                                            {@const index = gid - tileset.firstGid}
+                                            <div class="relative aspect-square min-h-11">
+                                                <button
+                                                    type="button"
+                                                    class="h-full w-full overflow-hidden rounded-md border bg-black/30 {state.selectedLayer !==
+                                                        '' && state.selectedGid === gid
+                                                        ? 'border-secondary ring-2 ring-secondary/60'
+                                                        : 'border-white/10 hover:border-white/50 hover:bg-white/10'}"
+                                                    style={tileStyle(gid, state.tilesets)}
+                                                    onclick={() =>
+                                                        selectPaletteBrush(state.selectedLayer, gid, state.layers)}
+                                                    aria-label={`Select ${tileset.name} tile ${index + 1}`}
+                                                    aria-pressed={state.selectedLayer !== "" &&
+                                                        state.selectedGid === gid}
+                                                    title={`${tileset.name} · tile ${index + 1}`}
+                                                ></button>
+                                                <StylePackCardMenu
+                                                    assetKind="terrain"
+                                                    source={{
+                                                        type: "map-tileset-tile",
+                                                        key: `${tileset.image}:${gid}`,
+                                                        version: "map-tileset-v1",
+                                                    }}
+                                                    metadata={embeddedStyleMetadata(tileset, gid)}
+                                                    derivedFromAssetId={`${tileset.image}:${gid}`}
+                                                />
+                                            </div>
+                                        {/each}
+                                    </div>
+                                </section>
+                            {/if}
+                        {/each}
+                    {/if}
                 </div>
             {/if}
         {/if}

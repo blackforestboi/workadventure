@@ -3,8 +3,12 @@ import type { Translation } from "../i18n-types";
 
 import enMapEditor from "../en-US/mapEditor";
 
+const enMapEditorTranslation = enMapEditor as Translation["mapEditor"];
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+    ...enMapEditorTranslation,
     map: {
+        ...enMapEditorTranslation.map,
         refreshPrompt: "新しいバージョンの地図が検出されました。更新してください。",
         deletePrompt: "このマップは削除されました",
         deletePromptSubtitle: "このルームから切断されました。",
@@ -358,6 +362,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         description: "マップ上にゾーンを描き、新しいゾーンを作成します。",
     },
     entityEditor: {
+        ...enMapEditorTranslation.entityEditor,
         header: {
             title: "マップにオブジェクトを追加",
             description: "検索、アップロード、または既存のオブジェクトを選択し、マップに追加します。",

@@ -7,11 +7,13 @@ import type {
     AssetGenerationResult,
     ImageGenerationProvider,
 } from "./AssetGenerationTypes";
+import { validateAssetGenerationGuidance } from "./GenerationGuidance";
 
 const TRANSPARENT_PIXEL_PNG =
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+XHLKAAAAAElFTkSuQmCC";
 
 export class DeterministicFakeImageProvider implements ImageGenerationProvider {
+    public lastRequest: AssetGenerationRequest | undefined;
     public readonly id = "fake" as const;
     public readonly capabilities: AssetGenerationCapabilities = {
         imageOutput: true,
@@ -48,6 +50,8 @@ export class DeterministicFakeImageProvider implements ImageGenerationProvider {
         signal: AbortSignal,
     ): Promise<AssetGenerationResult> {
         this.throwIfAborted(signal);
+        validateAssetGenerationGuidance(request);
+        this.lastRequest = request;
         const bytes = decodeBase64(TRANSPARENT_PIXEL_PNG);
         const assets = Array.from({ length: request.outputCount }, (_, index) => ({
             id: `fake-${request.seed ?? 0}-${index}`,

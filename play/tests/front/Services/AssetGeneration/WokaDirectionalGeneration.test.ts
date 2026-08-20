@@ -174,5 +174,10 @@ describe("WokaDirectionalGeneration", () => {
 });
 
 function reference(id: string): AssetGenerationReference {
-    return { id, blob: new Blob([id], { type: "image/png" }), mimeType: "image/png" };
+    return {
+        id,
+        blob: new Blob([id], { type: "image/png" }),
+        mimeType: "image/png",
+        role: "object-reference",
+    };
 }

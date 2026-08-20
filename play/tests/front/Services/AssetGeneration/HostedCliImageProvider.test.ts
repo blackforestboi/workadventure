@@ -40,8 +40,22 @@ describe("HostedCliImageProvider", () => {
                 modelId: "gpt-image",
                 target: "woka-body",
                 prompt: "A blue coat",
+                descriptionRole: "object",
                 outputCount: 1,
-                references: [],
+                references: [
+                    {
+                        id: "local-object-path",
+                        blob: new Blob(["object"], { type: "image/png" }),
+                        mimeType: "image/png",
+                        role: "object-reference",
+                    },
+                    {
+                        id: "local-style-path",
+                        blob: new Blob(["style"], { type: "image/png" }),
+                        mimeType: "image/png",
+                        role: "style-mood-guide",
+                    },
+                ],
             },
             "teapot-auth-token",
             new AbortController().signal,
@@ -58,11 +72,20 @@ describe("HostedCliImageProvider", () => {
             expect.objectContaining({ method: "POST", credentials: "same-origin", cache: "no-store" }),
         );
         const init = fetcher.mock.calls[0]?.[1];
-        expect(JSON.parse(String(init?.body))).toMatchObject({
+        if (typeof init?.body !== "string") throw new Error("Expected a serialized hosted CLI request body");
+        const body = JSON.parse(init.body) as { prompt: string; [key: string]: unknown };
+        expect(body).toMatchObject({
             model: "gpt-image",
             target: "woka-layer",
-            prompt: "A blue coat",
+            references: [
+                { name: "reference-1.png", role: "object-reference" },
+                { name: "reference-2.png", role: "style-mood-guide" },
+            ],
         });
+        expect(body.prompt).toContain('USER_DESCRIPTION_JSON "A blue coat"');
+        expect(body.prompt).toContain("reference-2 (style-mood-guide)");
+        expect(JSON.stringify(body)).not.toContain("local-object-path");
+        expect(JSON.stringify(body)).not.toContain("local-style-path");
     });
 
     it("never attempts a hosted request without the Teapot bearer", async () => {
@@ -86,7 +109,14 @@ describe("HostedCliImageProvider", () => {
 
         await expect(
             provider.generate(
-                { modelId: "gpt-5.6", target: "woka-body", prompt: "A blue coat", outputCount: 1, references: [] },
+                {
+                    modelId: "gpt-5.6",
+                    target: "woka-body",
+                    prompt: "A blue coat",
+                    descriptionRole: "object",
+                    outputCount: 1,
+                    references: [],
+                },
                 "teapot-auth-token",
                 new AbortController().signal,
             ),

@@ -3,8 +3,12 @@ import type { Translation } from "../i18n-types";
 
 import enMapEditor from "../en-US/mapEditor";
 
+const enMapEditorTranslation = enMapEditor as Translation["mapEditor"];
+
 const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+    ...enMapEditorTranslation,
     map: {
+        ...enMapEditorTranslation.map,
         refreshPrompt: "Nowa wersija karty so namakała. Aktualizacija je trěbna",
         deletePrompt: "Tuta karta bu zhašana",
         deletePromptSubtitle: "Zwisk z tutym rumnosću je so přetorhnył.",
@@ -358,6 +362,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
         description: "Če želite ustvariti novo območje, ga narišite na zemljevidu.",
     },
     entityEditor: {
+        ...enMapEditorTranslation.entityEditor,
         header: {
             title: "Objekt k swojej karće přidać",
             description: "Pytajće, nahrajće abo wubjerće eksistowacy objekt a přidajće jón k karće.",

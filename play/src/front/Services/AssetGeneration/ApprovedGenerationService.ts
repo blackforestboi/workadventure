@@ -1,4 +1,5 @@
 import { AssetGenerationError, toRedactedGenerationError } from "./AssetGenerationError";
+import { validateAssetGenerationGuidance } from "./GenerationGuidance";
 import type {
     ApprovedAssetGenerationBatch,
     AssetGenerationLifecycleEvent,
@@ -57,6 +58,7 @@ export class ApprovedGenerationService {
 
     private validateBatch(batch: ApprovedAssetGenerationBatch): void {
         const { metadata, request } = batch;
+        validateAssetGenerationGuidance(request);
         if (batch.approvalId.trim() === "") {
             throw new AssetGenerationError("invalid_request", "A generation approval ID is required.");
         }

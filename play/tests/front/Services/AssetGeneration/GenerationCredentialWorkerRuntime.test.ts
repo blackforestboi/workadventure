@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { DeterministicFakeImageProvider } from "../../../../src/front/Services/AssetGeneration/DeterministicFakeImageProvider";
 import { GenerationCredentialWorkerRuntime } from "../../../../src/front/Services/AssetGeneration/GenerationCredentialWorkerRuntime";
 import type { ImageGenerationProvider } from "../../../../src/front/Services/AssetGeneration/AssetGenerationTypes";
-import type { GenerationWorkerResponse } from "../../../../src/front/Services/AssetGeneration/GenerationWorkerProtocol";
+import type {
+    GenerationWorkerRequest,
+    GenerationWorkerResponse,
+} from "../../../../src/front/Services/AssetGeneration/GenerationWorkerProtocol";
 
 describe("GenerationCredentialWorkerRuntime", () => {
     it("accepts a credential for operations without providing any credential-read response", async () => {
@@ -36,6 +39,7 @@ describe("GenerationCredentialWorkerRuntime", () => {
                         modelId: "fake/deterministic-image",
                         target: "environment-object",
                         prompt: "A tree",
+                        descriptionRole: "object",
                         outputCount: 1,
                         references: [],
                     },
@@ -51,7 +55,7 @@ describe("GenerationCredentialWorkerRuntime", () => {
 
     it("generates a title alongside the image without exposing the credential", async () => {
         const provider = new DeterministicFakeImageProvider();
-        const generateTitle = vi.fn(async () => "Mossy Notice Board");
+        const generateTitle = vi.fn(() => Promise.resolve("Mossy Notice Board"));
         (provider as ImageGenerationProvider).generateTitle = generateTitle;
         const runtime = new GenerationCredentialWorkerRuntime([provider]);
         const responses: GenerationWorkerResponse[] = [];
@@ -78,9 +82,49 @@ describe("GenerationCredentialWorkerRuntime", () => {
         });
         expect(JSON.stringify(responses)).not.toContain("worker-only-secret");
     });
+
+    it("preserves mixed image and Description roles across the worker runtime", async () => {
+        const provider = new DeterministicFakeImageProvider();
+        const runtime = new GenerationCredentialWorkerRuntime([provider]);
+        const responses: GenerationWorkerResponse[] = [];
+        const message = createGenerationMessage();
+        message.batch.request.descriptionRole = "style-mood";
+        message.batch.request.references = [
+            {
+                id: "subject",
+                blob: new Blob(["subject"], { type: "image/png" }),
+                mimeType: "image/png",
+                role: "object-reference",
+            },
+            {
+                id: "vibe",
+                blob: new Blob(["vibe"], { type: "image/webp" }),
+                mimeType: "image/webp",
+                role: "style-mood-guide",
+            },
+        ];
+
+        await runtime.handleMessage(
+            {
+                type: "credential.configure",
+                requestId: "configure-role-test",
+                providerId: "fake",
+                credential: "worker-only-secret",
+            },
+            (response) => responses.push(response),
+        );
+        await runtime.handleMessage(message, (response) => responses.push(response));
+
+        expect(provider.lastRequest?.descriptionRole).toBe("style-mood");
+        expect(provider.lastRequest?.references.map(({ id, role }) => ({ id, role }))).toEqual([
+            { id: "subject", role: "object-reference" },
+            { id: "vibe", role: "style-mood-guide" },
+        ]);
+        expect(responses.some((response) => response.type === "generation.result")).toBe(true);
+    });
 });
 
-function createGenerationMessage() {
+function createGenerationMessage(): Extract<GenerationWorkerRequest, { type: "generation.execute" }> {
     return {
         type: "generation.execute" as const,
         requestId: "generate-1",
@@ -99,6 +143,7 @@ function createGenerationMessage() {
                 modelId: "fake/deterministic-image",
                 target: "environment-object" as const,
                 prompt: "A tree",
+                descriptionRole: "object",
                 outputCount: 1,
                 references: [],
             },

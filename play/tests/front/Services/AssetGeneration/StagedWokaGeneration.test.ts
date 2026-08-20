@@ -13,6 +13,7 @@ describe("StagedWokaGeneration", () => {
             modelId: "openai/gpt-image-1",
             target: "complete-woka",
             description: "A tall fox in a moss-green coat",
+            descriptionRole: "object",
         });
 
         expect(stage).toMatchObject({
@@ -42,7 +43,8 @@ describe("StagedWokaGeneration", () => {
         expect(stage.request.prompt).toContain("both feet are flat on one shared horizontal ground line");
         expect(stage.request.prompt).toContain("never this direct frontal camera angle, pose, framing, limb placement");
         expect(stage.request.prompt).toContain("provider's full output resolution");
-        expect(stage.request.prompt).toContain("bundled vanilla WorkAdventure Woka's unclothed neutral body");
+        expect(stage.request.prompt).toContain("bundled vanilla");
+        expect(stage.request.prompt).toContain("Woka's unclothed neutral body");
         expect(stage.request.prompt).toContain("oversized rounded head, compact small torso, short arms and legs");
         expect(stage.request.prompt).toContain("HIGHEST-PRIORITY WOKA BODY GEOMETRY");
         expect(stage.request.prompt).toContain("never an adult-proportioned character");
@@ -58,11 +60,13 @@ describe("StagedWokaGeneration", () => {
             modelId: "recraft/recraft-v4.1",
             target: "complete-woka",
             description: "A wizard",
+            descriptionRole: "object",
         });
         const withUserReference = createWokaIdleFrameStage({
             modelId: "recraft/recraft-v4.1",
             target: "complete-woka",
             description: "A wizard",
+            descriptionRole: "object",
             references: [userReference],
         });
 
@@ -78,6 +82,7 @@ describe("StagedWokaGeneration", () => {
             modelId: "openai/gpt-image-1",
             target: "complete-woka",
             description: "A tall fox in a moss-green coat",
+            descriptionRole: "object",
             acceptedSeed,
         });
 
@@ -115,6 +120,7 @@ describe("StagedWokaGeneration", () => {
             id: "unaccepted-reference",
             blob: new Blob(["not-png"], { type: "image/webp" }),
             mimeType: "image/webp",
+            role: "object-reference",
         };
 
         expect(() =>
@@ -122,6 +128,7 @@ describe("StagedWokaGeneration", () => {
                 modelId: "openai/gpt-image-1",
                 target: "complete-woka",
                 description: "A fox",
+                descriptionRole: "object",
                 acceptedSeed: nonPngSeed,
             }),
         ).toThrow("Stage 2 requires the accepted stage-1 PNG");
@@ -132,11 +139,13 @@ describe("StagedWokaGeneration", () => {
             modelId: "openai/gpt-image-1",
             target: "woka-body",
             description: "A long four-legged body",
+            descriptionRole: "object",
         });
         const sheetStage = createWokaSpriteSheetStage({
             modelId: "openai/gpt-image-1",
             target: "woka-body",
             description: "A long four-legged body",
+            descriptionRole: "object",
             acceptedSeed: pngReference("accepted-body"),
         });
 
@@ -154,5 +163,6 @@ function pngReference(id: string): AssetGenerationReference {
         id,
         blob: new Blob(["png-seed"], { type: "image/png" }),
         mimeType: "image/png",
+        role: "object-reference",
     };
 }
