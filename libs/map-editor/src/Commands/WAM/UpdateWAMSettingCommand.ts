@@ -1,6 +1,6 @@
 import type { UpdateWAMSettingsMessage } from "@workadventure/messages";
 import type { WAMFileFormat, WAMSettings } from "../../types";
-import { MegaphoneSettings, RecordingSettings } from "../../types";
+import { MegaphoneSettings, RecordingSettings, RoomMode } from "../../types";
 import { Command } from "../Command";
 
 export class UpdateWAMSettingCommand extends Command {
@@ -35,6 +35,10 @@ export class UpdateWAMSettingCommand extends Command {
                 this.wam.settings.recording = RecordingSettings.optional().parse(
                     message.updateRecordingSettingMessage.settings,
                 );
+                break;
+            }
+            case "updateRoomModeSettingMessage": {
+                this.wam.settings.roomMode = RoomMode.optional().parse(message.updateRoomModeSettingMessage.settings);
                 break;
             }
             default: {

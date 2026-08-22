@@ -18,6 +18,10 @@ import {
     BRAND_MANIFEST_ICON_URL,
     BRAND_NAME,
     BRAND_WEBSITE_URL,
+    PUSHER_URL,
+    SERVER_ICON,
+    SERVER_MOTD,
+    SERVER_NAME,
 } from "../enums/EnvironmentVariable";
 import { validateQuery } from "../services/QueryValidator";
 import { BaseHttpController } from "./BaseHttpController";
@@ -215,13 +219,10 @@ export class FrontController extends BaseHttpController {
         this.app.get("/server.json", (req: Request, res: Response) => {
             debug(`FrontController => [${req.method}] ${req.originalUrl} — IP: ${req.ip} — Time: ${Date.now()}`);
             res.json({
-                domain: process.env.PUSHER_URL,
-                name: process.env.SERVER_NAME || `${BRAND_NAME} Server`,
-                motd: process.env.SERVER_MOTD || `A ${BRAND_NAME} Server`,
-                icon:
-                    process.env.SERVER_ICON ||
-                    BRAND_MANIFEST_ICON_URL ||
-                    process.env.PUSHER_URL + "/static/images/branding/default-icon.svg",
+                domain: PUSHER_URL,
+                name: SERVER_NAME || `${BRAND_NAME} Server`,
+                motd: SERVER_MOTD || `A ${BRAND_NAME} Server`,
+                icon: SERVER_ICON || BRAND_MANIFEST_ICON_URL || PUSHER_URL + "/static/images/branding/default-icon.svg",
                 version: version + (process.env.NODE_ENV !== "production" ? "-dev" : ""),
             });
             return;

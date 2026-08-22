@@ -603,9 +603,12 @@ export const RecordingSettings = z.object({
     enableSounds: z.boolean().optional(),
 });
 
+export const RoomMode = z.enum(["editor", "website"]);
+
 export const WAMSettings = z.object({
     megaphone: MegaphoneSettings.optional(),
     recording: RecordingSettings.optional(),
+    roomMode: RoomMode.optional(),
 });
 
 export const WAMFileFormat = z.object({
@@ -692,6 +695,7 @@ export type AreaDescriptionPropertyData = z.infer<typeof AreaDescriptionProperty
 export type RestrictedRightsPropertyData = z.infer<typeof RestrictedRightsPropertyData>;
 export type PersonalAreaPropertyData = z.infer<typeof PersonalAreaPropertyData>;
 export type RecordingSettings = z.infer<typeof RecordingSettings>;
+export type RoomMode = z.infer<typeof RoomMode>;
 export type MatrixRoomPropertyData = z.infer<typeof MatrixRoomPropertyData>;
 export type PersonalAreaAccessClaimMode = z.infer<typeof PersonalAreaAccessClaimMode>;
 export type ExtensionModuleAreaPropertyData = z.infer<typeof ExtensionModuleAreaProperty>;

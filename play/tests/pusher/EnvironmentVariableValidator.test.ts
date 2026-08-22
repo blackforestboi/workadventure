@@ -10,6 +10,7 @@ const brandingEnvironment = EnvironmentVariables.pick({
     BRAND_AUTHOR: true,
     BRAND_PROVIDER: true,
     BRAND_THEME_COLOR: true,
+    BRAND_FAVICON_URL: true,
     BRAND_LOADING_LOGO_URL: true,
     BRAND_LOADING_BACKGROUND_URL: true,
 });
@@ -35,13 +36,13 @@ describe("START_ROOM_URL environment variable", () => {
 });
 
 describe("branding environment variables", () => {
-    it("provides tpot.world defaults", () => {
+    it("provides neutral defaults when no instance identity is configured", () => {
         expect(brandingEnvironment.parse({})).toMatchObject({
-            BRAND_NAME: "tpot.world",
-            BRAND_SHORT_NAME: "tpot",
-            BRAND_DESCRIPTION: "Organize your online world in tpot.world.",
-            BRAND_AUTHOR: "tpot.world team",
-            BRAND_PROVIDER: "tpot.world",
+            BRAND_NAME: "Virtual World",
+            BRAND_SHORT_NAME: "World",
+            BRAND_DESCRIPTION: "A shared online world.",
+            BRAND_AUTHOR: "Community",
+            BRAND_PROVIDER: "Self-hosted",
             BRAND_THEME_COLOR: "#1B2A41",
         });
     });
@@ -50,11 +51,13 @@ describe("branding environment variables", () => {
         expect(
             brandingEnvironment.parse({
                 BRAND_NAME: "Example Map",
+                BRAND_FAVICON_URL: "https://assets.example.test/favicon.svg",
                 BRAND_LOADING_LOGO_URL: "https://assets.example.test/loading.gif",
                 BRAND_LOADING_BACKGROUND_URL: "/branding/background.webp",
             }),
         ).toMatchObject({
             BRAND_NAME: "Example Map",
+            BRAND_FAVICON_URL: "https://assets.example.test/favicon.svg",
             BRAND_LOADING_LOGO_URL: "https://assets.example.test/loading.gif",
             BRAND_LOADING_BACKGROUND_URL: "/branding/background.webp",
         });
@@ -65,8 +68,8 @@ describe("ALLOWED_CORS_ORIGIN environment variable", () => {
     it("accepts multiple comma-separated origins", () => {
         expect(
             corsEnvironment.parse({
-                ALLOWED_CORS_ORIGIN: "http://play.workadventure.localhost,http://tpotworld.localhost",
+                ALLOWED_CORS_ORIGIN: "https://world.example.test,https://studio.example.test",
             }).ALLOWED_CORS_ORIGIN,
-        ).toBe("http://play.workadventure.localhost,http://tpotworld.localhost");
+        ).toBe("https://world.example.test,https://studio.example.test");
     });
 });

@@ -14,6 +14,7 @@
     import { worldCreationApi } from "../../../Services/WorldCreationApi";
     import { showFloatingUi } from "../../../Utils/svelte-floatingui-show";
     import { LL } from "../../../../i18n/i18n-svelte";
+    import { WAMSettingsUtils } from "@workadventure/map-editor";
     import { IconChevronDown, IconMapEditor } from "@wa-icons";
 
     interface Props {
@@ -30,7 +31,7 @@
     function requireLogin(): boolean {
         if (!localUserStore.isLogged()) {
             analyticsClient.login();
-        window.dispatchEvent(new CustomEvent("app:open-login-overlay"));
+            window.dispatchEvent(new CustomEvent("app:open-login-overlay"));
             return false;
         }
         return true;
@@ -38,6 +39,7 @@
 
     function openThisWorld() {
         if (!requireLogin()) return;
+        if (!WAMSettingsUtils.canEditMap(gameManager.getCurrentGameScene().wamFile?.settings)) return;
         analyticsClient.toggleMapEditor(true);
         mapEditorModeStore.switchMode(true);
         gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(EditorToolName.EntityEditor);
@@ -95,7 +97,7 @@
     onDestroy(closeWorldPicker);
 </script>
 
-{#if $mapEditorMenuVisibleStore}
+{#if $mapEditorMenuVisibleStore && WAMSettingsUtils.canEditMap(gameManager.getCurrentGameScene().wamFile?.settings)}
     <ActionBarButton
         onclick={toggleWorldPicker}
         label={$LL.actionbar.mapEditor()}

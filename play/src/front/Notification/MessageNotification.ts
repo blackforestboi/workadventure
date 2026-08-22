@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import * as Sentry from "@sentry/svelte";
 import LL from "../../i18n/i18n-svelte";
+import { getFrontendServiceWorkerScope } from "../Url/FrontendBasePath";
 import type { NotificationWA } from "./Notification";
 import { defaultOptions } from "./Notification";
 export class MessageNotification implements NotificationWA {
@@ -14,7 +15,9 @@ export class MessageNotification implements NotificationWA {
 
     public async sendNotification() {
         try {
-            const registration = await navigator.serviceWorker.register("/notification-service-worker.js");
+            const registration = await navigator.serviceWorker.register("/notification-service-worker.js", {
+                scope: getFrontendServiceWorkerScope(),
+            });
 
             const numberOfChar = 60;
             const messageToDisplay =

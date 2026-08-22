@@ -1,6 +1,18 @@
 import type { WAMSettings } from "./types";
 
 export class WAMSettingsUtils {
+    /**
+     * Room-mode feature policy. New room modes should be represented here so
+     * callers ask for a capability instead of comparing mode strings.
+     */
+    static canEditMap(wamSettings: WAMSettings | undefined): boolean {
+        return wamSettings?.roomMode !== "website";
+    }
+
+    static canEditAvatar(wamSettings: WAMSettings | undefined): boolean {
+        return wamSettings?.roomMode !== "website";
+    }
+
     private static hasMatchingRight(rights: string[] | undefined, tags: string[]): boolean {
         if (!rights || rights.length === 0) {
             return true;

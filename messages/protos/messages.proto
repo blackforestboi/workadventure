@@ -375,6 +375,7 @@ message UpdateWAMSettingsMessage {
   oneof message {
     UpdateMegaphoneSettingMessage updateMegaphoneSettingMessage = 1;
     UpdateRecordingSettingMessage updateRecordingSettingMessage = 2;
+    UpdateRoomModeSettingMessage updateRoomModeSettingMessage = 3;
   }
 }
 
@@ -383,6 +384,10 @@ message UpdateMegaphoneSettingMessage {
 }
 
 message UpdateRecordingSettingMessage {
+  google.protobuf.Value settings = 1;
+}
+
+message UpdateRoomModeSettingMessage {
   google.protobuf.Value settings = 1;
 }
 

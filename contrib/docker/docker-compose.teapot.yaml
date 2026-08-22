@@ -5,20 +5,22 @@ services:
       dockerfile: play/Dockerfile
     image: "${TEAPOT_PLAY_IMAGE:-teapot-play:${TEAPOT_IMAGE_TAG:-local}}"
     environment:
+      INSTANCE_CONFIG_PATH: /etc/teapot/instance.config.json
       TEAPOT_DATABASE_URL: "postgresql://${TEAPOT_POSTGRES_USER}:${TEAPOT_POSTGRES_PASSWORD}@postgres:5432/${TEAPOT_POSTGRES_DATABASE}"
       TEAPOT_REQUIRE_PERSISTENCE: "true"
       TEAPOT_MAP_STORAGE_WRITE_TOKEN: "${MAP_STORAGE_AUTHENTICATION_TOKEN}"
-      TEAPOT_MCP_PUBLIC_URL: "https://${DOMAIN}/mcp"
+      TEAPOT_MCP_PUBLIC_URL: "${TEAPOT_MCP_PUBLIC_URL}"
       TEAPOT_MCP_APPROVAL_SECRET: "${TEAPOT_MCP_APPROVAL_SECRET}"
       TEAPOT_AGENT_BRIDGE_URL: "http://teapot-agent-bridge:17375"
       TEAPOT_AGENT_BRIDGE_SECRET: "${TEAPOT_AGENT_BRIDGE_SECRET}"
       TEAPOT_WOKA_STORAGE_DIRECTORY: /data/teapot-wokas
-      TEAPOT_WOKA_PUBLIC_BASE_URL: "https://${DOMAIN}"
+      TEAPOT_WOKA_PUBLIC_BASE_URL: "${TEAPOT_WOKA_PUBLIC_BASE_URL}"
       TEAPOT_X_CLIENT_ID: "${TEAPOT_X_CLIENT_ID}"
       TEAPOT_X_CLIENT_SECRET: "${TEAPOT_X_CLIENT_SECRET}"
-      TEAPOT_X_REDIRECT_URI: "https://${DOMAIN}/teapot/auth/x/callback"
+      TEAPOT_X_REDIRECT_URI: "${TEAPOT_X_REDIRECT_URI}"
       TEAPOT_X_BOOTSTRAP_USER_IDS: "${TEAPOT_X_BOOTSTRAP_USER_IDS}"
     volumes:
+      - ${INSTANCE_CONFIG_FILE:-./instance.config.example.json}:/etc/teapot/instance.config.json:ro
       - teapot-woka-assets:/data/teapot-wokas
     depends_on:
       postgres:
@@ -62,7 +64,13 @@ services:
     expose:
       - "17375"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:17375/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:17375/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 3s
       retries: 12
@@ -77,7 +85,7 @@ services:
     environment:
       TEAPOT_MCP_HOST: 0.0.0.0
       TEAPOT_MCP_PORT: "17374"
-      TEAPOT_MCP_ALLOWED_HOSTS: "${DOMAIN},localhost:17374,127.0.0.1:17374"
+      TEAPOT_MCP_ALLOWED_HOSTS: "${TEAPOT_MCP_ALLOWED_HOSTS}"
       TEAPOT_PUSHER_URL: http://play:3000/
     depends_on:
       play:

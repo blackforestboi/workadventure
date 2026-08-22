@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
 
+    import { BRANDING } from "../../Branding";
     import type { AdmissionStatus, PendingEndorsement } from "../../Services/TeapotAdmissionApi";
     import { teapotAdmissionApi } from "../../Services/TeapotAdmissionApi";
 
@@ -97,7 +98,7 @@
 
 {#if visible}
     {#if status === null}
-        <div class="teapot-admission-map" role="dialog" aria-modal="true" aria-label="Sign up for Teapot Maps">
+        <div class="teapot-admission-map" role="dialog" aria-modal="true" aria-label={`Sign up for ${BRANDING.name}`}>
             <a class="sign-up" href={teapotAdmissionApi.createLoginUrl()}>Sign up</a>
         </div>
     {:else}
@@ -106,7 +107,7 @@
                 class="teapot-admission-card"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Teapot Maps admission"
+                aria-label={`${BRANDING.name} admission`}
                 aria-live="polite"
             >
                 <p class="eyebrow">TEAPOT MAPS</p>

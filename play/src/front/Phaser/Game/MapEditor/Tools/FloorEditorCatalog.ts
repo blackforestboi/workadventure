@@ -4,7 +4,7 @@ import {
     surfaceOverlayCoverLayerName,
     waterUnderlayCoverLayerName,
 } from "@workadventure/map-editor";
-import type { ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
+import type { ITiledMap, ITiledMapLayer } from "@workadventure/tiled-map-type-guard";
 
 const TERRAIN_LAYER_PATTERN = /(^|[\s/_-])(floor|ground|terrain|surface)([\s/_-]|$)/i;
 const SYSTEM_LAYER_PATTERN = /(collision|start|exit|zone|interaction)/i;
@@ -80,6 +80,40 @@ export function findTopmostSurfaceLayer(
         const overlayCoverLayerName = surfaceOverlayCoverLayerName(candidate.layer.name);
         if (candidate.layer.name !== coverLayerName && overlayCoverLayerName !== coverLayerName) continue;
         if (getTileLayerGid(candidate.layer, x, y) !== 0) return candidate.layer.name;
+    }
+    return undefined;
+}
+
+/** Finds an occupied surface at the starting cell when it belongs to the selected tileset. */
+export function findMatchingSurfaceLayer(
+    map: ITiledMap,
+    coverLayerName: string,
+    selectedTilesetFirstGid: number,
+    x: number,
+    y: number,
+): string | undefined {
+    const tilesetFirstGids = map.tilesets
+        .map((tileset) => tileset.firstgid)
+        .filter((firstGid): firstGid is number => typeof firstGid === "number")
+        .sort((left, right) => left - right);
+    const selectedTilesetIndex = tilesetFirstGids.indexOf(selectedTilesetFirstGid);
+    if (selectedTilesetIndex === -1) return undefined;
+    const nextTilesetFirstGid = tilesetFirstGids[selectedTilesetIndex + 1] ?? Number.POSITIVE_INFINITY;
+
+    const flattenedLayers = flattenLayersWithVisibility(map.layers);
+    // Tiled stores render order from back to front, so the first occupied related surface decides the result.
+    for (let index = flattenedLayers.length - 1; index >= 0; index -= 1) {
+        const candidate = flattenedLayers[index];
+        if (candidate === undefined || !candidate.visible || candidate.layer.type !== "tilelayer") continue;
+        if (
+            candidate.layer.name !== coverLayerName &&
+            surfaceOverlayCoverLayerName(candidate.layer.name) !== coverLayerName
+        ) {
+            continue;
+        }
+        const gid = getTileLayerGid(candidate.layer, x, y);
+        if (gid === 0) continue;
+        return gid >= selectedTilesetFirstGid && gid < nextTilesetFirstGid ? candidate.layer.name : undefined;
     }
     return undefined;
 }

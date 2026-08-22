@@ -1,10 +1,11 @@
 import { surfaceOverlayLayerName, waterUnderlayLayerName } from "@workadventure/map-editor";
-import type { ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
+import type { ITiledMap, ITiledMapLayer, ITiledMapTileLayer } from "@workadventure/tiled-map-type-guard";
 import { describe, expect, it } from "vitest";
 
 import {
     chooseDefaultPaintLayer,
     collectTerrainGids,
+    findMatchingSurfaceLayer,
     findTopmostErasableLayer,
     findTopmostSurfaceLayer,
     getTerrainTilesetGids,
@@ -21,6 +22,13 @@ function tileLayer(name: string, data: number[]): ITiledMapTileLayer {
         height: 1,
         width: data.length,
     } as unknown as ITiledMapTileLayer;
+}
+
+function map(layers: readonly ITiledMapLayer[]): ITiledMap {
+    return {
+        layers,
+        tilesets: [{ firstgid: 1 }, { firstgid: 101 }, { firstgid: 201 }, { firstgid: 301 }],
+    } as unknown as ITiledMap;
 }
 
 describe("terrain editor catalog", () => {
@@ -104,5 +112,46 @@ describe("terrain editor catalog", () => {
         expect(findTopmostSurfaceLayer([floor, lowerSurface, upperWater, upperSurface], "floor", 0, 0)).toBe(
             upperSurface.name,
         );
+    });
+
+    describe("matching an existing surface field", () => {
+        it("returns a matching occupied overlay", () => {
+            const floor = tileLayer("floor", [11]);
+            const matchingSurface = tileLayer(surfaceOverlayLayerName("floor", 101, "matching"), [105]);
+
+            expect(findMatchingSurfaceLayer(map([floor, matchingSurface]), "floor", 101, 0, 0)).toBe(
+                matchingSurface.name,
+            );
+        });
+
+        it("returns the matching occupied base layer when no overlay covers the cell", () => {
+            const floor = tileLayer("floor", [105]);
+            const emptySurface = tileLayer(surfaceOverlayLayerName("floor", 101, "empty"), [0]);
+
+            expect(findMatchingSurfaceLayer(map([floor, emptySurface]), "floor", 101, 0, 0)).toBe("floor");
+        });
+
+        it("does not reuse a buried match below an occupied surface from another tileset", () => {
+            const floor = tileLayer("floor", [105]);
+            const differentSurface = tileLayer(surfaceOverlayLayerName("floor", 201, "different"), [201]);
+
+            expect(findMatchingSurfaceLayer(map([floor, differentSurface]), "floor", 101, 0, 0)).toBeUndefined();
+        });
+
+        it("returns no match when the related surfaces are empty at the starting cell", () => {
+            const floor = tileLayer("floor", [0]);
+            const emptySurface = tileLayer(surfaceOverlayLayerName("floor", 101, "empty"), [0]);
+
+            expect(findMatchingSurfaceLayer(map([floor, emptySurface]), "floor", 101, 0, 0)).toBeUndefined();
+        });
+
+        it("ignores a hidden matching overlay", () => {
+            const floor = tileLayer("floor", [205]);
+            const matchingSurface = tileLayer(surfaceOverlayLayerName("floor", 101, "hidden"), [105]);
+
+            expect(
+                findMatchingSurfaceLayer(map([floor, { ...matchingSurface, visible: false }]), "floor", 201, 0, 0),
+            ).toBe("floor");
+        });
     });
 });

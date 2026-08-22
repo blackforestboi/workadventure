@@ -1,6 +1,6 @@
 {
-    "short_name": "tpot",
-    "name": "tpot.world",
+    "short_name": "World",
+    "name": "Virtual World",
     "icons": [
         {
             "src": "/static/images/favicons/apple-icon-57x57.png",
@@ -125,15 +125,17 @@
     "lang": "en",
     "theme_color": "#000000",
     "shortcuts": [
-      {
-        "name": "tpot.world",
-        "short_name": "tpot",
-        "description": "tpot.world application",
-        "url": "/",
-        "icons": [{ "src": "/static/images/favicons/android-icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
-      }
+        {
+            "name": "Virtual World",
+            "short_name": "World",
+            "description": "Virtual World application",
+            "url": "/",
+            "icons": [
+                { "src": "/static/images/favicons/android-icon-192x192.png", "sizes": "192x192", "type": "image/png" }
+            ]
+        }
     ],
-    "description": "tpot.world application",
+    "description": "Virtual World application",
     "screenshots": [],
     "related_applications": [],
     "prefer_related_applications": false

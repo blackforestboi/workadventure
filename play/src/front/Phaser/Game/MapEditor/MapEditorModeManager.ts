@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/svelte";
 import type { GameObjects, Input } from "phaser";
 import type { AreaData, Command } from "@workadventure/map-editor";
-import { UpdateWAMSettingCommand } from "@workadventure/map-editor";
+import { UpdateWAMSettingCommand, WAMSettingsUtils } from "@workadventure/map-editor";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import type { EditMapCommandMessage } from "@workadventure/messages";
@@ -669,6 +669,10 @@ export class MapEditorModeManager {
 
     private subscribeToStores(): void {
         this.mapEditorModeUnsubscriber = mapEditorModeStore.subscribe((active) => {
+            if (active && !WAMSettingsUtils.canEditMap(this.scene.wamFile?.settings)) {
+                mapEditorModeStore.switchMode(false);
+                return;
+            }
             this.active = active;
             if (!this.active) {
                 this.lastlyUsedTool = get(mapEditorSelectedToolStore);

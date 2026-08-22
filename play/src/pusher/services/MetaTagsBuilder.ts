@@ -32,7 +32,7 @@ export const MetaTagsDefaultValue: RequiredMetaTagsData = {
         {
             rel: "icon",
             sizes: "512x512",
-            src: BRAND_FAVICON_URL || "/static/images/branding/tpotfavicon.png",
+            src: BRAND_FAVICON_URL || "/static/images/branding/default-icon.svg",
         },
     ],
     manifestIcons: [

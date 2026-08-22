@@ -1,4 +1,5 @@
 import { NODE_ENV } from "../Enum/EnvironmentVariable";
+import { getFrontendServiceWorkerScope } from "../Url/FrontendBasePath";
 
 const WORKADVENTURE_CACHE_PREFIX = "workavdenture-cache";
 
@@ -49,6 +50,7 @@ export class _ServiceWorker {
         navigator.serviceWorker
             .register(
                 `/service-worker-prod.js?playUri=${window.location.protocol}//${window.location.host}${window.location.pathname}`,
+                { scope: getFrontendServiceWorkerScope() },
             )
             .then((serviceWorker) => {
                 console.info("Service Worker registered: ", serviceWorker);

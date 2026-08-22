@@ -9,7 +9,9 @@
     import type { InputTagOption } from "../../Input/InputTagOption";
     import Input from "../../Input/Input.svelte";
     import InputCheckbox from "../../Input/InputCheckbox.svelte";
+    import InputSwitch from "../../Input/InputSwitch.svelte";
     import TextArea from "../../Input/TextArea.svelte";
+    import { executeUpdateWAMSettings } from "../../../Phaser/Game/MapEditor/Commands/Facades";
     import { IconInfoCircle } from "@wa-icons";
 
     let dynamicStrings = $state({
@@ -22,6 +24,7 @@
     let description = $state("");
     let thumbnail = "";
     let copyright = $state("");
+    let websiteMode = $state(false);
     let tags: InputTagOption[] = $state([]);
     let _tag: InputTagOption[] = $state([
         {
@@ -43,6 +46,7 @@
         description = gameManager.getCurrentGameScene()?.wamFile?.metadata?.description ?? "";
         thumbnail = gameManager.getCurrentGameScene()?.wamFile?.metadata?.thumbnail ?? "";
         copyright = gameManager.getCurrentGameScene()?.wamFile?.metadata?.copyright ?? "";
+        websiteMode = gameManager.getCurrentGameScene()?.wamFile?.settings?.roomMode === "website";
         const vendorTags =
             (gameManager.getCurrentGameScene()?.wamFile?.vendor as { tags: string[] } | undefined)?.tags?.map(
                 (tag) => ({ value: tag, label: tag, created: false }),
@@ -74,6 +78,12 @@
                 copyright,
                 tags: tags != undefined && tags.length > 1 ? tags.map((tag) => tag.value).join(",") : undefined,
             }).emitEvent(roomConnection);
+            await executeUpdateWAMSettings({
+                $case: "updateRoomModeSettingMessage",
+                updateRoomModeSettingMessage: {
+                    settings: websiteMode ? "website" : "editor",
+                },
+            });
             return Promise.resolve($LL.mapEditor.settings.room.actions.success());
         } catch (e) {
             console.error(e);
@@ -105,6 +115,14 @@
         bind:value={description}
         onkeypress={() => {}}
     />
+    <div class="flex cursor-pointer items-center relative mt-4">
+        <InputSwitch
+            id="room-website-mode"
+            bind:value={websiteMode}
+            label="Website mode (disable map and avatar editing)"
+            labelPosition="right"
+        />
+    </div>
     <p class="help-text">
         <IconInfoCircle font-size="18" />
         {$LL.mapEditor.settings.room.helps.tags()}

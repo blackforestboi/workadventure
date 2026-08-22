@@ -1,3 +1,4 @@
+import { BRANDING } from "../../Branding";
 import { AssetGenerationError, createProviderHttpError, toRedactedGenerationError } from "./AssetGenerationError";
 import { copyToArrayBuffer, decodeBase64, encodeBase64 } from "./Base64";
 import {
@@ -145,7 +146,7 @@ export class HostedCliImageProvider implements ImageGenerationProvider {
 
     private headers(credential: string, json: boolean): HeadersInit {
         if (credential.trim() === "") {
-            throw new AssetGenerationError("missing_credential", "Log in to Teapot Maps before connecting AI.", {
+            throw new AssetGenerationError("missing_credential", `Log in to ${BRANDING.name} before connecting AI.`, {
                 providerId: this.id,
             });
         }

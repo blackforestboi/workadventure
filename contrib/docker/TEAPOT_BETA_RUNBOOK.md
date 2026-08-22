@@ -5,29 +5,39 @@ This overlay deploys the repository's own `play` and `map-storage` images, Postg
 ## First deployment
 
 1. Copy `.env.teapot.example` to `.env.teapot` and replace every `CHANGE_ME` value. Keep the file out of Git and restrict it to the deployment account. `TEAPOT_AGENT_BRIDGE_SECRET` must be a unique random value of at least 32 characters.
-2. Register this exact X callback URL: `https://<DOMAIN>/teapot/auth/x/callback`.
-3. Set `TEAPOT_X_BOOTSTRAP_USER_IDS` to at least one stable X user ID. A bootstrap user can admit the first cohort; remove stale bootstrap IDs after operators exist.
-4. Create the DNS record for `DOMAIN`, open TCP 80/443 (and 50051 only if the public room API is required), and verify the ACME email.
-5. Build and start:
+2. Copy `instance.config.example.json` to `instance.config.json`, set its `publicOrigin`, branding, contact links, server identity, assets, and start room, then generate the non-secret Compose projection:
+
+```bash
+node contrib/docker/instance-config.mjs \
+  contrib/docker/instance.config.json \
+  --output contrib/docker/.env.instance
+```
+
+3. Register the X callback shown by the configured origin: `<publicOrigin>/teapot/auth/x/callback`.
+4. Set `TEAPOT_X_BOOTSTRAP_USER_IDS` to at least one stable X user ID. A bootstrap user can admit the first cohort; remove stale bootstrap IDs after operators exist.
+5. Create the DNS record for the configured origin, open TCP 80/443 (and 50051 only if the public room API is required), and verify the ACME email.
+6. Build and start:
 
 ```bash
 docker compose \
   --env-file contrib/docker/.env.teapot \
+  --env-file contrib/docker/.env.instance \
   -f contrib/docker/docker-compose.prod.yaml \
   -f contrib/docker/docker-compose.teapot.yaml \
   up -d --build
 ```
 
-6. Inspect readiness without printing container environments:
+7. Inspect readiness without printing container environments:
 
 ```bash
 docker compose \
   --env-file contrib/docker/.env.teapot \
+  --env-file contrib/docker/.env.instance \
   -f contrib/docker/docker-compose.prod.yaml \
   -f contrib/docker/docker-compose.teapot.yaml \
   ps
 
-contrib/docker/teapot/smoke.sh "https://<DOMAIN>"
+contrib/docker/teapot/smoke.sh "<publicOrigin>"
 ```
 
 The browser stores OpenRouter keys only in session memory or in the encrypted client vault. Codex and Claude subscription credentials remain inside the access-restricted `teapot-agent-auth` server volume. The bridge has no published port or Traefik route: the browser reaches it only through authenticated Play endpoints.

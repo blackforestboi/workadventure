@@ -1,7 +1,8 @@
 import type { FrontConfigurationInterface } from "../../common/FrontConfigurationInterface";
+import { loadInstanceConfigEnvironment } from "../config/InstanceConfig";
 import { EnvironmentVariables } from "./EnvironmentVariableValidator";
 
-const envChecking = EnvironmentVariables.safeParse(process.env);
+const envChecking = EnvironmentVariables.safeParse(loadInstanceConfigEnvironment(process.env));
 
 // Will break the process if an error happens
 if (!envChecking.success) {
@@ -55,6 +56,7 @@ export const BRAND_AUTHOR = env.BRAND_AUTHOR;
 export const BRAND_PROVIDER = env.BRAND_PROVIDER;
 export const BRAND_THEME_COLOR = env.BRAND_THEME_COLOR;
 export const BRAND_WEBSITE_URL = env.BRAND_WEBSITE_URL;
+export const BRAND_CONTACT_EMAIL = env.BRAND_CONTACT_EMAIL;
 export const BRAND_LOGO_URL = env.BRAND_LOGO_URL;
 export const BRAND_LOADING_LOGO_URL = env.BRAND_LOADING_LOGO_URL;
 export const BRAND_LOGIN_LOGO_URL = env.BRAND_LOGIN_LOGO_URL;
@@ -70,6 +72,9 @@ export const BRAND_STATUS_FONT_DATA_URL = env.BRAND_STATUS_FONT_DATA_URL;
 export const BRAND_FAVICON_URL = env.BRAND_FAVICON_URL;
 export const BRAND_MANIFEST_ICON_URL = env.BRAND_MANIFEST_ICON_URL;
 export const BRAND_CARD_IMAGE_URL = env.BRAND_CARD_IMAGE_URL;
+export const SERVER_NAME = env.SERVER_NAME;
+export const SERVER_MOTD = env.SERVER_MOTD;
+export const SERVER_ICON = env.SERVER_ICON;
 export const PUBLIC_MAP_STORAGE_URL = env.PUBLIC_MAP_STORAGE_URL || "";
 export const INTERNAL_MAP_STORAGE_URL = env.INTERNAL_MAP_STORAGE_URL;
 export const TEAPOT_DATABASE_URL = env.TEAPOT_DATABASE_URL;
@@ -230,6 +235,7 @@ export const FRONT_ENVIRONMENT_VARIABLES: FrontConfigurationInterface = {
     BRAND_PROVIDER,
     BRAND_THEME_COLOR,
     BRAND_WEBSITE_URL,
+    BRAND_CONTACT_EMAIL,
     BRAND_LOGO_URL,
     BRAND_LOADING_LOGO_URL,
     BRAND_LOGIN_LOGO_URL,

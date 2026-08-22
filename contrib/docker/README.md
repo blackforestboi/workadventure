@@ -49,7 +49,7 @@ graph LR
 
 > **Note**
 > You can host your maps on the WorkAdventure server itself (using the dedicated map-storage container), or outside
-> of the WorkAdventure server, on any [properly configured HTTP server](../../docs/maps/hosting.md) (Nginx, Apache...). 
+> of the WorkAdventure server, on any [properly configured HTTP server](../../docs/maps/hosting.md) (Nginx, Apache...).
 > The default docker-compose file does **not** contain a container dedicated to hosting maps. The documentation and
 
 ## Getting started
@@ -62,21 +62,38 @@ graph LR
 
 On your server, install the latest Docker version, along docker-compose.
 
-### 2. Copy deployment files 
+### 2. Copy deployment files
 
-Copy the [`.env.prod.template`](.env.prod.template) file on your server, and rename it to `.env`.
-Copy the [`docker-compose.prod.yaml`](docker-compose.prod.yaml) file on your server, and rename it to `docker-compose.yaml`.
+Copy these files to your server:
+
+- [`.env.prod.template`](.env.prod.template) as `.env` for secrets and operational settings.
+- [`instance.config.example.json`](instance.config.example.json) as `instance.config.json` for the public domain, branding, contact details, server identity, assets, and start room.
+- [`instance-config.mjs`](instance-config.mjs), which validates the instance file and prepares Compose variables.
+- [`docker-compose.prod.yaml`](docker-compose.prod.yaml) as `docker-compose.yaml`.
 
 ### 3. Configure your environment
 
-Edit the `.env` file.
+Edit `instance.config.json`. This is the single public instance configuration: set `publicOrigin` once, optionally set `frontendBasePath` when the game is mounted below a path such as `/play`, then customize the `branding`, `links`, `server`, and `startRoomUrl` sections. Relative asset and room URLs are resolved against `publicOrigin`; same-origin room routes receive the frontend base path exactly once. Do not put passwords, tokens, API keys, or other secrets in this JSON file.
+
+Generate the Compose projection whenever the instance file changes:
+
+```console
+node instance-config.mjs instance.config.json --output .env.instance
+```
+
+The validator fails on unknown fields, invalid URLs, and secret-shaped keys. Explicit container environment values still override projected values for advanced deployments.
+
+For a non-Compose host, deploy the same JSON file with Play and set `INSTANCE_CONFIG_PATH` to its absolute path. If the platform runs the supporting services separately, use `instance-config.mjs` during deployment and apply its generated variables to those services. Secrets remain in the platform's secret manager.
+
+To consume the compiled browser as a local npm dependency in another website build, see [Package the browser build for another website](../../docs/others/self-hosting/static-web-package.md).
+
+Edit `.env` for secrets and operational settings only.
 
 For your environment to start, you will need to at least configure:
 
 - **VERSION**: the version of WorkAdventure to install. See below for more information.
 - **SECRET_KEY**: a random key used to generate JWT secrets
-- **DOMAIN**: your domain name (without any "https://" prefix)
-- **MAP_STORAGE_AUTHENTICATION_USER**: the username for the map-storage container 
+- **MAP_STORAGE_AUTHENTICATION_USER**: the username for the map-storage container
 - **MAP_STORAGE_AUTHENTICATION_PASSWORD**: the password for the map-storage container
 
 Furthermore, you should configure the Livekit environment variables to be able to have audio/video conversations with more than 4 users at the same time:
@@ -104,13 +121,13 @@ or
 > Username/password authentication is sent to the browser and users with a technical knowledge can easily extract those.
 > With a static secret, the authentication is done using a time-limited token that is much more secure.
 
-Finally, to upload maps to the map-storage container using the [map starter kit](https://github.com/workadventure/map-starter-kit), 
+Finally, to upload maps to the map-storage container using the [map starter kit](https://github.com/workadventure/map-starter-kit),
 you will need to configure an API token for the map-storage container:
 
 - **MAP_STORAGE_ENABLE_BEARER_AUTHENTICATION**: set to "true" to enable the bearer authentication
 - **MAP_STORAGE_AUTHENTICATION_TOKEN**: the token to use to authenticate when uploading maps (use a very long random string here)
 
-Feel free to look the other environment variables and modify them according to your preferences.
+Keep `.env.instance` next to the Compose file and regenerate it after changing `instance.config.json`. Feel free to modify the remaining operational environment variables according to your preferences.
 
 For a complete reference of all available environment variables, see the [Environment Variables documentation](../../docs/others/self-hosting/env-variables.md).
 
@@ -135,10 +152,10 @@ The list of tags is available in the [releases page](https://github.com/thecodin
 
 ### 4. Starting the environment
 
-In the directory containing your `docker-compose.yaml` file and your `.env` file, simply use:
+In the directory containing your deployment files, use both generated and secret environment files:
 
 ```console
-docker-compose up -d
+docker compose --env-file .env --env-file .env.instance up -d
 ```
 
 You can check the logs with:
@@ -163,7 +180,7 @@ Open your browser and go to `https://<your-domain>/map-storage/`.
 You will be asked to authenticate. Use the credentials you configured in the `.env` file.
 
 > **Note**
-> Right now, authentication is limited to a single user credential in the map-storage container, 
+> Right now, authentication is limited to a single user credential in the map-storage container,
 > hard coded in the `.env` file. This is not ideal, but works for now (the map-storage container
 > is quite new). Contributions are welcome if you want to improve this.
 
@@ -224,7 +241,7 @@ The upgrade path will depend on the installation of WorkAdventure you are using.
 
 - Download the `docker-compose.prod.yaml` for the version you want to upgrade to and replace it on your server
 - Now, edit the `.env` file and change the `VERSION` to the matching version.
-- Read the upgrade notes for the version you are upgrading to (see the [releases page](https://github.com/thecodingmachine/workadventure/releases/)), 
+- Read the upgrade notes for the version you are upgrading to (see the [releases page](https://github.com/thecodingmachine/workadventure/releases/)),
   and apply any changes if needed (this might often be an additional variable to add to the `.env` file)
 
 Then, simply run:

@@ -10,6 +10,7 @@ import type { FrontCommandInterface } from "../FrontCommandInterface";
 import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import { localUserStore } from "../../../../../Connection/LocalUserStore";
 import { megaphoneCanBeUsedStore, megaphoneSpaceSettingsStore } from "../../../../../Stores/MegaphoneStore";
+import { mapEditorModeStore } from "../../../../../Stores/MapEditorStore";
 
 export class UpdateWAMSettingFrontCommand extends UpdateWAMSettingCommand implements FrontCommandInterface {
     public constructor(
@@ -55,6 +56,22 @@ export class UpdateWAMSettingFrontCommand extends UpdateWAMSettingCommand implem
                 this.roomUrl,
             );
         }
+        if (this.updateWAMSettingsMessage.message?.$case === "updateRoomModeSettingMessage") {
+            const previousRoomMode = this.oldConfig?.roomMode;
+            return new UpdateWAMSettingFrontCommand(
+                this.wam,
+                {
+                    message: {
+                        $case: "updateRoomModeSettingMessage",
+                        updateRoomModeSettingMessage: {
+                            settings: previousRoomMode,
+                        },
+                    },
+                },
+                this.userTags,
+                this.roomUrl,
+            );
+        }
 
         return this;
     }
@@ -63,6 +80,9 @@ export class UpdateWAMSettingFrontCommand extends UpdateWAMSettingCommand implem
         await super.execute();
 
         const message: UpdateWAMSettingsMessage["message"] = this.updateWAMSettingsMessage.message;
+        if (message?.$case === "updateRoomModeSettingMessage" && !WAMSettingsUtils.canEditMap(this.wam.settings)) {
+            mapEditorModeStore.switchMode(false);
+        }
         if (message?.$case === "updateMegaphoneSettingMessage" || message?.$case === "updateRecordingSettingMessage") {
             const megaphoneSettings = MegaphoneSettings.optional().parse(this.wam.settings?.megaphone);
 

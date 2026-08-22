@@ -25,6 +25,11 @@ const AllowedCorsOrigin = z.string().refine(
 );
 
 export const EnvironmentVariables = z.object({
+    INSTANCE_CONFIG_PATH: z
+        .string()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Path to the validated non-secret instance configuration JSON file"),
     // Pusher related environment variables
     SECRET_KEY: z
         .string()
@@ -86,31 +91,31 @@ export const EnvironmentVariables = z.object({
         .string()
         .optional()
         .transform(emptyStringToUndefined)
-        .default("tpot.world")
-        .describe("Displayed product name. Defaults to tpot.world"),
+        .default("Virtual World")
+        .describe("Displayed product name. Defaults to Virtual World"),
     BRAND_SHORT_NAME: z
         .string()
         .optional()
         .transform(emptyStringToUndefined)
-        .default("tpot")
-        .describe("Short displayed product name used by app metadata. Defaults to tpot"),
+        .default("World")
+        .describe("Short displayed product name used by app metadata. Defaults to World"),
     BRAND_DESCRIPTION: z
         .string()
         .optional()
         .transform(emptyStringToUndefined)
-        .default("Organize your online world in tpot.world.")
+        .default("A shared online world.")
         .describe("Default application description used by metadata"),
     BRAND_AUTHOR: z
         .string()
         .optional()
         .transform(emptyStringToUndefined)
-        .default("tpot.world team")
+        .default("Community")
         .describe("Default metadata author"),
     BRAND_PROVIDER: z
         .string()
         .optional()
         .transform(emptyStringToUndefined)
-        .default("tpot.world")
+        .default("Self-hosted")
         .describe("Default metadata provider"),
     BRAND_THEME_COLOR: z
         .string()
@@ -123,6 +128,12 @@ export const EnvironmentVariables = z.object({
         .optional()
         .transform(emptyStringToUndefined)
         .describe("Optional public website URL used by app metadata"),
+    BRAND_CONTACT_EMAIL: z
+        .string()
+        .email()
+        .optional()
+        .transform(emptyStringToUndefined)
+        .describe("Public contact email displayed by the application"),
     BRAND_LOGO_URL: z.string().optional().transform(emptyStringToUndefined).describe("Default application logo URL"),
     BRAND_LOADING_LOGO_URL: z
         .string()
@@ -182,6 +193,9 @@ export const EnvironmentVariables = z.object({
         .optional()
         .transform(emptyStringToUndefined)
         .describe("Social sharing card image URL"),
+    SERVER_NAME: z.string().optional().transform(emptyStringToUndefined).describe("Public server display name"),
+    SERVER_MOTD: z.string().optional().transform(emptyStringToUndefined).describe("Public server message of the day"),
+    SERVER_ICON: z.string().optional().transform(emptyStringToUndefined).describe("Public server icon URL"),
     MAP_STORAGE_API_TOKEN: z.string().describe("API token for authenticating with the map-storage service"),
     REDIS_HOST: z.string().optional().transform(emptyStringToUndefined).describe("Redis server hostname or IP address"),
     REDIS_PORT: PositiveIntAsString.optional()

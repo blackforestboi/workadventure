@@ -10,6 +10,7 @@ Environment variables for the Play service (frontend and pusher).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `INSTANCE_CONFIG_PATH` | No | Path to the validated non-secret instance configuration JSON file |
 | `SECRET_KEY` | Yes | Secret key used to encode JWT tokens. Set this to a random unguessable string. |
 | `API_URL` | Yes | URL of the back server API |
 | `ADMIN_API_URL` | No | The URL to the admin API. If in the same network, you can use a local name here. |
@@ -24,9 +25,35 @@ Environment variables for the Play service (frontend and pusher).
 | `SOCKET_IDLE_TIMER` | No | maximum time (in second) without activity before a socket is closed. Should be greater than 60 seconds in order to cope for Chrome intensive throttling (https://developer.chrome.com/blog/timer-throttling-in-chrome-88/#intensive-throttling) |
 | `CLIENT_DISCONNECTION_RETENTION_MS` | No | Maximum time, in milliseconds, the client keeps sent websocket messages for replay after a short disconnection. Defaults to 30000. |
 | `PUSHER_ADMIN_WS_MAX_BACKPRESSURE_BYTES` | No | Maximum uWebSockets backpressure bytes accepted on admin websocket connections. Defaults to 1048576. |
-| `ALLOWED_CORS_ORIGIN` | No | Allowed CORS origin for API requests. Use '*' to allow any domain |
+| `ALLOWED_CORS_ORIGIN` | No | Allowed CORS origin(s) for API requests, comma-separated. Use '*' to allow any domain |
 | `PUSHER_URL` | No | Public URL of the pusher service |
 | `FRONT_URL` | No | Public URL of the frontend application |
+| `BRAND_NAME` | No | Displayed product name. Defaults to Virtual World |
+| `BRAND_SHORT_NAME` | No | Short displayed product name used by app metadata. Defaults to World |
+| `BRAND_DESCRIPTION` | No | Default application description used by metadata |
+| `BRAND_AUTHOR` | No | Default metadata author |
+| `BRAND_PROVIDER` | No | Default metadata provider |
+| `BRAND_THEME_COLOR` | No | Default browser theme color |
+| `BRAND_WEBSITE_URL` | No | Optional public website URL used by app metadata |
+| `BRAND_CONTACT_EMAIL` | No | Public contact email displayed by the application |
+| `BRAND_LOGO_URL` | No | Default application logo URL |
+| `BRAND_LOADING_LOGO_URL` | No | Loading screen logo or animation URL |
+| `BRAND_LOGIN_LOGO_URL` | No | Login screen logo URL |
+| `BRAND_ERROR_LOGO_URL` | No | Error screen logo URL |
+| `BRAND_ERROR_IMAGE_URL` | No | Error screen illustration or animation URL |
+| `BRAND_LOADING_BACKGROUND_URL` | No | Loading and login background image URL |
+| `BRAND_PWA_BACKGROUND_URL` | No | PWA install screen background image URL |
+| `BRAND_POWERED_BY_LOGO_URL` | No | Optional powered-by logo URL |
+| `BRAND_STATUS_ICON_URL` | No | Reconnect/error scene icon URL |
+| `BRAND_STATUS_CHARACTER_URL` | No | Reconnect/error scene character spritesheet URL |
+| `BRAND_STATUS_FONT_IMAGE_URL` | No | Reconnect/error scene bitmap font image URL |
+| `BRAND_STATUS_FONT_DATA_URL` | No | Reconnect/error scene bitmap font data URL |
+| `BRAND_FAVICON_URL` | No | Application favicon URL |
+| `BRAND_MANIFEST_ICON_URL` | No | Application manifest icon URL |
+| `BRAND_CARD_IMAGE_URL` | No | Social sharing card image URL |
+| `SERVER_NAME` | No | Public server display name |
+| `SERVER_MOTD` | No | Public server message of the day |
+| `SERVER_ICON` | No | Public server icon URL |
 | `MAP_STORAGE_API_TOKEN` | Yes | API token for authenticating with the map-storage service |
 | `REDIS_HOST` | No | Redis server hostname or IP address |
 | `REDIS_PORT` | No | Redis server port. Defaults to 6379 |

@@ -73,6 +73,10 @@ describe("floor editor rendering", () => {
     });
 
     it("stacks built-in non-water surfaces while keeping water on its underlay", () => {
+        const pointerDownSource = floorEditorToolSource.match(
+            /private handlePointerDown\([\s\S]*?\n {4}private handlePointerUp/,
+        )?.[0];
+
         expect(floorEditorToolSource).toContain('this.selectedTilesetFirstGid = familyId === "water" ? 0 : firstGid');
         expect(floorEditorToolSource).toContain(
             "this.selectedTilesetFirstGid = this.selectedWaterFillGid === undefined ? firstGid : 0",
@@ -80,7 +84,18 @@ describe("floor editor rendering", () => {
         expect(floorEditorToolSource).not.toContain(
             "selectedTileset !== undefined && !BUILT_IN_TERRAIN_TILESET.matchesImage(selectedTileset.image)",
         );
-        expect(floorEditorToolSource).toContain("this.surfaceStrokePlacementId = crypto.randomUUID()");
+        expect(pointerDownSource).toContain("const matchingSurfaceLayer = findMatchingSurfaceLayer(");
+        expect(pointerDownSource?.match(/findMatchingSurfaceLayer\(/g)).toHaveLength(1);
+        expect(pointerDownSource).toContain("if (matchingSurfaceLayer !== undefined)");
+        expect(pointerDownSource).toContain("this.surfaceStrokeLayerName = matchingSurfaceLayer");
+        expect(pointerDownSource).toContain("this.surfaceStrokePlacementId = crypto.randomUUID()");
+        expect(pointerDownSource).toContain("tile.layer = this.surfaceStrokeLayerName");
+        expect(pointerDownSource?.indexOf("const tile = this.getTileAtPointer(pointer)")).toBeLessThan(
+            pointerDownSource?.indexOf("const matchingSurfaceLayer = findMatchingSurfaceLayer(") ?? -1,
+        );
+        expect(pointerDownSource?.indexOf("this.paintElevation(tile)")).toBeLessThan(
+            pointerDownSource?.indexOf("const matchingSurfaceLayer = findMatchingSurfaceLayer(") ?? -1,
+        );
         expect(floorEditorToolSource).toContain(
             "this.selectedTilesetFirstGid,\n            this.surfaceStrokePlacementId",
         );

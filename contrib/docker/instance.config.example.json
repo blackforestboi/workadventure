@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "publicOrigin": "https://world.example.com",
+  "frontendBasePath": "",
+  "branding": {
+    "name": "My World",
+    "shortName": "World",
+    "description": "A private online world for gathering, creating, and exploring.",
+    "author": "My World team",
+    "provider": "My World",
+    "themeColor": "#245A73",
+    "contactEmail": "hello@example.com",
+    "assets": {
+      "logo": "/branding/logo.svg",
+      "loadingLogo": "/branding/loading-logo.svg",
+      "loginLogo": "/branding/login-logo.svg",
+      "errorLogo": "/branding/error-logo.svg",
+      "errorImage": "/branding/error-image.svg",
+      "loadingBackground": "/branding/loading-background.webp",
+      "pwaBackground": "/branding/pwa-background.webp",
+      "poweredByLogo": "/branding/powered-by.svg",
+      "statusIcon": "/branding/status-icon.svg",
+      "statusCharacter": "/branding/status-character.png",
+      "statusFontImage": "/branding/status-font.png",
+      "statusFontData": "/branding/status-font.xml",
+      "favicon": "/branding/favicon.svg",
+      "manifestIcon": "/branding/manifest-icon.png",
+      "cardImage": "/branding/card-image.webp"
+    }
+  },
+  "links": {
+    "contactUrl": "/contact",
+    "issuesUrl": "/support"
+  },
+  "server": {
+    "name": "My World",
+    "motd": "Welcome to My World.",
+    "iconUrl": "/branding/server-icon.png"
+  },
+  "startRoomUrl": "/~/maps/start.wam"
+}

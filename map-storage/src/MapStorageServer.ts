@@ -24,6 +24,7 @@ import {
     vegetationPresetFromMessage,
     vegetationPresetToMessage,
     WallPlacement,
+    WAMSettingsUtils,
 } from "@workadventure/map-editor";
 import type {
     EditMapCommandMessage,
@@ -144,9 +145,23 @@ const mapStorageServer: MapStorageServer = {
                     );
                 }
 
+                if (
+                    editMapMessage.$case === "updateWAMSettingsMessage" &&
+                    editMapMessage.updateWAMSettingsMessage.message?.$case === "updateRoomModeSettingMessage" &&
+                    !connectedUserTags.includes("admin")
+                ) {
+                    throw new Error(`User ${userUUID} is not allowed to change room mode on map ${mapUrl}`);
+                }
+
                 // Map-storage can run with multiple instances. Always base a whole-map write on the durable
                 // snapshot rather than this process's read cache so an older instance cannot erase newer edits.
                 const wamFile = await mapsManager.loadWAMToMemory(mapKey);
+                if (
+                    !WAMSettingsUtils.canEditMap(wamFile.getWam().settings) &&
+                    editMapMessage.$case !== "updateWAMSettingsMessage"
+                ) {
+                    throw new Error(`Map ${mapUrl} is in website mode and cannot be edited`);
+                }
                 const gameMapAreas = wamFile.getGameMapAreas();
                 const entityCommandPermissions = gameMapAreas
                     ? new EntityPermissions(gameMapAreas, connectedUserTags, userCanEdit, userUUID)

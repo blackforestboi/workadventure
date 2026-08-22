@@ -43,7 +43,6 @@ import { videoQualityAnalyticsQueue } from "../services/VideoQualityAnalyticsQue
 import { PusherRoomSocketController } from "../services/PusherRoomSocketController";
 import { AdminWebSocketBackpressureWriter } from "../services/AdminWebSocketBackpressureWriter";
 import type { PusherWebSocket } from "../services/PusherWebSocket";
-import { getTeapotDataServices } from "../teapot/TeapotDataRuntime";
 import { teapotWamRevisionCoordinator } from "../teapot/TeapotWamRevisionCoordinator";
 import { hasTemporaryRootGuestAccess } from "../teapot/TemporaryRootEditorAccess";
 
@@ -363,7 +362,7 @@ export class IoSocketController {
                                 status: "error",
                                 type: "error",
                                 title: "Sign in required",
-                                subtitle: "Use X to enter Teapot Maps",
+                                subtitle: `Use X to enter ${BRAND_NAME}`,
                                 image: "",
                                 code: "TEAPOT_X_AUTH_REQUIRED",
                                 details: "Return to the sign-in screen and continue with X.",

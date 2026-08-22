@@ -11,6 +11,7 @@ export interface FrontConfigurationInterface {
     BRAND_PROVIDER: string;
     BRAND_THEME_COLOR: string;
     BRAND_WEBSITE_URL: string | undefined;
+    BRAND_CONTACT_EMAIL: string | undefined;
     BRAND_LOGO_URL: string | undefined;
     BRAND_LOADING_LOGO_URL: string | undefined;
     BRAND_LOGIN_LOGO_URL: string | undefined;

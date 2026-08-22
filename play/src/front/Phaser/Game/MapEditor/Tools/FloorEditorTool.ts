@@ -78,6 +78,7 @@ import { getEntityDisplaySize, getVegetationDisplaySize } from "../../../../Util
 import { collapseTileRegions, createFloorEdit, type FloorEdit } from "./FloorEditorHistory";
 import {
     collectTerrainGids,
+    findMatchingSurfaceLayer,
     findTopmostErasableLayer,
     findTopmostSurfaceLayer,
     getTerrainTilesetGids,
@@ -604,14 +605,6 @@ export class FloorEditorTool extends MapEditorTool {
             this.panCandidate = true;
             return;
         }
-        if (this.selectedTilesetFirstGid > 0) {
-            this.surfaceStrokePlacementId = crypto.randomUUID();
-            this.surfaceStrokeLayerName = surfaceOverlayLayerName(
-                this.selectedLayer,
-                this.selectedTilesetFirstGid,
-                this.surfaceStrokePlacementId,
-            );
-        }
         const tile = this.getTileAtPointer(pointer);
         if (tile === undefined) return;
         if (get(mapEditorFloorStateStore)?.toolMode === "elevation") {
@@ -624,6 +617,29 @@ export class FloorEditorTool extends MapEditorTool {
             this.paintElevation(tile);
             this.nextElevationSculptAt = this.scene.time.now + ELEVATION_REPEAT_INTERVAL_MS;
             return;
+        }
+        if (this.selectedTilesetFirstGid > 0) {
+            const visibleMap = this.draftMap ?? this.draftBaseMap ?? this.publishedMap;
+            if (visibleMap === undefined) return;
+            const matchingSurfaceLayer = findMatchingSurfaceLayer(
+                visibleMap,
+                this.selectedLayer,
+                this.selectedTilesetFirstGid,
+                tile.x,
+                tile.y,
+            );
+            if (matchingSurfaceLayer !== undefined) {
+                this.surfaceStrokePlacementId = undefined;
+                this.surfaceStrokeLayerName = matchingSurfaceLayer;
+            } else {
+                this.surfaceStrokePlacementId = crypto.randomUUID();
+                this.surfaceStrokeLayerName = surfaceOverlayLayerName(
+                    this.selectedLayer,
+                    this.selectedTilesetFirstGid,
+                    this.surfaceStrokePlacementId,
+                );
+            }
+            tile.layer = this.surfaceStrokeLayerName;
         }
         const shapeBrush =
             this.selectedAutotile?.familyId === "water"

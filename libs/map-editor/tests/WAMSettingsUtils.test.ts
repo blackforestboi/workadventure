@@ -11,6 +11,20 @@ const baseSettings: WAMSettings = {
 };
 
 describe("WAMSettingsUtils", () => {
+    describe("room-mode capabilities", () => {
+        it("keeps map and avatar editing enabled when no mode is configured", () => {
+            expect(WAMSettingsUtils.canEditMap(undefined)).toBe(true);
+            expect(WAMSettingsUtils.canEditAvatar({})).toBe(true);
+        });
+
+        it("disables map and avatar editing in website mode", () => {
+            const settings: WAMSettings = { roomMode: "website" };
+
+            expect(WAMSettingsUtils.canEditMap(settings)).toBe(false);
+            expect(WAMSettingsUtils.canEditAvatar(settings)).toBe(false);
+        });
+    });
+
     describe("canUseMegaphone", () => {
         it("does not let admins bypass megaphone usage rights", () => {
             expect(

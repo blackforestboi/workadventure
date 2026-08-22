@@ -67,12 +67,34 @@ function rewriteNode(node: Node): void {
     }
 }
 
+function applyConfiguredFavicon(): void {
+    let faviconLinks = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]'));
+    if (faviconLinks.length === 0) {
+        const favicon = document.createElement("link");
+        favicon.rel = "icon";
+        document.head.append(favicon);
+        faviconLinks = [favicon];
+    }
+
+    for (const favicon of faviconLinks) {
+        favicon.href = BRANDING.assets.favicon;
+        favicon.removeAttribute("sizes");
+        favicon.removeAttribute("type");
+    }
+}
+
 /**
  * Keeps legacy translated/server-provided brand wording out of the rendered UI
  * without modifying generated i18n output. Returns the observer cleanup function.
  */
 export function installBrandingRuntime(): () => void {
-    if (typeof document === "undefined" || !document.body) {
+    if (typeof document === "undefined") {
+        return () => undefined;
+    }
+
+    applyConfiguredFavicon();
+
+    if (!document.body) {
         return () => undefined;
     }
 

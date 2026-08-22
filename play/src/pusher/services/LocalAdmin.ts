@@ -56,6 +56,8 @@ import {
     MATRIX_ADMIN_PASSWORD,
     MATRIX_DOMAIN,
     BRAND_WEBSITE_URL,
+    FRONT_URL,
+    PUSHER_URL,
 } from "../enums/EnvironmentVariable";
 import type { AdminBannedData, FetchMemberDataByUuidResponse } from "./AdminApi";
 import type { AdminInterface } from "./AdminInterface";
@@ -73,6 +75,10 @@ const isRecordingConfigured = !!(
     LIVEKIT_RECORDING_S3_SECRET_KEY &&
     LIVEKIT_RECORDING_S3_REGION
 );
+
+function normalizeLandingPath(pathname: string): string {
+    return pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
+}
 const generatedWorldRootPathPattern = /^\/~\/worlds\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i;
 
 /**
@@ -193,7 +199,7 @@ class LocalAdmin implements AdminInterface {
         if (ERASER_ENABLED) {
             applications.push({
                 name: "Eraser",
-                doc: BRAND_WEBSITE_URL ?? "https://tpot.world",
+                doc: BRAND_WEBSITE_URL ?? PUSHER_URL,
                 description: "Eraser (White board)",
                 enabled: true,
                 default: true,
@@ -215,7 +221,7 @@ class LocalAdmin implements AdminInterface {
         if (CARDS_ENABLED) {
             applications.push({
                 name: "Cards",
-                doc: BRAND_WEBSITE_URL ?? "https://tpot.world",
+                doc: BRAND_WEBSITE_URL ?? PUSHER_URL,
                 description: "Cards (learning tool)",
                 enabled: true,
                 default: true,
@@ -264,10 +270,10 @@ class LocalAdmin implements AdminInterface {
     ): Promise<MapDetailsData | RoomRedirect | ErrorApiData> {
         const roomUrl = new URL(playUri);
 
-        if (roomUrl.pathname === "/") {
-            roomUrl.pathname = START_ROOM_URL;
+        const frontendPath = normalizeLandingPath(new URL(FRONT_URL || "/", roomUrl.origin).pathname);
+        if (roomUrl.pathname === "/" || normalizeLandingPath(roomUrl.pathname) === frontendPath) {
             return Promise.resolve({
-                redirectUrl: roomUrl.toString(),
+                redirectUrl: new URL(START_ROOM_URL, roomUrl.origin).toString(),
             });
         }
 

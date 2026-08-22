@@ -23,7 +23,7 @@ export const CLIENT_DISCONNECTION_RETENTION_MS = 30_000;
 export const PUSHER_ADMIN_WS_MAX_BACKPRESSURE_BYTES = 1024 * 1024;
 export const ALLOWED_CORS_ORIGIN: string | undefined = undefined;
 export const PUSHER_URL = "http://pusher.test";
-export const FRONT_URL = "http://front.test";
+export const FRONT_URL = "http://front.test/play";
 export const BRAND_NAME = "tpot.world";
 export const BRAND_SHORT_NAME = "tpot";
 export const BRAND_DESCRIPTION = "Organize your online world in tpot.world.";
@@ -31,6 +31,7 @@ export const BRAND_AUTHOR = "tpot.world team";
 export const BRAND_PROVIDER = "tpot.world";
 export const BRAND_THEME_COLOR = "#1B2A41";
 export const BRAND_WEBSITE_URL: string | undefined = undefined;
+export const BRAND_CONTACT_EMAIL: string | undefined = undefined;
 export const BRAND_LOGO_URL: string | undefined = undefined;
 export const BRAND_LOADING_LOGO_URL: string | undefined = undefined;
 export const BRAND_LOGIN_LOGO_URL: string | undefined = undefined;
@@ -46,7 +47,7 @@ export const BRAND_STATUS_FONT_DATA_URL: string | undefined = undefined;
 export const BRAND_FAVICON_URL: string | undefined = undefined;
 export const BRAND_MANIFEST_ICON_URL: string | undefined = undefined;
 export const BRAND_CARD_IMAGE_URL: string | undefined = undefined;
-export const PUBLIC_MAP_STORAGE_URL = "";
+export const PUBLIC_MAP_STORAGE_URL = "http://map-storage.test";
 export const INTERNAL_MAP_STORAGE_URL: string | undefined = undefined;
 export const REDIS_HOST: string | undefined = undefined;
 export const REDIS_PORT = 6379;
@@ -77,7 +78,7 @@ export const BYPASS_PWA = false;
 export const PROVIDE_DEFAULT_WOKA_NAME: "no" | "random" | "fix" | "fix-plus-random-numbers" | undefined = undefined;
 export const PROVIDE_DEFAULT_WOKA_TEXTURE: "no" | "random" | "fix" | undefined = undefined;
 export const ENABLE_OPENAPI_ENDPOINT = false;
-export const START_ROOM_URL = "/~/maps/areas.wam";
+export const START_ROOM_URL = "http://front.test/play/~/maps/empty.wam";
 export const FALLBACK_LOCALE: string | undefined = "en";
 export const LOGROCKET_ID: string | undefined = undefined;
 export const SENTRY_DSN: string | undefined = undefined;
@@ -143,6 +144,7 @@ export const FRONT_ENVIRONMENT_VARIABLES: FrontConfigurationInterface = {
     BRAND_PROVIDER,
     BRAND_THEME_COLOR,
     BRAND_WEBSITE_URL,
+    BRAND_CONTACT_EMAIL,
     BRAND_LOGO_URL,
     BRAND_LOADING_LOGO_URL,
     BRAND_LOGIN_LOGO_URL,

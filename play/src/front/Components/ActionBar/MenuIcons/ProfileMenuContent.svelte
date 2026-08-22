@@ -30,6 +30,7 @@
     import { selectCompanionSceneVisibleStore } from "../../../Stores/SelectCompanionStore";
     import { getStatusInformation } from "../../../Utils/AvailabilityStatus";
     import { LL } from "../../../../i18n/i18n-svelte";
+    import { WAMSettingsUtils } from "@workadventure/map-editor";
     import ActionBarButton from "../ActionBarButton.svelte";
     import AvailabilityStatusList from "../AvailabilityStatus/AvailabilityStatusList.svelte";
     import Companion from "../../Companion/Companion.svelte";
@@ -71,6 +72,7 @@
     }
 
     function openEditSkinScene() {
+        if (!WAMSettingsUtils.canEditAvatar(gameManager.getCurrentGameScene().wamFile?.settings)) return;
         selectCharacterSceneVisibleStore.set(true);
         gameManager.leaveGame(SelectCharacterSceneName, new SelectCharacterScene());
     }
@@ -164,15 +166,17 @@
                 <ProfilIcon />
             </ActionBarButton>
         {/if}
-        <ActionBarButton
-            label={$LL.actionbar.woka()}
-            onclick={() => {
-                openEditSkinScene();
-                analyticsClient.editWoka();
-            }}
-        >
-            <Woka userId={-1} placeholderSrc="" customWidth="26px" />
-        </ActionBarButton>
+        {#if WAMSettingsUtils.canEditAvatar(gameManager.getCurrentGameScene().wamFile?.settings)}
+            <ActionBarButton
+                label={$LL.actionbar.woka()}
+                onclick={() => {
+                    openEditSkinScene();
+                    analyticsClient.editWoka();
+                }}
+            >
+                <Woka userId={-1} placeholderSrc="" customWidth="26px" />
+            </ActionBarButton>
+        {/if}
         <ActionBarButton
             label={$LL.actionbar.companion()}
             onclick={() => {

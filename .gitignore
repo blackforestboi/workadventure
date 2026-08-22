@@ -1,5 +1,6 @@
 .env
 .env.teapot
+.env.instance
 contrib/docker/.env.teapot
 contrib/railway/.env.provisioning
 backups/teapot/
@@ -14,6 +15,7 @@ maps/dist/computer.js
 maps/dist/computer.js.map
 teapot-mcp/dist/
 node_modules
+artifacts/
 .worktrees/
 .teapot-data/
 _

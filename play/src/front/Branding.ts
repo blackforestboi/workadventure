@@ -1,6 +1,7 @@
 import {
     BRAND_AUTHOR,
     BRAND_CARD_IMAGE_URL,
+    BRAND_CONTACT_EMAIL,
     BRAND_DESCRIPTION,
     BRAND_ERROR_IMAGE_URL,
     BRAND_ERROR_LOGO_URL,
@@ -24,17 +25,16 @@ import {
 } from "./Enum/EnvironmentVariable";
 import defaultErrorImage from "./Components/UI/images/error.gif";
 import defaultLoadingBackground from "./Components/images/map-exemple.png";
-import defaultBrandLogo from "./Components/images/tpot-world-ribbon.png";
 import defaultPwaBackground from "./Components/images/pwa-background-image.jpg";
 
-const DEFAULT_BRAND_WEBSITE_URL = "https://tpot.world";
-const websiteUrl = BRAND_WEBSITE_URL ?? DEFAULT_BRAND_WEBSITE_URL;
+const defaultBrandLogo = "/static/images/branding/default-icon.svg";
+const websiteUrl = BRAND_WEBSITE_URL ?? window.location.origin;
 
 function getDefaultContactEmail(url: string): string {
     try {
         return `hello@${new URL(url).hostname}`;
     } catch {
-        return "hello@tpot.world";
+        return "hello@localhost";
     }
 }
 
@@ -50,7 +50,7 @@ export const BRANDING = Object.freeze({
     provider: BRAND_PROVIDER,
     themeColor: BRAND_THEME_COLOR,
     websiteUrl,
-    contactEmail: getDefaultContactEmail(websiteUrl),
+    contactEmail: BRAND_CONTACT_EMAIL ?? getDefaultContactEmail(websiteUrl),
     assets: Object.freeze({
         logo: BRAND_LOGO_URL ?? defaultBrandLogo,
         loadingLogo: BRAND_LOADING_LOGO_URL ?? defaultBrandLogo,
@@ -64,7 +64,7 @@ export const BRANDING = Object.freeze({
         statusCharacter: BRAND_STATUS_CHARACTER_URL ?? "resources/characters/pipoya/Cat 01-1.png",
         statusFontImage: BRAND_STATUS_FONT_IMAGE_URL ?? "resources/fonts/arcade.png",
         statusFontData: BRAND_STATUS_FONT_DATA_URL ?? "resources/fonts/arcade.xml",
-        favicon: BRAND_FAVICON_URL ?? "/static/images/branding/tpotfavicon.png",
+        favicon: BRAND_FAVICON_URL ?? "/static/images/branding/default-icon.svg",
         manifestIcon: BRAND_MANIFEST_ICON_URL ?? "/static/images/branding/default-icon.svg",
         cardImage: BRAND_CARD_IMAGE_URL ?? "/static/images/branding/default-icon.svg",
     }),

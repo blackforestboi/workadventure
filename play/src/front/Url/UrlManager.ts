@@ -1,6 +1,7 @@
 import type { Room } from "../Connection/Room";
 import { localUserStore } from "../Connection/LocalUserStore";
 import { BRANDING } from "../Branding";
+import { getFrontendBasePath, prependFrontendBasePath, stripFrontendBasePath } from "./FrontendBasePath";
 
 export enum GameConnexionTypes {
     room = 1,
@@ -14,7 +15,13 @@ export enum GameConnexionTypes {
 //this class is responsible with analysing and editing the game's url
 class UrlManager {
     public getGameConnexionType(): GameConnexionTypes {
-        const url = window.location.pathname.toString();
+        const currentPath = window.location.pathname.toString();
+        const basePath = getFrontendBasePath();
+        if (basePath !== "" && (currentPath === basePath || currentPath === `${basePath}/`)) {
+            return GameConnexionTypes.room;
+        }
+
+        const url = stripFrontendBasePath(currentPath);
         if (url === "/login") {
             return GameConnexionTypes.login;
         }
@@ -38,12 +45,12 @@ class UrlManager {
      * @deprecated
      */
     public getOrganizationToken(): string | null {
-        const match = /\/register\/(.+)/.exec(window.location.pathname.toString());
+        const match = /\/register\/(.+)/.exec(stripFrontendBasePath(window.location.pathname.toString()));
         return match ? match[1] : null;
     }
 
     public pushRoomIdToUrl(room: Room): void {
-        const roomPath = `/${room.id}`;
+        const roomPath = prependFrontendBasePath(`/${room.id}`);
         if (window.location.pathname === roomPath) return;
         //Set last room visited! (connected or nor, must to be saved in local storage and cache API)
         //use href to keep # value

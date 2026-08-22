@@ -29,4 +29,9 @@ describe("MapEditorMenuItem", () => {
         expect(mapEditorWorldPickerSource).toContain("$LL.actionbar.mapEditorCreating()");
         expect(mapEditorMenuItemSource).toContain("warningMessageStore.addWarningMessage");
     });
+
+    it("uses the shared room-mode policy before showing or opening the editor", () => {
+        expect(mapEditorMenuItemSource).toContain("WAMSettingsUtils.canEditMap");
+        expect(mapEditorMenuItemSource).toContain("if (!WAMSettingsUtils.canEditMap");
+    });
 });

@@ -20,6 +20,7 @@
         "dev-front": "cross-env vite",
         "dev-pusher": "TSX_TSCONFIG_PATH=tsconfig-pusher.json tsx watch --clear-screen=false --inspect=0.0.0.0:9229 ./src/server.ts",
         "build": "echo \"Compiling with options: $NODE_OPTIONS \" && cross-env vite build",
+        "package:web": "TSX_TSCONFIG_PATH=tsconfig-pusher.json tsx scripts/packageStaticWeb.ts",
         "typecheck": "cross-env tsc --noEmit",
         "profile": "if [ -n \"$STARTUP_COMMAND\" ]; then sh -c \"$STARTUP_COMMAND\"; fi && TSX_TSCONFIG_PATH=tsconfig-pusher.json node --prof --import tsx ./src/server.ts",
         "push-sentry-sourcemaps": "tsc --project tsconfig-pusher.json && sentry-cli sourcemaps inject dist/ && sentry-cli releases new $SENTRY_RELEASE && sentry-cli sourcemaps upload dist --release=\"$SENTRY_RELEASE\" && sentry-cli releases finalize $SENTRY_RELEASE",

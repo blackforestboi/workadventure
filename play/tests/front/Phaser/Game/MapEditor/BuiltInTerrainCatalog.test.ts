@@ -135,6 +135,17 @@ describe("built-in terrain catalog", () => {
         const roadGroups = BUILT_IN_SUMMER_TERRAIN_TILESET.groups.filter(({ autotile }) => autotile !== undefined);
         expect(roadGroups).toHaveLength(2);
         expect(roadGroups.every(({ autotile }) => Object.values(autotile ?? {}).length === 13)).toBe(true);
+        expect(
+            roadGroups.map(({ autotile }) => ({
+                innerTopLeft: autotile?.innerTopLeft,
+                innerTopRight: autotile?.innerTopRight,
+                innerBottomLeft: autotile?.innerBottomLeft,
+                innerBottomRight: autotile?.innerBottomRight,
+            })),
+        ).toEqual([
+            { innerTopLeft: 2572, innerTopRight: 2571, innerBottomLeft: 2570, innerBottomRight: 2569 },
+            { innerTopLeft: 2604, innerTopRight: 2603, innerBottomLeft: 2602, innerBottomRight: 2601 },
+        ]);
 
         const tileIds = getBuiltInTerrainTileIdsForTileset(BUILT_IN_SUMMER_TERRAIN_TILESET.id);
         expect(tileIds).toHaveLength(BUILT_IN_SUMMER_TERRAIN_ASSETS.length);

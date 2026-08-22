@@ -55,4 +55,22 @@ describe("WAM Setting", () => {
         await command.execute();
         expect(wamFile?.settings?.recording).toEqual(recordingData);
     });
+
+    it("should update room mode when room mode command received", async () => {
+        const wamFile: WAMFileFormat = { ...defaultWamFile };
+        const command = new UpdateWAMSettingCommand(
+            wamFile,
+            {
+                message: {
+                    $case: "updateRoomModeSettingMessage",
+                    updateRoomModeSettingMessage: { settings: "website" },
+                },
+            },
+            "test-room-mode-uuid",
+        );
+
+        await command.execute();
+
+        expect(wamFile.settings?.roomMode).toBe("website");
+    });
 });

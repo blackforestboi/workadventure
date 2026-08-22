@@ -8,6 +8,7 @@
     import { selectCharacterSceneVisibleStore } from "../../Stores/SelectCharacterStore";
     import WokaSelectScene from "./WokaSelectScene.svelte";
     import WokaCustomizeScene from "./WokaCustomizeScene.svelte";
+    import { WAMSettingsUtils } from "@workadventure/map-editor";
 
     let buildOwnWoka = $state(false);
     let error: string | null = $state(null);
@@ -43,6 +44,10 @@
     let mounted = $state(false);
 
     onMount(() => {
+        if (!WAMSettingsUtils.canEditAvatar(gameManager.getCurrentGameScene().wamFile?.settings)) {
+            selectCharacterSceneVisibleStore.set(false);
+            return;
+        }
         mounted = true;
         // Get the current textures
         const currentTextures = gameManager.getCharacterTextureIds();

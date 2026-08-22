@@ -213,10 +213,10 @@ function roadAutotile(start: number): TerrainAutotileTiles {
         bottomLeft: start + 6,
         bottom: start + 7,
         bottomRight: start + 8,
-        innerTopLeft: start + 9,
-        innerTopRight: start + 10,
-        innerBottomLeft: start + 11,
-        innerBottomRight: start + 12,
+        innerTopLeft: start + 12,
+        innerTopRight: start + 11,
+        innerBottomLeft: start + 10,
+        innerBottomRight: start + 9,
     };
 }
 
